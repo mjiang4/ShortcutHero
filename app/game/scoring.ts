@@ -70,7 +70,7 @@ function getPracticeShortcuts(
       misses: 0,
       wrongInputs: 0,
     };
-    current.misses += attempt.outcome === "miss" ? 1 : 0;
+    current.misses += attempt.outcome === "clean" ? 0 : 1;
     current.wrongInputs += attempt.wrongInputs;
     byShortcut.set(attempt.shortcut.id, current);
   }
@@ -78,14 +78,13 @@ function getPracticeShortcuts(
   return [...byShortcut.values()]
     .map((item) => ({
       ...item,
-      mistakes: item.misses + item.wrongInputs,
+      mistakes: Math.max(item.misses, item.wrongInputs),
     }))
     .filter((item) => item.mistakes > 0)
     .sort(
       (a, b) =>
         b.mistakes - a.mistakes || a.shortcut.action.localeCompare(b.shortcut.action),
-    )
-    .slice(0, 3);
+    );
 }
 
 interface CorrectAccumulator {
@@ -110,9 +109,11 @@ function getCorrectShortcuts(
       perfectHits: 0,
     };
     current.attempts += 1;
-    if (attempt.outcome !== "miss") current.correct += 1;
+    if (attempt.outcome === "clean") current.correct += 1;
     if (attempt.outcome === "clean") current.cleanHits += 1;
-    if (attempt.judgement === "perfect") current.perfectHits += 1;
+    if (attempt.outcome === "clean" && attempt.judgement === "perfect") {
+      current.perfectHits += 1;
+    }
     byShortcut.set(attempt.shortcut.id, current);
   }
 
@@ -129,8 +130,7 @@ function getCorrectShortcuts(
         b.perfectHits - a.perfectHits ||
         b.correct - a.correct ||
         a.shortcut.action.localeCompare(b.shortcut.action),
-    )
-    .slice(0, 5);
+    );
 }
 
 export function calculateResults(
@@ -144,15 +144,15 @@ export function calculateResults(
   const recoveredHits = attempts.filter(
     (attempt) => attempt.outcome === "recovered",
   ).length;
-  const misses = attempts.filter((attempt) => attempt.outcome === "miss").length;
-  const correctAnswers = cleanHits + recoveredHits;
+  const misses = attempts.filter((attempt) => attempt.outcome !== "clean").length;
+  const correctAnswers = cleanHits;
   const accuracyPct =
     attempts.length === 0
       ? 0
       : Math.round((correctAnswers / attempts.length) * 1_000) / 10;
   const uniqueShortcutsCorrect = new Set(
     attempts
-      .filter((attempt) => attempt.outcome !== "miss")
+      .filter((attempt) => attempt.outcome === "clean")
       .map((attempt) => attempt.shortcut.id),
   ).size;
 

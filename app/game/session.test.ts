@@ -200,7 +200,7 @@ test("requeues misses within the remaining session using a fresh cue id", () => 
   assert.equal(new Set(missed.session.queue.map((prompt) => prompt.promptId)).size, missed.session.queue.length);
 });
 
-test("reports the shortcuts the player actually got right", () => {
+test("reports any action with a wrong input as missed", () => {
   const knownShortcut = EASY_SHORTCUTS[0];
   const missedShortcut = EASY_SHORTCUTS[1];
   const attempts: PromptAttempt[] = [
@@ -218,12 +218,12 @@ test("reports the shortcuts the player actually got right", () => {
     {
       promptId: `${knownShortcut.id}:1`,
       shortcut: knownShortcut,
-      outcome: "clean",
+      outcome: "recovered",
       responseMs: 950,
-      timingOffsetMs: 80,
-      judgement: "good",
-      wrongInputs: 0,
-      points: 150,
+      timingOffsetMs: 0,
+      judgement: "perfect",
+      wrongInputs: 1,
+      points: 100,
       requeued: false,
     },
     {
@@ -239,14 +239,21 @@ test("reports the shortcuts the player actually got right", () => {
     },
   ];
 
-  const results = calculateResults(attempts, 350, 2, 0, 30_000);
+  const results = calculateResults(attempts, 300, 1, 0, 30_000);
 
-  assert.equal(results.correctAnswers, 2);
-  assert.equal(results.misses, 1);
+  assert.equal(results.correctAnswers, 1);
+  assert.equal(results.misses, 2);
+  assert.equal(results.recoveredHits, 1);
+  assert.equal(results.accuracyPct, 33.3);
   assert.equal(results.correctShortcuts.length, 1);
   assert.equal(results.correctShortcuts[0].shortcut.id, knownShortcut.id);
-  assert.equal(results.correctShortcuts[0].correct, 2);
+  assert.equal(results.correctShortcuts[0].correct, 1);
   assert.equal(results.correctShortcuts[0].attempts, 2);
   assert.equal(results.correctShortcuts[0].perfectHits, 1);
-  assert.equal(results.correctShortcuts[0].accuracyPct, 100);
+  assert.equal(results.correctShortcuts[0].accuracyPct, 50);
+  assert.equal(results.practice.length, 2);
+  assert.equal(
+    results.practice.find((item) => item.shortcut.id === knownShortcut.id)?.misses,
+    1,
+  );
 });

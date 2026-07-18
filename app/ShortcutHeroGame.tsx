@@ -660,7 +660,10 @@ export function ShortcutHeroGame({
               <div className="results-grid">
                 <ResultStat label="Accuracy" value={`${results.accuracyPct}%`} />
                 <ResultStat label="Best combo" value={String(results.longestCombo)} />
-                <ResultStat label="Shortcuts" value={String(results.uniqueShortcutsCorrect)} />
+                <ResultStat
+                  label="Unique shortcuts"
+                  value={String(results.uniqueShortcutsCorrect)}
+                />
               </div>
 
               {results.correctShortcuts.length > 0 ? (
@@ -691,8 +694,15 @@ export function ShortcutHeroGame({
                   <ul className="review-list" aria-label="Shortcuts to practise">
                     {results.practice.map((item) => (
                       <li className="review-item" key={item.shortcut.id}>
-                        <span>{item.shortcut.action}</span>
-                        <span className="review-shortcut">{item.shortcut.input.display}</span>
+                        <span className="review-item__identity">
+                          <strong>{item.shortcut.action}</strong>
+                          <span className="review-shortcut">
+                            {item.shortcut.input.display}
+                          </span>
+                        </span>
+                        <span className="review-item__stats">
+                          {item.misses} {item.misses === 1 ? "miss" : "misses"}
+                        </span>
                       </li>
                     ))}
                   </ul>

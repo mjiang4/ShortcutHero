@@ -110,7 +110,8 @@ Speed does not change the music or the type of shortcut being tested.
 
 - Faster correct answers earn more points.
 - Consecutive first-attempt answers build the combo and score multiplier.
-- A recovered answer earns reduced points and does not continue the combo.
+- A recovered answer earns reduced points, does not continue the combo, and is
+  recorded as missed in the round summary.
 - A miss earns no points and returns that shortcut later in the run.
 - Recall guidance maintains a separate high score from Learn guidance.
 
@@ -119,9 +120,9 @@ The results screen shows:
 - Score
 - Accuracy
 - Longest combo
-- Shortcuts answered correctly
-- Up to five shortcuts the player knew, with correct attempts and perfect hits
-- Up to three shortcuts to practise again
+- Unique shortcuts answered correctly on the first attempt
+- Every shortcut the player knew, with clean attempts and perfect hits
+- Every shortcut missed or recovered, with its missed-action count
 
 ### Visual escalation
 
