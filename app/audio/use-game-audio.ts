@@ -23,8 +23,9 @@ export async function primeGameAudio(
   muted = false,
 ): Promise<boolean> {
   const engine = getSharedEngine();
+  engine.setTempo(tempo);
   engine.setMuted(muted);
-  return engine.start(tempo);
+  return engine.unlock();
 }
 
 export type GameAudioControls = {

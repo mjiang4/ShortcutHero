@@ -23,17 +23,19 @@ import type {
 } from "./types";
 
 const COLORS = {
-  background: "#050507",
-  runway: "#0c0c11",
-  runwayEdge: "#252431",
-  surface: "#14131a",
-  surfaceRaised: "#1a1921",
-  text: "#f5f3f8",
-  muted: "#8b8994",
-  accent: "#6f65dc",
-  accentBright: "#a59cff",
-  hit: "#aef2d0",
-  miss: "#ff7087",
+  background: "#080a14",
+  runway: "#0c0d1a",
+  runwayEdge: "#342d56",
+  surface: "#151426",
+  surfaceRaised: "#1b1930",
+  text: "#f4f1ea",
+  muted: "#aaa6b4",
+  accent: "#7c6cff",
+  accentBright: "#a897ff",
+  gold: "#f4a261",
+  sun: "#ffd6a3",
+  hit: "#b7f5d3",
+  miss: "#ff706b",
 } as const;
 
 const STRIKE_Z = 1.75;
@@ -180,7 +182,176 @@ function CameraRig({
   return null;
 }
 
-function Atmosphere({ combo }: { combo: number }) {
+function SkyWorld({
+  combo,
+  runProgress,
+  reducedMotion,
+}: {
+  combo: number;
+  runProgress: number;
+  reducedMotion: boolean;
+}) {
+  const skyMaterial = useRef<THREE.ShaderMaterial>(null);
+  const sun = useRef<THREE.Mesh>(null);
+  const world = useRef<THREE.Group>(null);
+  const energy = comboEnergy(combo);
+  const skyUniforms = useMemo(
+    () => ({
+      uProgress: { value: 0 },
+      uEnergy: { value: 0 },
+    }),
+    [],
+  );
+  const mountains = useMemo(
+    () =>
+      Array.from({ length: 13 }, (_, index) => ({
+        x: -25 + index * 4.2,
+        height: 2.6 + ((index * 17) % 7) * 0.38,
+        width: 4.6 + ((index * 13) % 5) * 0.45,
+        z: -27.5 - (index % 3) * 1.4,
+      })),
+    [],
+  );
+  const monoliths = useMemo(
+    () =>
+      Array.from({ length: 16 }, (_, index) => ({
+        side: index % 2 === 0 ? -1 : 1,
+        z: -22 + index * 1.48,
+        height: 0.55 + ((index * 7) % 5) * 0.24,
+      })),
+    [],
+  );
+
+  useFrame((state, delta) => {
+    if (skyMaterial.current) {
+      skyMaterial.current.uniforms.uProgress.value = THREE.MathUtils.damp(
+        skyMaterial.current.uniforms.uProgress.value,
+        runProgress,
+        2.4,
+        delta,
+      );
+      skyMaterial.current.uniforms.uEnergy.value = THREE.MathUtils.damp(
+        skyMaterial.current.uniforms.uEnergy.value,
+        energy,
+        3.2,
+        delta,
+      );
+    }
+    if (sun.current) {
+      sun.current.position.y = 2.25 - runProgress * 1.35;
+      const scale = 1 + energy * 0.13;
+      sun.current.scale.setScalar(scale);
+      sun.current.rotation.z = reducedMotion ? 0 : state.clock.elapsedTime * 0.018;
+    }
+    if (world.current && !reducedMotion) {
+      world.current.position.x = Math.sin(state.clock.elapsedTime * 0.08) * 0.08;
+    }
+  });
+
+  return (
+    <group ref={world}>
+      <mesh position={[0, 7.5, -35]} renderOrder={-10}>
+        <planeGeometry args={[82, 38]} />
+        <shaderMaterial
+          ref={skyMaterial}
+          uniforms={skyUniforms}
+          depthWrite={false}
+          vertexShader={`
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `}
+          fragmentShader={`
+            varying vec2 vUv;
+            uniform float uProgress;
+            uniform float uEnergy;
+            void main() {
+              vec3 dawnTop = vec3(0.075, 0.045, 0.16);
+              vec3 dawnBottom = vec3(0.58, 0.18, 0.24);
+              vec3 nightTop = vec3(0.018, 0.025, 0.10);
+              vec3 nightBottom = vec3(0.20, 0.07, 0.31);
+              vec3 top = mix(dawnTop, nightTop, smoothstep(0.18, 0.92, uProgress));
+              vec3 bottom = mix(dawnBottom, nightBottom, smoothstep(0.1, 0.88, uProgress));
+              float horizon = smoothstep(0.0, 0.72, vUv.y);
+              vec3 color = mix(bottom, top, horizon);
+              float band = exp(-pow((vUv.y - 0.31) * 7.0, 2.0));
+              color += vec3(0.18, 0.07, 0.15) * band * (0.35 + uEnergy * 0.55);
+              float vignette = smoothstep(0.98, 0.3, distance(vUv, vec2(0.5, 0.52)));
+              color *= 0.72 + vignette * 0.32;
+              gl_FragColor = vec4(color, 1.0);
+            }
+          `}
+        />
+      </mesh>
+
+      <mesh ref={sun} position={[5.3, 2.25, -33.5]} renderOrder={-8}>
+        <circleGeometry args={[1.95, 64]} />
+        <meshBasicMaterial
+          color={COLORS.sun}
+          transparent
+          opacity={Math.max(0.08, 0.76 - runProgress * 0.6)}
+          depthWrite={false}
+          fog={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <pointLight
+        position={[5.3, 3.2, -20]}
+        color={COLORS.gold}
+        intensity={5.5 * (1 - runProgress * 0.55)}
+        distance={38}
+        decay={1.5}
+      />
+
+      <group position={[0, -1.75, 0]}>
+        {mountains.map((mountain, index) => (
+          <mesh
+            key={`${mountain.x}-${mountain.z}`}
+            position={[mountain.x, mountain.height * 0.35, mountain.z]}
+            rotation={[0, 0, index % 2 === 0 ? 0.04 : -0.05]}
+          >
+            <coneGeometry args={[mountain.width, mountain.height, 3]} />
+            <meshBasicMaterial
+              color={index % 3 === 0 ? "#332441" : "#211a34"}
+              transparent
+              opacity={0.88}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      <group>
+        {monoliths.map((item, index) => (
+          <group key={`${item.z}-${index}`} position={[item.side * 5.2, 0.15, item.z]}>
+            <mesh position={[0, item.height / 2, 0]} rotation={[0, item.side * 0.18, 0]}>
+              <boxGeometry args={[0.13, item.height, 0.18]} />
+              <meshStandardMaterial
+                color="#18162b"
+                emissive={index % 3 === 0 ? COLORS.gold : COLORS.accent}
+                emissiveIntensity={0.12 + energy * 0.5}
+                roughness={0.7}
+              />
+            </mesh>
+            <mesh position={[0, item.height + 0.08, 0]}>
+              <boxGeometry args={[0.4, 0.025, 0.025]} />
+              <meshBasicMaterial
+                color={index % 3 === 0 ? COLORS.sun : COLORS.accentBright}
+                transparent
+                opacity={0.18 + energy * 0.45}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+function Atmosphere({ combo, runProgress }: { combo: number; runProgress: number }) {
   const accentLight = useRef<THREE.PointLight>(null);
   const energy = comboEnergy(combo);
 
@@ -197,14 +368,14 @@ function Atmosphere({ combo }: { combo: number }) {
 
   return (
     <>
-      <ambientLight intensity={0.32} color="#b9b5ca" />
-      <hemisphereLight args={["#7772a4", "#08080d", 0.5]} />
+      <ambientLight intensity={0.34 + runProgress * 0.08} color="#d7c6ce" />
+      <hemisphereLight args={["#b99bd2", "#080a14", 0.62]} />
       <spotLight
         position={[0, 9, 5]}
         angle={0.55}
         penumbra={0.9}
         intensity={18}
-        color="#d7d2ff"
+        color={runProgress < 0.48 ? COLORS.sun : "#d7d2ff"}
         target-position={[0, 0, -7]}
       />
       <pointLight
@@ -240,6 +411,14 @@ function Runway({ combo, paused }: { combo: number; paused: boolean }) {
 
   return (
     <group>
+      <mesh position={[0, -0.27, -10.2]} receiveShadow>
+        <boxGeometry args={[58, 0.08, 31]} />
+        <meshStandardMaterial
+          color="#070914"
+          roughness={1}
+          metalness={0}
+        />
+      </mesh>
       <mesh position={[0, -0.16, -10.2]} receiveShadow>
         <boxGeometry args={[8.4, 0.18, 29.6]} />
         <meshStandardMaterial
@@ -414,7 +593,7 @@ function StrikeGate({
     if (curtainMaterial.current) {
       curtainMaterial.current.color.set(miss ? COLORS.miss : COLORS.accentBright);
       curtainMaterial.current.opacity =
-        0.025 + energy * 0.018 + breath * 0.008 + readyPulse * 0.045 + impact * 0.16;
+        0.018 + energy * 0.014 + breath * 0.006 + readyPulse * 0.032 + impact * 0.085;
     }
     if (edgeMaterial.current) {
       edgeMaterial.current.color.set(miss ? COLORS.miss : COLORS.accentBright);
@@ -433,8 +612,8 @@ function StrikeGate({
 
   return (
     <group ref={gate} position={[0, 0, STRIKE_Z]}>
-      <mesh position={[0, 1.02, 0]}>
-        <planeGeometry args={[7.3, 1.92]} />
+      <mesh position={[0, 0.88, 0]}>
+        <planeGeometry args={[6.8, 1.58]} />
         <meshBasicMaterial
           ref={curtainMaterial}
           color={COLORS.accentBright}
@@ -447,10 +626,10 @@ function StrikeGate({
         />
       </mesh>
 
-      {[-3.64, 3.64].map((x) => (
+      {[-3.4, 3.4].map((x) => (
         <group key={x}>
-          <mesh position={[x, 1.02, 0.015]}>
-            <boxGeometry args={[0.045, 2.05, 0.055]} />
+          <mesh position={[x, 0.88, 0.015]}>
+            <boxGeometry args={[0.045, 1.72, 0.055]} />
             <meshBasicMaterial
               color={COLORS.accentBright}
               transparent
@@ -459,7 +638,7 @@ function StrikeGate({
             />
           </mesh>
           <mesh
-            position={[x - Math.sign(x) * 0.15, 1.91, 0.018]}
+            position={[x - Math.sign(x) * 0.15, 1.64, 0.018]}
             rotation={[0, 0, Math.sign(x) * 0.72]}
           >
             <boxGeometry args={[0.46, 0.045, 0.06]} />
@@ -472,8 +651,8 @@ function StrikeGate({
           </mesh>
         </group>
       ))}
-      <mesh position={[0, 2.04, 0.015]}>
-        <boxGeometry args={[7.32, 0.045, 0.055]} />
+      <mesh position={[0, 1.74, 0.015]}>
+        <boxGeometry args={[6.84, 0.045, 0.055]} />
         <meshBasicMaterial
           ref={edgeMaterial}
           color={COLORS.accentBright}
@@ -482,8 +661,8 @@ function StrikeGate({
           toneMapped={false}
         />
       </mesh>
-      <mesh ref={scan} position={[0, 0.98, 0.025]}>
-        <planeGeometry args={[6.95, 0.026]} />
+      <mesh ref={scan} position={[0, 0.84, 0.025]}>
+        <planeGeometry args={[6.5, 0.026]} />
         <meshBasicMaterial
           ref={scanMaterial}
           color={COLORS.accentBright}
@@ -496,7 +675,7 @@ function StrikeGate({
       </mesh>
 
       <mesh position={[0, 0.012, 0]}>
-        <boxGeometry args={[8.08, 0.075, 0.13]} />
+        <boxGeometry args={[7.3, 0.065, 0.13]} />
         <meshBasicMaterial
           color={COLORS.accentBright}
           transparent
@@ -769,7 +948,7 @@ function ActionRibbon({
       body.current.visible = fade > 0.035;
     }
     if (shellMaterial.current) {
-      shellMaterial.current.opacity = fade;
+      shellMaterial.current.opacity = (isActive ? 0.28 : 0.11) * fade;
       shellMaterial.current.emissiveIntensity = THREE.MathUtils.damp(
         shellMaterial.current.emissiveIntensity,
         cleared ? 2.5 * fade : missed ? 1.35 * fade : isActive ? 0.82 : 0.24,
@@ -799,26 +978,28 @@ function ActionRibbon({
     <group ref={group}>
       <group ref={body}>
         <mesh>
-          <boxGeometry args={[5.9, 1.02, 0.12]} />
+          <boxGeometry args={[5.72, 0.78, 0.035]} />
           <meshStandardMaterial
             ref={shellMaterial}
-            color={missed ? "#211219" : COLORS.surfaceRaised}
-            roughness={0.55}
-            metalness={0.18}
+            color={missed ? "#3b141d" : COLORS.surfaceRaised}
+            roughness={0.28}
+            metalness={0.08}
             emissive={color}
             emissiveIntensity={isActive ? 0.82 : 0.24}
             transparent
-            opacity={1}
+            opacity={isActive ? 0.28 : 0.11}
+            depthWrite={false}
           />
         </mesh>
 
-        {[-0.52, 0.52].map((y) => (
+        {[-0.4, 0.4].map((y) => (
           <mesh key={y} position={[0, y, 0.014]}>
-            <boxGeometry args={[5.98, 0.025, 0.15]} />
+            <boxGeometry args={[5.86, 0.018, 0.045]} />
             <meshBasicMaterial
               color={color}
               transparent
-              opacity={isActive ? 0.62 : 0.2}
+              opacity={isActive ? 0.8 : 0.22}
+              depthWrite={false}
               toneMapped={false}
             />
           </mesh>
@@ -827,10 +1008,10 @@ function ActionRibbon({
         {[-1, 1].map((side) => (
           <mesh
             key={side}
-            position={[side * 2.87, side * 0.43, 0.045]}
-            rotation={[0, 0, side * 0.72]}
+            position={[side * 2.79, side * 0.3, 0.045]}
+            rotation={[0, 0, side * 0.78]}
           >
-            <boxGeometry args={[0.34, 0.035, 0.08]} />
+            <boxGeometry args={[0.42, 0.026, 0.045]} />
             <meshBasicMaterial
               color={color}
               transparent
@@ -840,8 +1021,8 @@ function ActionRibbon({
           </mesh>
         ))}
 
-        <mesh position={[-2.66, 0, 0.077]}>
-          <boxGeometry args={[0.055, 0.73, 0.025]} />
+        <mesh position={[-2.62, 0, 0.077]}>
+          <boxGeometry args={[0.035, 0.58, 0.025]} />
           <meshBasicMaterial
             ref={accentMaterial}
             color={color}
@@ -852,16 +1033,16 @@ function ActionRibbon({
         </mesh>
 
         <Text
-          position={[-2.45, showShortcut ? 0.13 : 0, 0.075]}
-          maxWidth={showShortcut ? 3.65 : 4.65}
-          fontSize={0.28}
+          position={[-2.4, showShortcut ? 0.11 : 0, 0.075]}
+          maxWidth={showShortcut ? 3.72 : 4.75}
+          fontSize={0.31}
           lineHeight={1}
           color={COLORS.text}
           anchorX="left"
           anchorY="middle"
           textAlign="left"
           outlineWidth={0.005}
-          outlineColor="#050507"
+          outlineColor={COLORS.background}
         >
           {cue.action}
         </Text>
@@ -869,9 +1050,9 @@ function ActionRibbon({
         {showShortcut && cue.shortcut ? (
           <>
             <Text
-              position={[-2.45, -0.25, 0.076]}
+              position={[-2.4, -0.21, 0.076]}
               maxWidth={3.5}
-              fontSize={0.19}
+              fontSize={0.16}
               letterSpacing={0.04}
               color={isActive ? COLORS.accentBright : COLORS.muted}
               anchorX="left"
@@ -879,29 +1060,19 @@ function ActionRibbon({
             >
               {cue.shortcut}
             </Text>
-            <mesh position={[2.03, 0, 0.082]}>
-              <boxGeometry args={[1.35, 0.48, 0.03]} />
+            <mesh position={[1.62, 0, 0.082]}>
+              <boxGeometry args={[0.018, 0.5, 0.025]} />
               <meshBasicMaterial
                 color={color}
                 transparent
-                opacity={isActive ? 0.16 : 0.08}
+                opacity={isActive ? 0.8 : 0.25}
+                toneMapped={false}
               />
             </mesh>
-            {[-0.69, 0.69].map((x) => (
-              <mesh key={x} position={[2.03 + x, 0, 0.099]}>
-                <boxGeometry args={[0.025, 0.48, 0.018]} />
-                <meshBasicMaterial
-                  color={color}
-                  transparent
-                  opacity={isActive ? 0.82 : 0.32}
-                  toneMapped={false}
-                />
-              </mesh>
-            ))}
             <Text
-              position={[2.03, 0, 0.102]}
-              maxWidth={1.12}
-              fontSize={0.2}
+              position={[2.04, 0, 0.102]}
+              maxWidth={1.28}
+              fontSize={0.21}
               letterSpacing={0.035}
               color={isActive ? COLORS.text : COLORS.muted}
               anchorX="center"
@@ -1061,7 +1232,7 @@ function KeyboardDeck({
   const keyGap = 0.07;
 
   return (
-    <group position={[0, 0.03, 4.28]}>
+    <group position={[0, 0.16, 3.58]}>
       <mesh position={[0, -0.13, 0.05]}>
         <boxGeometry args={[8.1, 0.2, 2.65]} />
         <meshStandardMaterial
@@ -1364,6 +1535,7 @@ function SceneContent({
   hintKeys,
   showShortcuts,
   combo,
+  runProgress,
   feedback,
   paused,
   reducedMotion,
@@ -1376,6 +1548,7 @@ function SceneContent({
     | "hintKeys"
     | "showShortcuts"
     | "combo"
+    | "runProgress"
     | "paused"
     | "reducedMotion"
     | "bloom"
@@ -1398,13 +1571,18 @@ function SceneContent({
     <>
       <color attach="background" args={[COLORS.background]} />
       <fog attach="fog" args={[COLORS.background, 15, 39]} />
+      <SkyWorld
+        combo={combo}
+        runProgress={runProgress}
+        reducedMotion={reducedMotion}
+      />
       <CameraRig
         combo={combo}
         feedback={feedback}
         paused={paused}
         reducedMotion={reducedMotion}
       />
-      <Atmosphere combo={combo} />
+      <Atmosphere combo={combo} runProgress={runProgress} />
       <Runway combo={combo} paused={paused} />
       <StrikeGate
         combo={combo}
@@ -1472,10 +1650,12 @@ export function GameScene({
   hintKeys = [],
   showShortcuts = true,
   combo = 0,
+  runProgress = 0,
   feedback = null,
   paused = false,
   reducedMotion = false,
   bloom = true,
+  onReady,
   className,
   style,
 }: GameSceneProps) {
@@ -1503,6 +1683,7 @@ export function GameScene({
           toneMappingExposure: 1.05,
         }}
         shadows={false}
+        onCreated={onReady}
         style={{ display: "block", width: "100%", height: "100%" }}
       >
         <SceneContent
@@ -1511,6 +1692,7 @@ export function GameScene({
           hintKeys={hintKeys}
           showShortcuts={showShortcuts}
           combo={combo}
+          runProgress={runProgress}
           feedback={feedback}
           paused={paused}
           reducedMotion={reducedMotion}

@@ -2,14 +2,19 @@
 
 A fast, 3D browser game for learning Linear keyboard shortcuts. Actions travel down a Guitar Hero-inspired highway; enter the matching shortcut before each prompt reaches the keyboard.
 
+Product and visual direction:
+
+- [Hackathon product spec](./PROJECT_SPEC.md)
+- [Design and visual identity](./DESIGN_IDENTITY.md)
+
 ## Play modes
 
-- Easy: single-key actions
+- Novice: single-key actions
 - Medium: two-key sequences
 - Hard: Shift chords
-- Mix: a one-minute showcase across all three input styles
-- Novice guidance shows the shortcut; Pro hides it
-- Relaxed, Fast, and Turbo tempo presets
+- Mix: a 45-second showcase across all three input styles
+- Learn guidance shows the shortcut; Recall hides it
+- Focus, Fast, and Turbo tempo presets
 
 The game currently targets physical macOS keyboards. It only suppresses allowlisted game keys while a run is active and leaves Command, Control, and Option shortcuts to the browser.
 

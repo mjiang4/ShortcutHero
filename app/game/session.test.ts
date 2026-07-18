@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { EASY_SHORTCUTS, HARD_SHORTCUTS, MEDIUM_SHORTCUTS } from "./content";
+import { calculateResults } from "./scoring";
 import {
   APPROACH_DURATION_MS,
   createGameSession,
@@ -12,7 +13,7 @@ import {
   startSession,
   tickSession,
 } from "./session";
-import type { GameSettings } from "./types";
+import type { GameSettings, PromptAttempt } from "./types";
 
 const BASE_SETTINGS: GameSettings = {
   mode: "easy",
@@ -197,4 +198,55 @@ test("requeues misses within the remaining session using a fresh cue id", () => 
   }
   assert.ok(missed.session.queue.some((prompt) => prompt.requeueCount === 1));
   assert.equal(new Set(missed.session.queue.map((prompt) => prompt.promptId)).size, missed.session.queue.length);
+});
+
+test("reports the shortcuts the player actually got right", () => {
+  const knownShortcut = EASY_SHORTCUTS[0];
+  const missedShortcut = EASY_SHORTCUTS[1];
+  const attempts: PromptAttempt[] = [
+    {
+      promptId: `${knownShortcut.id}:0`,
+      shortcut: knownShortcut,
+      outcome: "clean",
+      responseMs: 900,
+      timingOffsetMs: 0,
+      judgement: "perfect",
+      wrongInputs: 0,
+      points: 200,
+      requeued: false,
+    },
+    {
+      promptId: `${knownShortcut.id}:1`,
+      shortcut: knownShortcut,
+      outcome: "clean",
+      responseMs: 950,
+      timingOffsetMs: 80,
+      judgement: "good",
+      wrongInputs: 0,
+      points: 150,
+      requeued: false,
+    },
+    {
+      promptId: `${missedShortcut.id}:2`,
+      shortcut: missedShortcut,
+      outcome: "miss",
+      responseMs: 1_300,
+      timingOffsetMs: 300,
+      judgement: "miss",
+      wrongInputs: 0,
+      points: 0,
+      requeued: false,
+    },
+  ];
+
+  const results = calculateResults(attempts, 350, 2, 0, 30_000);
+
+  assert.equal(results.correctAnswers, 2);
+  assert.equal(results.misses, 1);
+  assert.equal(results.correctShortcuts.length, 1);
+  assert.equal(results.correctShortcuts[0].shortcut.id, knownShortcut.id);
+  assert.equal(results.correctShortcuts[0].correct, 2);
+  assert.equal(results.correctShortcuts[0].attempts, 2);
+  assert.equal(results.correctShortcuts[0].perfectHits, 1);
+  assert.equal(results.correctShortcuts[0].accuracyPct, 100);
 });

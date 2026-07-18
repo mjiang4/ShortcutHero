@@ -75,9 +75,7 @@ export class ShortcutHeroAudio {
   }
 
   /** Call directly inside a user gesture handler. */
-  async start(tempo?: AudioTempo): Promise<boolean> {
-    if (tempo !== undefined) this.setTempo(tempo);
-
+  async unlock(): Promise<boolean> {
     const context = this.ensureContext();
     if (!context) return false;
 
@@ -90,6 +88,13 @@ export class ShortcutHeroAudio {
     }
 
     if (context.state !== "running") return false;
+    return true;
+  }
+
+  /** Starts the procedural score after the render scene is ready. */
+  async start(tempo?: AudioTempo): Promise<boolean> {
+    if (tempo !== undefined) this.setTempo(tempo);
+    if (!(await this.unlock())) return false;
     this.startAmbient();
     return true;
   }

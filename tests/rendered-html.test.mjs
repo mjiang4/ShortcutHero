@@ -23,7 +23,7 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the DOM-only Shortcut Hero settings screen", async () => {
+test("server-renders the DOM-only Shortcut Hero title screen", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -31,15 +31,17 @@ test("server-renders the DOM-only Shortcut Hero settings screen", async () => {
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
   assert.match(html, /Master Linear shortcuts/i);
-  assert.match(html, /Set the run/i);
-  assert.match(html, /Novice/i);
-  assert.match(html, /New game/i);
+  assert.match(html, /enter the flow/i);
+  assert.match(html, /high scores/i);
+  assert.match(html, /how to play/i);
+  assert.match(html, /options/i);
+  assert.match(html, /start/i);
   assert.match(html, /og\.png/i);
   assert.doesNotMatch(html, /game-canvas|Go to Inbox/i);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);
 });
 
-test("separates settings and play routes while keeping the 3D dependencies", async () => {
+test("separates title and play routes while keeping the 3D dependencies", async () => {
   const [page, playPage, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
@@ -65,6 +67,6 @@ test("server-renders the configured play route", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
-  assert.match(html, /Linear edition/i);
-  assert.doesNotMatch(html, /Set the run/i);
+  assert.match(html, /game-canvas/i);
+  assert.doesNotMatch(html, /enter the flow|high scores/i);
 });

@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { primeGameAudio } from "../../audio/use-game-audio";
 import {
   createPlayHref,
   DEFAULT_LAUNCH_SETTINGS,
+  parseLaunchSettings,
   type EffectsMode,
   type GameDifficulty,
   type GuidanceMode,
@@ -16,101 +17,184 @@ import {
   type TempoPreset,
 } from "./settings";
 
-const DIFFICULTY_OPTIONS: readonly {
-  value: GameDifficulty;
-  level: string;
-  skill: string;
-  description: string;
-  keys: readonly string[];
-}[] = [
-  {
-    value: "easy",
-    level: "Novice",
-    skill: "Single key",
-    description: "Build recall one action at a time.",
-    keys: ["C"],
-  },
-  {
-    value: "medium",
-    level: "Medium",
-    skill: "Sequence",
-    description: "Play two keys in order.",
-    keys: ["G", "I"],
-  },
-  {
-    value: "hard",
-    level: "Hard",
-    skill: "Chord",
-    description: "Strike keys together.",
-    keys: ["⇧", "E"],
-  },
+type TitleView = "menu" | "options" | "scores" | "help" | "credits";
+type MenuAction = Exclude<TitleView, "menu"> | "start";
+
+const SETTINGS_STORAGE_KEY = "shortcut-hero:launch-settings";
+const SCORE_PREFIX = "shortcut-hero:high-score:";
+
+const MENU_ITEMS: readonly { label: string; action: MenuAction }[] = [
+  { label: "start", action: "start" },
+  { label: "high scores", action: "scores" },
+  { label: "how to play", action: "help" },
+  { label: "options", action: "options" },
+  { label: "credits", action: "credits" },
 ];
 
-const GUIDANCE_OPTIONS: readonly {
-  value: GuidanceMode;
+const DIFFICULTIES: readonly GameDifficulty[] = ["easy", "medium", "hard"];
+const GUIDANCE: readonly GuidanceMode[] = ["novice", "pro"];
+const PACES: readonly TempoPreset[] = ["relaxed", "standard", "turbo"];
+const SESSIONS: readonly SessionLength[] = [30, 45, 60];
+const SOUND: readonly SoundMode[] = ["on", "off"];
+const EFFECTS: readonly EffectsMode[] = ["full", "system", "reduced"];
+
+const LABELS = {
+  difficulty: {
+    easy: "single keys",
+    medium: "key sequences",
+    hard: "shift chords",
+  },
+  guidance: {
+    novice: "show shortcuts",
+    pro: "hide shortcuts",
+  },
+  pace: {
+    relaxed: "140 bpm · focus",
+    standard: "180 bpm · fast",
+    turbo: "220 bpm · turbo",
+  },
+  effects: {
+    full: "full motion + bloom",
+    system: "match system motion",
+    reduced: "reduced motion",
+  },
+} as const;
+
+type ScoreEntry = {
   label: string;
-  description: string;
-}[] = [
-  {
-    value: "novice",
-    label: "Learn",
-    description: "Show the shortcut and illuminate its keys.",
-  },
-  {
-    value: "pro",
-    label: "Recall",
-    description: "Show the action only. Supply the shortcut from memory.",
-  },
-];
+  score: number;
+};
 
-const PACE_OPTIONS: readonly {
-  value: TempoPreset;
-  label: string;
-  bpm: number;
-}[] = [
-  { value: "relaxed", label: "Focus", bpm: 140 },
-  { value: "standard", label: "Fast", bpm: 180 },
-  { value: "turbo", label: "Turbo", bpm: 220 },
-];
+function cycleValue<T extends string | number>(
+  values: readonly T[],
+  current: T,
+  direction: -1 | 1,
+): T {
+  const index = Math.max(0, values.indexOf(current));
+  return values[(index + direction + values.length) % values.length];
+}
 
-const SESSION_OPTIONS: readonly SessionLength[] = [30, 45, 60];
+function restoreSettings(): LaunchSettings {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return DEFAULT_LAUNCH_SETTINGS;
+    const saved = JSON.parse(raw) as Record<string, unknown>;
+    const params = new URLSearchParams();
+    for (const key of [
+      "difficulty",
+      "guidance",
+      "pace",
+      "session",
+      "sound",
+      "effects",
+    ]) {
+      const value = saved[key];
+      if (typeof value === "string" || typeof value === "number") {
+        params.set(key, String(value));
+      }
+    }
+    return parseLaunchSettings(params);
+  } catch {
+    return DEFAULT_LAUNCH_SETTINGS;
+  }
+}
 
-const SOUND_OPTIONS: readonly { value: SoundMode; label: string }[] = [
-  { value: "on", label: "On" },
-  { value: "off", label: "Off" },
-];
-
-const EFFECTS_OPTIONS: readonly {
-  value: EffectsMode;
-  label: string;
-  description: string;
-}[] = [
-  { value: "full", label: "Full", description: "Maximum impact" },
-  { value: "system", label: "System", description: "Match motion preference" },
-  { value: "reduced", label: "Reduced", description: "Minimal motion" },
-];
-
-function ChoiceKeys({ keys }: { readonly keys: readonly string[] }) {
-  return (
-    <span className="settings-choice__keys" aria-hidden="true">
-      {keys.map((key, index) => (
-        <span className="settings-choice__key-group" key={`${key}-${index}`}>
-          {index > 0 ? (
-            <span className="settings-choice__key-joiner">
-              {keys.length === 2 && keys[0] === "⇧" ? "+" : "→"}
-            </span>
-          ) : null}
-          <kbd className="settings-choice__key">{key}</kbd>
-        </span>
-      ))}
-    </span>
-  );
+function readHighScores(): readonly ScoreEntry[] {
+  try {
+    const entries: ScoreEntry[] = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key?.startsWith(SCORE_PREFIX)) continue;
+      const score = Number(window.localStorage.getItem(key) ?? 0);
+      if (!Number.isFinite(score) || score <= 0) continue;
+      const [mode = "run", assistance = "learn", pace = "fast", duration = "45s"] =
+        key.slice(SCORE_PREFIX.length).split(":");
+      entries.push({
+        score,
+        label: `${LABELS.difficulty[mode as GameDifficulty] ?? mode} · ${
+          LABELS.guidance[assistance as GuidanceMode] ?? assistance
+        } · ${LABELS.pace[pace as TempoPreset] ?? pace} · ${duration}`,
+      });
+    }
+    return entries.sort((a, b) => b.score - a.score).slice(0, 5);
+  } catch {
+    return [];
+  }
 }
 
 export function SettingsScreen() {
   const router = useRouter();
+  const [view, setView] = useState<TitleView>("menu");
+  const [menuIndex, setMenuIndex] = useState(0);
   const [settings, setSettings] = useState<LaunchSettings>(
     DEFAULT_LAUNCH_SETTINGS,
+  );
+  const [scores, setScores] = useState<readonly ScoreEntry[]>([]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setSettings(restoreSettings());
+      setScores(readHighScores());
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch {
+      // Persistence is optional; the title screen remains usable without it.
+    }
+  }, [settings]);
+
+  const startGame = useCallback(() => {
+    void primeGameAudio(settings.pace, settings.sound === "off");
+    router.push(createPlayHref(settings));
+  }, [router, settings]);
+
+  const openView = useCallback(
+    (action: MenuAction) => {
+      if (action === "start") {
+        startGame();
+        return;
+      }
+      if (action === "scores") setScores(readHighScores());
+      setView(action);
+    },
+    [startGame],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (view !== "menu") {
+        if (event.code === "Escape") {
+          event.preventDefault();
+          setView("menu");
+        }
+        return;
+      }
+      if (event.code === "ArrowDown" || event.code === "KeyS") {
+        event.preventDefault();
+        setMenuIndex((index) => (index + 1) % MENU_ITEMS.length);
+      } else if (event.code === "ArrowUp" || event.code === "KeyW") {
+        event.preventDefault();
+        setMenuIndex((index) => (index - 1 + MENU_ITEMS.length) % MENU_ITEMS.length);
+      } else if (event.code === "Enter" || event.code === "Space") {
+        event.preventDefault();
+        openView(MENU_ITEMS[menuIndex].action);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuIndex, openView, view]);
+
+  const summary = useMemo(
+    () =>
+      `${LABELS.difficulty[settings.difficulty]} · ${
+        LABELS.guidance[settings.guidance]
+      } · ${LABELS.pace[settings.pace]} · ${settings.session}s`,
+    [settings],
   );
 
   function updateSetting<Key extends keyof LaunchSettings>(
@@ -120,215 +204,189 @@ export function SettingsScreen() {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
-  function startGame() {
-    // Prime Web Audio synchronously inside the user gesture before route teardown.
-    void primeGameAudio(settings.pace, settings.sound === "off");
-    router.push(createPlayHref(settings));
-  }
-
   return (
-    <main className="settings-screen">
-      <div className="settings-screen__frame">
-        <header className="settings-header">
-          <div className="settings-brand" aria-label="Shortcut Hero">
-            <span className="settings-brand__mark" aria-hidden="true">SH</span>
-            <span className="settings-brand__name">Shortcut Hero</span>
-          </div>
-          <div className="settings-header__status" aria-label="Platform macOS">
-            <span className="settings-header__status-light" aria-hidden="true" />
-            macOS training deck
-          </div>
-        </header>
-
-        <section className="settings-intro" aria-labelledby="settings-title">
-          <p className="settings-intro__eyebrow">Linear shortcut trainer</p>
-          <h1 className="settings-intro__title" id="settings-title">
-            Set the run.
-            <br />
-            Build the reflex.
-          </h1>
-          <p className="settings-intro__copy">
-            Turn keyboard shortcuts into muscle memory on a rhythm-driven action highway.
-          </p>
-        </section>
-
-        <form className="settings-console">
-          <fieldset className="settings-group settings-group--difficulty">
-            <legend className="settings-group__legend">
-              <span className="settings-group__index">01</span>
-              <span>Difficulty</span>
-            </legend>
-            <div className="settings-choice-grid settings-choice-grid--difficulty">
-              {DIFFICULTY_OPTIONS.map((option) => (
-                <label className="settings-choice settings-choice--difficulty" key={option.value}>
-                  <input
-                    className="settings-choice__input"
-                    type="radio"
-                    name="difficulty"
-                    value={option.value}
-                    checked={settings.difficulty === option.value}
-                    onChange={() => updateSetting("difficulty", option.value)}
-                  />
-                  <span className="settings-choice__surface">
-                    <span className="settings-choice__topline">
-                      <span className="settings-choice__title">{option.level}</span>
-                      <span className="settings-choice__skill">{option.skill}</span>
-                    </span>
-                    <span className="settings-choice__description">{option.description}</span>
-                    <ChoiceKeys keys={option.keys} />
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="settings-console__secondary-grid">
-            <fieldset className="settings-group">
-              <legend className="settings-group__legend">
-                <span className="settings-group__index">02</span>
-                <span>Guidance</span>
-              </legend>
-              <div className="settings-choice-grid settings-choice-grid--split">
-                {GUIDANCE_OPTIONS.map((option) => (
-                  <label className="settings-choice settings-choice--compact" key={option.value}>
-                    <input
-                      className="settings-choice__input"
-                      type="radio"
-                      name="guidance"
-                      value={option.value}
-                      checked={settings.guidance === option.value}
-                      onChange={() => updateSetting("guidance", option.value)}
-                    />
-                    <span className="settings-choice__surface">
-                      <span className="settings-choice__title">{option.label}</span>
-                      <span className="settings-choice__description">{option.description}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="settings-group">
-              <legend className="settings-group__legend">
-                <span className="settings-group__index">03</span>
-                <span>Pace</span>
-              </legend>
-              <div className="settings-choice-grid settings-choice-grid--three">
-                {PACE_OPTIONS.map((option) => (
-                  <label className="settings-choice settings-choice--compact" key={option.value}>
-                    <input
-                      className="settings-choice__input"
-                      type="radio"
-                      name="pace"
-                      value={option.value}
-                      checked={settings.pace === option.value}
-                      onChange={() => updateSetting("pace", option.value)}
-                    />
-                    <span className="settings-choice__surface">
-                      <span className="settings-choice__title">{option.label}</span>
-                      <span className="settings-choice__metric">{option.bpm} BPM</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="settings-group">
-              <legend className="settings-group__legend">
-                <span className="settings-group__index">04</span>
-                <span>Session</span>
-              </legend>
-              <div className="settings-choice-grid settings-choice-grid--three">
-                {SESSION_OPTIONS.map((duration) => (
-                  <label className="settings-choice settings-choice--compact" key={duration}>
-                    <input
-                      className="settings-choice__input"
-                      type="radio"
-                      name="session"
-                      value={duration}
-                      checked={settings.session === duration}
-                      onChange={() => updateSetting("session", duration)}
-                    />
-                    <span className="settings-choice__surface">
-                      <span className="settings-choice__title">{duration}</span>
-                      <span className="settings-choice__metric">seconds</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="settings-group">
-              <legend className="settings-group__legend">
-                <span className="settings-group__index">05</span>
-                <span>Sound</span>
-              </legend>
-              <div className="settings-choice-grid settings-choice-grid--split">
-                {SOUND_OPTIONS.map((option) => (
-                  <label className="settings-choice settings-choice--compact" key={option.value}>
-                    <input
-                      className="settings-choice__input"
-                      type="radio"
-                      name="sound"
-                      value={option.value}
-                      checked={settings.sound === option.value}
-                      onChange={() => updateSetting("sound", option.value)}
-                    />
-                    <span className="settings-choice__surface">
-                      <span className="settings-choice__title">{option.label}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="settings-group settings-group--effects">
-              <legend className="settings-group__legend">
-                <span className="settings-group__index">06</span>
-                <span>Effects</span>
-              </legend>
-              <div className="settings-choice-grid settings-choice-grid--three">
-                {EFFECTS_OPTIONS.map((option) => (
-                  <label className="settings-choice settings-choice--compact" key={option.value}>
-                    <input
-                      className="settings-choice__input"
-                      type="radio"
-                      name="effects"
-                      value={option.value}
-                      checked={settings.effects === option.value}
-                      onChange={() => updateSetting("effects", option.value)}
-                    />
-                    <span className="settings-choice__surface">
-                      <span className="settings-choice__title">{option.label}</span>
-                      <span className="settings-choice__metric">{option.description}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          </div>
-
-          <footer className="settings-launch">
-            <p className="settings-launch__summary" aria-live="polite">
-              <span>{DIFFICULTY_OPTIONS.find((option) => option.value === settings.difficulty)?.level}</span>
-              <span aria-hidden="true"> / </span>
-              <span>{GUIDANCE_OPTIONS.find((option) => option.value === settings.guidance)?.label}</span>
-              <span aria-hidden="true"> / </span>
-              <span>{PACE_OPTIONS.find((option) => option.value === settings.pace)?.bpm} BPM</span>
-              <span aria-hidden="true"> / </span>
-              <span>{settings.session} SEC</span>
-            </p>
-            <button
-              className="settings-launch__button"
-              type="button"
-              onClick={startGame}
-            >
-              <span>New game</span>
-              <span className="settings-launch__button-icon" aria-hidden="true">↗</span>
-            </button>
-          </footer>
-        </form>
+    <main className="title-screen">
+      <div className="title-world" aria-hidden="true">
+        <div className="title-world__sky" />
+        <div className="title-world__sun" />
+        <div className="title-world__haze" />
+        <div className="title-world__mountains title-world__mountains--far" />
+        <div className="title-world__mountains title-world__mountains--near" />
+        <div className="title-world__highway">
+          <span className="title-world__rail title-world__rail--left" />
+          <span className="title-world__rail title-world__rail--right" />
+          <span className="title-world__signal" />
+        </div>
+        <div className="title-world__grain" />
       </div>
+
+      <header className="title-brand">
+        <span className="title-brand__name">shortcut hero</span>
+        <span className="title-brand__edition">linear edition · macOS</span>
+      </header>
+
+      {view === "menu" ? (
+        <section className="title-menu" aria-label="Main menu">
+          <p className="title-menu__prelude">enter the flow</p>
+          <nav className="title-menu__items">
+            {MENU_ITEMS.map((item, index) => (
+              <button
+                type="button"
+                className={`title-menu__item${index === menuIndex ? " is-active" : ""}`}
+                key={item.action}
+                aria-current={index === menuIndex ? "true" : undefined}
+                onMouseEnter={() => setMenuIndex(index)}
+                onFocus={() => setMenuIndex(index)}
+                onClick={() => openView(item.action)}
+              >
+                <span className="title-menu__cursor" aria-hidden="true">›</span>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </section>
+      ) : null}
+
+      {view === "options" ? (
+        <TitlePanel title="options" subtitle="shape the next run">
+          <div className="option-list">
+            <OptionRow
+              label="difficulty"
+              value={LABELS.difficulty[settings.difficulty]}
+              onPrevious={() => updateSetting("difficulty", cycleValue(DIFFICULTIES, settings.difficulty, -1))}
+              onNext={() => updateSetting("difficulty", cycleValue(DIFFICULTIES, settings.difficulty, 1))}
+            />
+            <OptionRow
+              label="guidance"
+              value={LABELS.guidance[settings.guidance]}
+              onPrevious={() => updateSetting("guidance", cycleValue(GUIDANCE, settings.guidance, -1))}
+              onNext={() => updateSetting("guidance", cycleValue(GUIDANCE, settings.guidance, 1))}
+            />
+            <OptionRow
+              label="pace"
+              value={LABELS.pace[settings.pace]}
+              onPrevious={() => updateSetting("pace", cycleValue(PACES, settings.pace, -1))}
+              onNext={() => updateSetting("pace", cycleValue(PACES, settings.pace, 1))}
+            />
+            <OptionRow
+              label="session"
+              value={`${settings.session} seconds`}
+              onPrevious={() => updateSetting("session", cycleValue(SESSIONS, settings.session, -1))}
+              onNext={() => updateSetting("session", cycleValue(SESSIONS, settings.session, 1))}
+            />
+            <OptionRow
+              label="music"
+              value={settings.sound === "on" ? "original score on" : "music off"}
+              onPrevious={() => updateSetting("sound", cycleValue(SOUND, settings.sound, -1))}
+              onNext={() => updateSetting("sound", cycleValue(SOUND, settings.sound, 1))}
+            />
+            <OptionRow
+              label="effects"
+              value={LABELS.effects[settings.effects]}
+              onPrevious={() => updateSetting("effects", cycleValue(EFFECTS, settings.effects, -1))}
+              onNext={() => updateSetting("effects", cycleValue(EFFECTS, settings.effects, 1))}
+            />
+          </div>
+          <BackButton onClick={() => setView("menu")} />
+        </TitlePanel>
+      ) : null}
+
+      {view === "scores" ? (
+        <TitlePanel title="high scores" subtitle="your strongest runs">
+          {scores.length > 0 ? (
+            <ol className="score-list">
+              {scores.map((entry, index) => (
+                <li key={`${entry.label}-${entry.score}`}>
+                  <span className="score-list__rank">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="score-list__label">{entry.label}</span>
+                  <strong>{entry.score.toLocaleString("en-US")}</strong>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="title-panel__empty">No runs yet. The highway is waiting.</p>
+          )}
+          <BackButton onClick={() => setView("menu")} />
+        </TitlePanel>
+      ) : null}
+
+      {view === "help" ? (
+        <TitlePanel title="how to play" subtitle="match the action to its shortcut">
+          <ol className="instruction-list">
+            <li><span>01</span>Read the action.</li>
+            <li><span>02</span>Press its shortcut at the strike line.</li>
+            <li><span>03</span>Chain hits for a higher score.</li>
+          </ol>
+          <BackButton onClick={() => setView("menu")} />
+        </TitlePanel>
+      ) : null}
+
+      {view === "credits" ? (
+        <TitlePanel title="credits" subtitle="built in one improbable sprint">
+          <div className="credit-copy">
+            <p>Designed and built as a shortcut-learning experiment.</p>
+            <p>Inspired by Linear, musical games, golden-hour skies, and the pleasure of remembering without looking.</p>
+          </div>
+          <BackButton onClick={() => setView("menu")} />
+        </TitlePanel>
+      ) : null}
+
+      <footer className="title-footer">
+        <span>{summary}</span>
+        <span>↑ ↓ select · enter confirm · esc back</span>
+      </footer>
     </main>
+  );
+}
+
+function TitlePanel({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`title-panel${title === "options" ? " title-panel--options" : ""}`}
+      aria-labelledby="title-panel-heading"
+    >
+      <p className="title-panel__subtitle">{subtitle}</p>
+      <h1 id="title-panel-heading">{title}</h1>
+      {children}
+    </section>
+  );
+}
+
+function OptionRow({
+  label,
+  value,
+  onPrevious,
+  onNext,
+}: {
+  label: string;
+  value: string;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="option-row">
+      <span className="option-row__label">{label}</span>
+      <span className="option-row__control">
+        <button type="button" aria-label={`Previous ${label}`} onClick={onPrevious}>‹</button>
+        <strong>{value}</strong>
+        <button type="button" aria-label={`Next ${label}`} onClick={onNext}>›</button>
+      </span>
+    </div>
+  );
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="title-panel__back" onClick={onClick}>
+      <span aria-hidden="true">←</span> back
+    </button>
   );
 }

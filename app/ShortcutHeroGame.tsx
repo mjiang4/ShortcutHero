@@ -31,7 +31,6 @@ type JudgementTone = HitJudgement | "miss" | "wait" | "sequence";
 type Judgement = {
   id: number;
   label: string;
-  detail?: string;
   tone: JudgementTone;
 };
 type DepartingCue = {
@@ -105,8 +104,9 @@ export function ShortcutHeroGame({
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [judgement, setJudgement] = useState<Judgement | null>(null);
   const [departingCues, setDepartingCues] = useState<readonly DepartingCue[]>([]);
-  const [highScore, setHighScore] = useState(0);
+  const [, setHighScore] = useState(0);
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
   const feedbackId = useRef(0);
   const judgementId = useRef(0);
@@ -137,9 +137,9 @@ export function ShortcutHeroGame({
   }, []);
 
   const showJudgement = useCallback(
-    (label: string, tone: JudgementTone, detail?: string) => {
+    (label: string, tone: JudgementTone) => {
       judgementId.current += 1;
-      setJudgement({ id: judgementId.current, label, detail, tone });
+      setJudgement({ id: judgementId.current, label, tone });
       if (judgementTimer.current) clearTimeout(judgementTimer.current);
       judgementTimer.current = setTimeout(() => setJudgement(null), 680);
     },
@@ -200,23 +200,16 @@ export function ShortcutHeroGame({
       for (const effect of effects) {
         switch (effect.type) {
           case "input-progress":
-            showJudgement(
-              `${effect.step} / ${effect.total}`,
-              "sequence",
-              "Finish inside the strike gate",
-            );
+            showJudgement(`${effect.step} / ${effect.total}`, "sequence");
             break;
           case "wrong-input":
             emitFeedback("recovered", 0.32);
-            showJudgement("Wrong key", "miss", "Combo broken · recover it");
+            showJudgement("Wrong key", "miss");
             break;
           case "timing-input":
             showJudgement(
               effect.timing === "too-early" ? "Too early" : "Too late",
               "wait",
-              effect.timing === "too-early"
-                ? "Wait for the strike gate"
-                : "That cue has passed",
             );
             break;
           case "hit": {
@@ -233,17 +226,11 @@ export function ShortcutHeroGame({
               resolvedPrompt?.promptId,
             );
             retainResolvedCue(resolvedPrompt, "cleared", nowMs);
-            const offset = Math.round(Math.abs(effect.timingOffsetMs));
-            const timingDetail =
-              effect.judgement === "perfect"
-                ? `${offset <= 12 ? "On beat" : `${offset} ms`} · +${effect.points}`
-                : `${offset} ms ${effect.timingOffsetMs < 0 ? "early" : "late"} · +${effect.points}`;
             showJudgement(
               effect.outcome === "recovered"
                 ? "Recovered"
                 : effect.judgement,
               effect.judgement,
-              timingDetail,
             );
             break;
           }
@@ -259,11 +246,7 @@ export function ShortcutHeroGame({
             playMiss();
             emitFeedback("miss", 0.86, resolvedPrompt?.promptId);
             retainResolvedCue(resolvedPrompt, "missed", nowMs);
-            showJudgement(
-              "Miss",
-              "miss",
-              effect.requeued ? "Returning later" : "Cue lost",
-            );
+            showJudgement("Miss", "miss");
             break;
           case "finished":
             persistResults(effect.results, sourceSession);
@@ -297,8 +280,8 @@ export function ShortcutHeroGame({
 
   useEffect(() => {
     setMuted(!soundEnabled);
-    void startAudio(settings.speed);
-  }, [setMuted, settings.speed, soundEnabled, startAudio]);
+    if (sceneReady) void startAudio(settings.speed);
+  }, [sceneReady, setMuted, settings.speed, soundEnabled, startAudio]);
 
   useEffect(() => {
     const key = getHighScoreKey(settings);
@@ -313,7 +296,7 @@ export function ShortcutHeroGame({
   }, [settings]);
 
   useEffect(() => {
-    if (viewPhase !== "countdown") return;
+    if (viewPhase !== "countdown" || !sceneReady) return;
 
     let next = 3;
     const timer = window.setInterval(() => {
@@ -333,7 +316,7 @@ export function ShortcutHeroGame({
     }, 60_000 / SPEED_BPM[settings.speed]);
 
     return () => window.clearInterval(timer);
-  }, [playStart, setSession, settings, viewPhase]);
+  }, [playStart, sceneReady, setSession, settings, viewPhase]);
 
   useEffect(() => {
     if (viewPhase !== "game" || session?.phase !== "playing") return;
@@ -533,6 +516,14 @@ export function ShortcutHeroGame({
             completed) *
             100,
         );
+  const actLabel =
+    runProgress < 0.18
+      ? "Ignition"
+      : runProgress < 0.56
+        ? "Acceleration"
+        : runProgress < 0.84
+          ? "Flow"
+          : "Overload";
 
   return (
     <main className="shortcut-hero">
@@ -543,40 +534,25 @@ export function ShortcutHeroGame({
           hintKeys={hintKeysFor(session)}
           showShortcuts={settings.assistance === "novice"}
           combo={session?.combo ?? 0}
+          runProgress={runProgress}
           feedback={feedback}
           paused={session?.phase === "paused"}
           reducedMotion={reducedMotion}
           bloom={!reducedMotion}
+          onReady={() => setSceneReady(true)}
         />
       </div>
 
       <div className="ui-layer">
-        <header className="topbar">
-          <div className="brand" aria-label="Shortcut Hero">
-            <span className="brand-mark" aria-hidden="true" />
-            Shortcut Hero
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className="edition-badge">
-              <span className="status-dot" aria-hidden="true" />
-              Linear edition · macOS
-            </span>
-            <button
-              type="button"
-              className="quiet-button"
-              onClick={toggleMuted}
-              aria-label={isMuted ? "Turn sound on" : "Mute sound"}
-            >
-              {isMuted ? "Sound off" : "Sound on"}
-            </button>
-          </div>
-        </header>
-
         {viewPhase === "countdown" ? (
           <div className="countdown-overlay" aria-live="assertive">
-            <span className="countdown-number" key={countdown}>
-              {countdown}
-            </span>
+            {sceneReady ? (
+              <span className="countdown-number" key={countdown}>
+                {countdown}
+              </span>
+            ) : (
+              <span className="countdown-loading">loading game…</span>
+            )}
           </div>
         ) : null}
 
@@ -586,7 +562,6 @@ export function ShortcutHeroGame({
               <div className="hud-cluster">
                 <HudStat label="Score" value={SCORE_FORMATTER.format(session.score)} />
                 <HudStat label="Accuracy" value={`${accuracy}%`} />
-                <HudStat label="Best" value={SCORE_FORMATTER.format(highScore)} />
               </div>
               <div className="combo-display" aria-live="polite">
                 <span className="combo-value">{session.combo}</span>
@@ -596,9 +571,17 @@ export function ShortcutHeroGame({
               </div>
               <div className="hud-cluster is-right">
                 <HudStat
-                  label="Mode"
-                  value={`${DIFFICULTY_LABELS[settings.mode]} · ${settings.assistance === "novice" ? "Learn" : "Recall"}`}
+                  label={actLabel}
+                  value={`${remainingSeconds}s`}
                 />
+                <button
+                  type="button"
+                  className="quiet-button"
+                  onClick={toggleMuted}
+                  aria-label={isMuted ? "Turn sound on" : "Mute sound"}
+                >
+                  {isMuted ? "sound off" : "sound on"}
+                </button>
                 <button
                   type="button"
                   className="quiet-button"
@@ -623,7 +606,7 @@ export function ShortcutHeroGame({
                 />
               </div>
               <span className="progress-time">
-                {remainingSeconds}s
+                {DIFFICULTY_LABELS[settings.mode]} · {settings.assistance === "novice" ? "Learn" : "Recall"}
               </span>
             </div>
 
@@ -634,24 +617,23 @@ export function ShortcutHeroGame({
                 aria-live="polite"
               >
                 <span className="judgement-label">{judgement.label}</span>
-                {judgement.detail ? (
-                  <span className="judgement-detail">{judgement.detail}</span>
-                ) : null}
               </div>
             ) : null}
 
             {session.phase === "paused" ? (
               <div className="pause-overlay">
                 <div className="pause-card">
-                  <p className="eyebrow">Run paused</p>
-                  <h2>Hold that thought.</h2>
-                  <p>Your prompt is frozen. Resume when your hands are ready.</p>
+                  <h2>Paused</h2>
+                  <p>Resume, restart, or return to the title screen.</p>
                   <div className="pause-actions">
                     <button type="button" className="primary-button" onClick={resume}>
                       Resume
                     </button>
+                    <button type="button" className="secondary-button" onClick={beginRun}>
+                      Restart
+                    </button>
                     <button type="button" className="secondary-button" onClick={returnToSettings}>
-                      End run
+                      Title
                     </button>
                   </div>
                 </div>
@@ -663,18 +645,9 @@ export function ShortcutHeroGame({
         {viewPhase === "results" && results ? (
           <section className="results-screen" aria-labelledby="results-title">
             <div className="results-card">
-              <p className="eyebrow">Run complete</p>
-              <h1 id="results-title">
-                {results.accuracyPct >= 90
-                  ? "Shortcut instinct."
-                  : results.accuracyPct >= 70
-                    ? "Finding the flow."
-                    : "Memory in motion."}
-              </h1>
+              <h1 id="results-title">Run complete</h1>
               <p className="results-subtitle">
-                {results.practice.length === 0
-                  ? "Clean run. Try Recall guidance or turn up the pace."
-                  : "The misses below are already queued for your next run."}
+                {results.correctAnswers} correct · {results.misses} missed
               </p>
 
               <div className="results-score">
@@ -690,15 +663,40 @@ export function ShortcutHeroGame({
                 <ResultStat label="Shortcuts" value={String(results.uniqueShortcutsCorrect)} />
               </div>
 
+              {results.correctShortcuts.length > 0 ? (
+                <section className="results-breakdown" aria-labelledby="correct-shortcuts-title">
+                  <h2 id="correct-shortcuts-title">You got these right</h2>
+                  <ul className="correct-list">
+                    {results.correctShortcuts.map((item) => (
+                      <li className="correct-item" key={item.shortcut.id}>
+                        <span className="correct-item__identity">
+                          <strong>{item.shortcut.action}</strong>
+                          <span className="review-shortcut">{item.shortcut.input.display}</span>
+                        </span>
+                        <span className="correct-item__stats">
+                          {item.correct}/{item.attempts} correct
+                          {item.perfectHits > 0
+                            ? ` · ${item.perfectHits} perfect`
+                            : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               {results.practice.length > 0 ? (
-                <ul className="review-list" aria-label="Shortcuts to practise">
-                  {results.practice.map((item) => (
-                    <li className="review-item" key={item.shortcut.id}>
-                      <span>{item.shortcut.action}</span>
-                      <span className="review-shortcut">{item.shortcut.input.display}</span>
-                    </li>
-                  ))}
-                </ul>
+                <section className="results-breakdown" aria-labelledby="practice-shortcuts-title">
+                  <h2 id="practice-shortcuts-title">Practice these next</h2>
+                  <ul className="review-list" aria-label="Shortcuts to practise">
+                    {results.practice.map((item) => (
+                      <li className="review-item" key={item.shortcut.id}>
+                        <span>{item.shortcut.action}</span>
+                        <span className="review-shortcut">{item.shortcut.input.display}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ) : null}
 
               <div className="results-actions">
@@ -706,7 +704,7 @@ export function ShortcutHeroGame({
                   Play again
                 </button>
                 <button type="button" className="secondary-button" onClick={returnToSettings}>
-                  Change settings
+                  Title
                 </button>
               </div>
             </div>

@@ -108,6 +108,15 @@ export interface PracticeShortcut {
   readonly wrongInputs: number;
 }
 
+export interface CorrectShortcutSummary {
+  readonly shortcut: ShortcutDefinition;
+  readonly attempts: number;
+  readonly correct: number;
+  readonly cleanHits: number;
+  readonly perfectHits: number;
+  readonly accuracyPct: number;
+}
+
 export interface GameResults {
   readonly score: number;
   readonly accuracyPct: number;
@@ -119,6 +128,8 @@ export interface GameResults {
   readonly correctAnswers: number;
   readonly uniqueShortcutsCorrect: number;
   readonly durationMs: number;
+  /** Best-known shortcuts from this run, ranked by accuracy and clean hits. */
+  readonly correctShortcuts: readonly CorrectShortcutSummary[];
   readonly practice: readonly PracticeShortcut[];
 }
 

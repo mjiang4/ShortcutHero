@@ -59,11 +59,15 @@ export interface GameSceneProps {
   /** Shows cue shortcut labels. Set false for Pro mode. */
   showShortcuts?: boolean;
   combo?: number;
+  /** 0..1 progression through the current run; drives the environmental act. */
+  runProgress?: number;
   feedback?: SceneFeedback | null;
   paused?: boolean;
   reducedMotion?: boolean;
   /** Disable post-processing on constrained devices or in tests. */
   bloom?: boolean;
+  /** Fires when the WebGL canvas has been created and can begin the count-in. */
+  onReady?: () => void;
   className?: string;
   style?: CSSProperties;
 }

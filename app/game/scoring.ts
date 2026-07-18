@@ -1,5 +1,6 @@
 import type {
   ComboTier,
+  CorrectShortcutSummary,
   GameResults,
   HitJudgement,
   PracticeShortcut,
@@ -87,6 +88,51 @@ function getPracticeShortcuts(
     .slice(0, 3);
 }
 
+interface CorrectAccumulator {
+  shortcut: ShortcutDefinition;
+  attempts: number;
+  correct: number;
+  cleanHits: number;
+  perfectHits: number;
+}
+
+function getCorrectShortcuts(
+  attempts: readonly PromptAttempt[],
+): readonly CorrectShortcutSummary[] {
+  const byShortcut = new Map<string, CorrectAccumulator>();
+
+  for (const attempt of attempts) {
+    const current = byShortcut.get(attempt.shortcut.id) ?? {
+      shortcut: attempt.shortcut,
+      attempts: 0,
+      correct: 0,
+      cleanHits: 0,
+      perfectHits: 0,
+    };
+    current.attempts += 1;
+    if (attempt.outcome !== "miss") current.correct += 1;
+    if (attempt.outcome === "clean") current.cleanHits += 1;
+    if (attempt.judgement === "perfect") current.perfectHits += 1;
+    byShortcut.set(attempt.shortcut.id, current);
+  }
+
+  return [...byShortcut.values()]
+    .filter((item) => item.correct > 0)
+    .map((item) => ({
+      ...item,
+      accuracyPct: Math.round((item.correct / item.attempts) * 100),
+    }))
+    .sort(
+      (a, b) =>
+        b.accuracyPct - a.accuracyPct ||
+        b.cleanHits - a.cleanHits ||
+        b.perfectHits - a.perfectHits ||
+        b.correct - a.correct ||
+        a.shortcut.action.localeCompare(b.shortcut.action),
+    )
+    .slice(0, 5);
+}
+
 export function calculateResults(
   attempts: readonly PromptAttempt[],
   score: number,
@@ -124,6 +170,7 @@ export function calculateResults(
       startedAtMs === null || finishedAtMs === null
         ? 0
         : Math.max(0, finishedAtMs - startedAtMs),
+    correctShortcuts: getCorrectShortcuts(attempts),
     practice: getPracticeShortcuts(attempts),
   };
 }
