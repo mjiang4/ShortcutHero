@@ -5,9 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameAudio } from "./audio";
 import { GameScene, type SceneCue, type SceneFeedback } from "./components/game";
 import {
+  APPROACH_DURATION_MS,
   createGameSession,
   getApproachProgress,
   getHighScoreKey,
+  getVisiblePromptTimings,
   handleSessionKey,
   pauseSession,
   resumeSession,
@@ -18,13 +20,27 @@ import {
   type GameResults,
   type GameSession,
   type GameSettings,
+  type HitJudgement,
+  type ActivePrompt,
   type ShortcutDefinition,
   type SpeedPreset,
   type AssistanceMode,
 } from "./game";
 
 type ViewPhase = "menu" | "countdown" | "game" | "results";
-type Judgement = { id: number; text: string; tone: "hit" | "miss" };
+type JudgementTone = HitJudgement | "miss" | "wait" | "sequence";
+type Judgement = {
+  id: number;
+  label: string;
+  detail?: string;
+  tone: JudgementTone;
+};
+type DepartingCue = {
+  prompt: ActivePrompt;
+  state: "cleared" | "missed";
+  resolvedAtMs: number;
+  startProgress: number;
+};
 
 const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
@@ -47,9 +63,17 @@ const ASSISTANCE_OPTIONS: readonly {
 
 const SPEED_OPTIONS: readonly { value: SpeedPreset; label: string }[] = [
   { value: "relaxed", label: "Relaxed" },
-  { value: "standard", label: "Standard" },
+  { value: "standard", label: "Fast" },
   { value: "turbo", label: "Turbo" },
 ];
+
+const SPEED_BPM: Readonly<Record<SpeedPreset, number>> = {
+  relaxed: 120,
+  standard: 150,
+  turbo: 200,
+};
+
+const DEPARTURE_DURATION_MS = 820;
 
 const DEFAULT_SETTINGS: GameSettings = {
   mode: "showcase",
@@ -92,16 +116,19 @@ export function ShortcutHeroGame() {
   const [pressedKeys, setPressedKeys] = useState<readonly string[]>([]);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [judgement, setJudgement] = useState<Judgement | null>(null);
+  const [departingCues, setDepartingCues] = useState<readonly DepartingCue[]>([]);
   const [highScore, setHighScore] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
   const feedbackId = useRef(0);
   const judgementId = useRef(0);
   const judgementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finishAudioTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     isMuted,
     start: startAudio,
+    pause: pauseAudio,
     stop: stopAudio,
     toggleMuted,
     playStart,
@@ -115,17 +142,40 @@ export function ShortcutHeroGame() {
     setSessionState(next);
   }, []);
 
-  const showJudgement = useCallback((text: string, tone: "hit" | "miss") => {
-    judgementId.current += 1;
-    setJudgement({ id: judgementId.current, text, tone });
-    if (judgementTimer.current) clearTimeout(judgementTimer.current);
-    judgementTimer.current = setTimeout(() => setJudgement(null), 760);
-  }, []);
+  const showJudgement = useCallback(
+    (label: string, tone: JudgementTone, detail?: string) => {
+      judgementId.current += 1;
+      setJudgement({ id: judgementId.current, label, detail, tone });
+      if (judgementTimer.current) clearTimeout(judgementTimer.current);
+      judgementTimer.current = setTimeout(() => setJudgement(null), 680);
+    },
+    [],
+  );
 
   const emitFeedback = useCallback(
-    (type: SceneFeedback["type"], strength = 0.7) => {
+    (type: SceneFeedback["type"], strength = 0.7, cueId?: string) => {
       feedbackId.current += 1;
-      setFeedback({ id: feedbackId.current, type, strength });
+      setFeedback({ id: feedbackId.current, type, strength, cueId });
+    },
+    [],
+  );
+
+  const retainResolvedCue = useCallback(
+    (
+      prompt: ActivePrompt | null,
+      state: DepartingCue["state"],
+      nowMs: number,
+    ) => {
+      if (!prompt) return;
+      setDepartingCues((current) => [
+        ...current.filter((cue) => cue.prompt.promptId !== prompt.promptId),
+        {
+          prompt,
+          state,
+          resolvedAtMs: nowMs,
+          startProgress: getApproachProgress(prompt, nowMs),
+        },
+      ]);
     },
     [],
   );
@@ -147,48 +197,100 @@ export function ShortcutHeroGame() {
   }, []);
 
   const processEffects = useCallback(
-    (effects: readonly GameEffect[], sourceSession: GameSession) => {
+    (
+      effects: readonly GameEffect[],
+      sourceSession: GameSession,
+      resolvedPrompt: ActivePrompt | null,
+      nowMs: number,
+    ) => {
       for (const effect of effects) {
         switch (effect.type) {
           case "input-progress":
-            showJudgement(`${effect.step} / ${effect.total}`, "hit");
+            showJudgement(
+              `${effect.step} / ${effect.total}`,
+              "sequence",
+              "Finish inside the strike gate",
+            );
             break;
           case "wrong-input":
             emitFeedback("recovered", 0.32);
-            showJudgement("Try again", "miss");
+            showJudgement("Wrong key", "miss", "Combo broken · recover it");
+            break;
+          case "timing-input":
+            showJudgement(
+              effect.timing === "too-early" ? "Too early" : "Too late",
+              "wait",
+              effect.timing === "too-early"
+                ? "Wait for the strike gate"
+                : "That cue has passed",
+            );
             break;
           case "hit": {
-            const perfect = effect.outcome === "clean" && effect.points >= 180;
-            playHit(perfect ? "perfect" : "good");
-            emitFeedback(effect.outcome === "clean" ? "hit" : "recovered");
+            const strength =
+              effect.judgement === "perfect"
+                ? 1
+                : effect.judgement === "good"
+                  ? 0.82
+                  : 0.62;
+            playHit(effect.judgement, effect.combo);
+            emitFeedback(
+              effect.outcome === "clean" ? "hit" : "recovered",
+              strength,
+              resolvedPrompt?.promptId,
+            );
+            retainResolvedCue(resolvedPrompt, "cleared", nowMs);
+            const offset = Math.round(Math.abs(effect.timingOffsetMs));
+            const timingDetail =
+              effect.judgement === "perfect"
+                ? `${offset <= 12 ? "On beat" : `${offset} ms`} · +${effect.points}`
+                : `${offset} ms ${effect.timingOffsetMs < 0 ? "early" : "late"} · +${effect.points}`;
             showJudgement(
               effect.outcome === "recovered"
-                ? `Recovered  +${effect.points}`
-                : `${perfect ? "Instant" : "Clear"}  +${effect.points}`,
-              "hit",
+                ? "Recovered"
+                : effect.judgement,
+              effect.judgement,
+              timingDetail,
             );
             break;
           }
           case "combo-tier":
             playCombo(effect.combo);
-            emitFeedback("combo", effect.tier === "flow" ? 1 : 0.72);
-            showJudgement(effect.tier === "flow" ? "Flow state" : `${effect.combo} combo`, "hit");
+            emitFeedback(
+              "combo",
+              effect.tier === "flow" ? 1 : 0.72,
+              resolvedPrompt?.promptId,
+            );
             break;
           case "miss":
             playMiss();
-            emitFeedback("miss", 0.78);
-            showJudgement(effect.requeued ? "Miss · returning later" : "Miss", "miss");
+            emitFeedback("miss", 0.86, resolvedPrompt?.promptId);
+            retainResolvedCue(resolvedPrompt, "missed", nowMs);
+            showJudgement(
+              "Miss",
+              "miss",
+              effect.requeued ? "Returning later" : "Cue lost",
+            );
             break;
           case "finished":
             persistResults(effect.results, sourceSession);
             playCombo(12);
-            setTimeout(stopAudio, 900);
+            if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
+            finishAudioTimer.current = setTimeout(stopAudio, 900);
             setViewPhase("results");
             break;
         }
       }
     },
-    [emitFeedback, persistResults, playCombo, playHit, playMiss, showJudgement, stopAudio],
+    [
+      emitFeedback,
+      persistResults,
+      playCombo,
+      playHit,
+      playMiss,
+      retainResolvedCue,
+      showJudgement,
+      stopAudio,
+    ],
   );
 
   useEffect(() => {
@@ -229,7 +331,7 @@ export function ShortcutHeroGame() {
       setSession(nextSession);
       playStart();
       setViewPhase("game");
-    }, 720);
+    }, 60_000 / SPEED_BPM[settings.speed]);
 
     return () => window.clearInterval(timer);
   }, [playStart, setSession, settings, viewPhase]);
@@ -246,7 +348,7 @@ export function ShortcutHeroGame() {
       const update = tickSession(current, now);
       if (update.session !== current) {
         setSession(update.session);
-        processEffects(update.effects, update.session);
+        processEffects(update.effects, update.session, current.active, now);
       }
       if (now - lastRenderAt >= 30) {
         lastRenderAt = now;
@@ -271,6 +373,7 @@ export function ShortcutHeroGame() {
         event.preventDefault();
         if (current.phase === "playing") {
           setSession(pauseSession(current, performance.now()));
+          pauseAudio();
         }
         return;
       }
@@ -282,10 +385,11 @@ export function ShortcutHeroGame() {
         150,
       );
 
-      const update = handleSessionKey(current, event, performance.now());
+      const now = performance.now();
+      const update = handleSessionKey(current, event, now);
       if (update.preventDefault) event.preventDefault();
       if (update.session !== current) setSession(update.session);
-      processEffects(update.effects, update.session);
+      processEffects(update.effects, update.session, current.active, now);
     };
 
     const releaseKey = (event: KeyboardEvent) => {
@@ -296,6 +400,7 @@ export function ShortcutHeroGame() {
       const current = sessionRef.current;
       if (current?.phase === "playing") {
         setSession(pauseSession(current, performance.now()));
+        pauseAudio();
       }
       setPressedKeys([]);
     };
@@ -310,11 +415,12 @@ export function ShortcutHeroGame() {
       window.removeEventListener("blur", pauseOnBlur);
       document.removeEventListener("visibilitychange", pauseOnBlur);
     };
-  }, [processEffects, setSession, viewPhase]);
+  }, [pauseAudio, processEffects, setSession, viewPhase]);
 
   useEffect(
     () => () => {
       if (judgementTimer.current) clearTimeout(judgementTimer.current);
+      if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
     },
     [],
   );
@@ -323,28 +429,52 @@ export function ShortcutHeroGame() {
     setResults(null);
     setFeedback(null);
     setJudgement(null);
+    setDepartingCues([]);
     setSession(null);
     setCountdown(3);
-    void startAudio();
+    if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
+    void startAudio(settings.speed);
     setViewPhase("countdown");
-  }, [setSession, startAudio]);
+  }, [setSession, settings.speed, startAudio]);
 
   const returnToMenu = useCallback(() => {
+    if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
     stopAudio();
     setSession(null);
     setResults(null);
     setFeedback(null);
+    setDepartingCues([]);
     setViewPhase("menu");
   }, [setSession, stopAudio]);
 
-  const resume = useCallback(() => {
+  const resume = useCallback(async () => {
     const current = sessionRef.current;
     if (!current || current.phase !== "paused") return;
-    void startAudio();
-    setSession(resumeSession(current, performance.now()));
-  }, [setSession, startAudio]);
+    await startAudio(settings.speed);
+    const now = performance.now();
+    const beatMs = 60_000 / SPEED_BPM[settings.speed];
+    const pausedAt = current.pausedAtMs ?? now;
+    const remainingToStrike = current.active
+      ? Math.max(0, current.active.strikeAtMs - pausedAt)
+      : beatMs;
+    const beatsToStrike = Math.max(1, Math.ceil(remainingToStrike / beatMs));
+    const alignedRemaining = beatsToStrike * beatMs + 35;
+    const alignmentDelay = Math.max(0, alignedRemaining - remainingToStrike);
+    const pausedFor = Math.max(0, now - pausedAt);
+    setDepartingCues((cues) =>
+      cues.map((cue) => ({
+        ...cue,
+        resolvedAtMs: cue.resolvedAtMs + pausedFor,
+      })),
+    );
+    setFrameNow(now);
+    setSession(resumeSession(current, now + alignmentDelay));
+  }, [setSession, settings.speed, startAudio]);
 
-  const progress = getApproachProgress(session?.active ?? null, frameNow);
+  const visiblePromptTimings = useMemo(
+    () => (session ? getVisiblePromptTimings(session, frameNow, 5) : []),
+    [frameNow, session],
+  );
   const sceneCues = useMemo<readonly SceneCue[]>(() => {
     if (viewPhase === "menu") {
       return [
@@ -360,28 +490,36 @@ export function ShortcutHeroGame() {
       ];
     }
 
-    if (!session?.active) return [];
-    const active: SceneCue = {
-      id: session.active.promptId,
-      action: session.active.shortcut.action,
-      shortcut: session.active.shortcut.input.display,
-      keys: shortcutKeys(session.active.shortcut),
-      progress,
-      state: "active",
-      context: session.active.shortcut.context,
-    };
-    const future = session.queue.slice(0, 2).map<SceneCue>((queued, index) => ({
-      id: queued.promptId,
-      action: queued.shortcut.action,
-      shortcut: queued.shortcut.input.display,
-      keys: shortcutKeys(queued.shortcut),
-      progress: Math.max(-0.06, progress - (index + 1) * 0.31),
-      state: "upcoming",
-      context: queued.shortcut.context,
-      laneOffset: index === 0 ? -0.55 : 0.55,
-    }));
-    return [active, ...future];
-  }, [progress, session, viewPhase]);
+    const live = visiblePromptTimings
+      .filter((timing) => timing.progress > -0.1)
+      .map<SceneCue>((timing) => ({
+        id: timing.promptId,
+        action: timing.shortcut.action,
+        shortcut: timing.shortcut.input.display,
+        keys: shortcutKeys(timing.shortcut),
+        progress: timing.progress,
+        state:
+          timing.state === "active" && timing.canHit ? "active" : "upcoming",
+        context: timing.shortcut.context,
+        laneOffset: 0,
+      }));
+    const resolved = departingCues
+      .filter((cue) => frameNow - cue.resolvedAtMs < DEPARTURE_DURATION_MS)
+      .map<SceneCue>((cue) => {
+        const elapsed = Math.max(0, frameNow - cue.resolvedAtMs);
+        const travel = APPROACH_DURATION_MS[settings.speed];
+        return {
+          id: cue.prompt.promptId,
+          action: cue.prompt.shortcut.action,
+          shortcut: cue.prompt.shortcut.input.display,
+          keys: shortcutKeys(cue.prompt.shortcut),
+          progress: Math.min(1.4, cue.startProgress + (elapsed / travel) * 0.9),
+          state: cue.state,
+          context: cue.prompt.shortcut.context,
+        };
+      });
+    return [...resolved, ...live];
+  }, [departingCues, frameNow, settings.speed, viewPhase, visiblePromptTimings]);
 
   const completed = session?.attempts.length ?? 0;
   const remaining = (session?.queue.length ?? 0) + (session?.active ? 1 : 0);
@@ -442,8 +580,8 @@ export function ShortcutHeroGame() {
                 Shortcut <span>Hero</span>
               </h1>
               <p className="hero-copy">
-                Enter the Linear shortcut before the action reaches the strike line.
-                Clean hits build your combo—and wake up the runway.
+                Hit the Linear shortcut as the action crosses the strike gate.
+                Timing—not speed—builds your combo and wakes up the runway.
               </p>
 
               <div className="menu-controls">
@@ -526,6 +664,7 @@ export function ShortcutHeroGame() {
                     const current = sessionRef.current;
                     if (current?.phase === "playing") {
                       setSession(pauseSession(current, performance.now()));
+                      pauseAudio();
                     }
                   }}
                 >
@@ -552,7 +691,10 @@ export function ShortcutHeroGame() {
                 className={`judgement-toast is-${judgement.tone}`}
                 aria-live="polite"
               >
-                {judgement.text}
+                <span className="judgement-label">{judgement.label}</span>
+                {judgement.detail ? (
+                  <span className="judgement-detail">{judgement.detail}</span>
+                ) : null}
               </div>
             ) : null}
 

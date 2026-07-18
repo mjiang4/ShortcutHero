@@ -1,14 +1,20 @@
 import type {
   ComboTier,
   GameResults,
+  HitJudgement,
   PracticeShortcut,
   PromptAttempt,
   ShortcutDefinition,
 } from "./types";
 
-const BASE_HIT_POINTS = 100;
-const MAX_SPEED_BONUS = 100;
 const RECOVERY_FACTOR = 0.5;
+
+const JUDGEMENT_POINTS: Readonly<Record<HitJudgement, number>> = {
+  perfect: 200,
+  good: 150,
+  early: 100,
+  late: 100,
+};
 
 export function getComboTier(combo: number): ComboTier {
   if (combo >= 9) return "flow";
@@ -31,19 +37,13 @@ export function getScoreMultiplier(combo: number): number {
 }
 
 export interface ScoreHitOptions {
-  readonly responseMs: number;
-  readonly windowMs: number;
+  readonly judgement: HitJudgement;
   readonly combo: number;
   readonly recovered: boolean;
 }
 
 export function scoreHit(options: ScoreHitOptions): number {
-  const progress = Math.min(
-    1,
-    Math.max(0, options.responseMs / Math.max(1, options.windowMs)),
-  );
-  const rawPoints =
-    BASE_HIT_POINTS + Math.round(MAX_SPEED_BONUS * (1 - progress));
+  const rawPoints = JUDGEMENT_POINTS[options.judgement];
 
   if (options.recovered) {
     return Math.round(rawPoints * RECOVERY_FACTOR);

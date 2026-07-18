@@ -514,7 +514,7 @@ button:focus-visible {
   letter-spacing: -0.08em;
   line-height: 1;
   text-shadow: 0 0 80px rgba(110, 114, 255, 0.38);
-  animation: countdown-pop 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: countdown-pop 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes countdown-pop {
@@ -526,28 +526,72 @@ button:focus-visible {
 .judgement-toast {
   position: absolute;
   left: 50%;
-  bottom: 20%;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
+  bottom: 22%;
+  display: flex;
+  min-width: 190px;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 18px;
   color: var(--text);
-  background: rgba(10, 10, 14, 0.72);
-  font-size: 10px;
-  font-weight: 620;
-  letter-spacing: 0.14em;
+  pointer-events: none;
+  text-align: center;
   text-transform: uppercase;
   transform: translateX(-50%);
-  backdrop-filter: blur(10px);
-  animation: judgement-rise 700ms ease-out both;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.58));
+  animation: judgement-impact 640ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.judgement-toast.is-hit { color: var(--success); }
+.judgement-toast::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 260px;
+  height: 90px;
+  border-radius: 50%;
+  content: "";
+  opacity: 0.36;
+  background: radial-gradient(ellipse, currentColor 0%, transparent 66%);
+  filter: blur(28px);
+  transform: translate(-50%, -50%);
+}
+
+.judgement-label,
+.judgement-detail {
+  position: relative;
+  z-index: 1;
+}
+
+.judgement-label {
+  font-size: clamp(24px, 4vw, 46px);
+  font-weight: 720;
+  letter-spacing: 0.12em;
+  line-height: 0.95;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.judgement-detail {
+  color: rgba(247, 247, 251, 0.78);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 560;
+  letter-spacing: 0.1em;
+}
+
+.judgement-toast.is-perfect { color: #c8fff0; }
+.judgement-toast.is-good { color: var(--success); }
+.judgement-toast.is-early,
+.judgement-toast.is-late { color: var(--warning); }
+.judgement-toast.is-sequence { color: var(--accent-bright); }
+.judgement-toast.is-wait { color: #b8b7c2; }
 .judgement-toast.is-miss { color: var(--danger); }
 
-@keyframes judgement-rise {
-  from { opacity: 0; transform: translate(-50%, 10px) scale(0.96); }
-  25% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  to { opacity: 0; transform: translate(-50%, -18px) scale(1.02); }
+@keyframes judgement-impact {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+  18% { opacity: 1; transform: translate(-50%, -2px) scale(1.12); }
+  42% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  76% { opacity: 0.94; }
+  100% { opacity: 0; transform: translate(-50%, -26px) scale(1.04); }
 }
 
 .pause-card,

@@ -1,18 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ShortcutHeroAudio, type HitQuality } from "./game-audio";
+import {
+  ShortcutHeroAudio,
+  type AudioTempo,
+  type HitQuality,
+} from "./game-audio";
 
 export type GameAudioControls = {
   isReady: boolean;
   isMuted: boolean;
   /** Call from the event handler that starts a run. */
-  start: () => Promise<boolean>;
+  start: (tempo?: AudioTempo) => Promise<boolean>;
+  pause: () => void;
   stop: () => void;
+  setTempo: (tempo: AudioTempo) => void;
   setMuted: (muted: boolean) => void;
   toggleMuted: () => boolean;
   playStart: () => void;
-  playHit: (quality?: HitQuality) => void;
+  playHit: (quality?: HitQuality, combo?: number) => void;
   playMiss: () => void;
   playCombo: (combo: number) => void;
 };
@@ -33,14 +39,22 @@ export function useGameAudio(): GameAudioControls {
     };
   }, []);
 
-  const start = useCallback(async () => {
-    const ready = (await engineRef.current?.start()) ?? false;
+  const start = useCallback(async (tempo?: AudioTempo) => {
+    const ready = (await engineRef.current?.start(tempo)) ?? false;
     setIsReady(ready);
     return ready;
   }, []);
 
+  const pause = useCallback(() => {
+    engineRef.current?.pause();
+  }, []);
+
   const stop = useCallback(() => {
-    engineRef.current?.stopAmbient();
+    engineRef.current?.stop();
+  }, []);
+
+  const setTempo = useCallback((tempo: AudioTempo) => {
+    engineRef.current?.setTempo(tempo);
   }, []);
 
   const setMuted = useCallback((muted: boolean) => {
@@ -56,7 +70,8 @@ export function useGameAudio(): GameAudioControls {
 
   const playStart = useCallback(() => engineRef.current?.playStart(), []);
   const playHit = useCallback(
-    (quality: HitQuality = "good") => engineRef.current?.playHit(quality),
+    (quality: HitQuality = "good", combo?: number) =>
+      engineRef.current?.playHit(quality, combo),
     [],
   );
   const playMiss = useCallback(() => engineRef.current?.playMiss(), []);
@@ -69,7 +84,9 @@ export function useGameAudio(): GameAudioControls {
     isReady,
     isMuted,
     start,
+    pause,
     stop,
+    setTempo,
     setMuted,
     toggleMuted,
     playStart,

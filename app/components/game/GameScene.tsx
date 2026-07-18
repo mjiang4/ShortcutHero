@@ -12,6 +12,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import * as THREE from "three";
 
@@ -38,6 +39,7 @@ const COLORS = {
 
 const STRIKE_Z = 1.75;
 const HORIZON_Z = -22;
+const EXIT_Z = 7.15;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -58,9 +60,40 @@ function normalizeKey(value: string): string {
 }
 
 function cueColor(state: SceneCueState): string {
-  if (state === "hit") return COLORS.hit;
-  if (state === "miss") return COLORS.miss;
+  if (state === "hit" || state === "cleared") return COLORS.hit;
+  if (state === "miss" || state === "missed") return COLORS.miss;
   return COLORS.accent;
+}
+
+function isClearedState(state: SceneCueState): boolean {
+  return state === "hit" || state === "cleared";
+}
+
+function isMissedState(state: SceneCueState): boolean {
+  return state === "miss" || state === "missed";
+}
+
+function isResolvedState(state: SceneCueState): boolean {
+  return isClearedState(state) || isMissedState(state) || state === "exiting";
+}
+
+function progressToZ(progress: number): number {
+  if (progress <= 1) {
+    return THREE.MathUtils.lerp(HORIZON_Z, STRIKE_Z, progress);
+  }
+  return THREE.MathUtils.lerp(
+    STRIKE_Z,
+    EXIT_Z,
+    Math.min(1, (progress - 1) / 0.38),
+  );
+}
+
+function cueDirection(id: string): -1 | 1 {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) {
+    hash = Math.imul(hash ^ id.charCodeAt(index), 31);
+  }
+  return hash % 2 === 0 ? -1 : 1;
 }
 
 function comboEnergy(combo: number): number {
@@ -73,10 +106,12 @@ function comboEnergy(combo: number): number {
 function CameraRig({
   combo,
   feedback,
+  paused,
   reducedMotion,
 }: {
   combo: number;
   feedback: SceneFeedback | null;
+  paused: boolean;
   reducedMotion: boolean;
 }) {
   const { camera, size } = useThree();
@@ -92,10 +127,15 @@ function CameraRig({
   }, [feedback?.id]);
 
   useFrame((state, delta) => {
-    feedbackAge.current += delta;
+    if (!paused) feedbackAge.current += delta;
     const portrait = size.width / Math.max(size.height, 1) < 1.05;
     const energy = comboEnergy(combo);
     const push = reducedMotion ? 0 : energy * 0.42;
+    const impactLife = clamp01(1 - feedbackAge.current / 0.24);
+    const hitKick =
+      !reducedMotion && feedback && feedback.type !== "miss"
+        ? impactLife * impactLife * (feedback.strength ?? 0.75)
+        : 0;
     const missShake =
       !reducedMotion && feedback?.type === "miss" && feedbackAge.current < 0.32
         ? Math.sin(feedbackAge.current * 78) *
@@ -104,8 +144,8 @@ function CameraRig({
         : 0;
     const idle = reducedMotion ? 0 : Math.sin(state.clock.elapsedTime * 0.42) * 0.025;
     const targetX = missShake;
-    const targetY = portrait ? 7.7 : 6.35 - push * 0.16;
-    const targetZ = portrait ? 13.5 : 10.7 - push;
+    const targetY = (portrait ? 7.7 : 6.35 - push * 0.16) - hitKick * 0.055;
+    const targetZ = (portrait ? 13.5 : 10.7 - push) - hitKick * 0.3;
     const sceneCamera = cameraRef.current;
 
     sceneCamera.position.x = THREE.MathUtils.damp(
@@ -127,6 +167,15 @@ function CameraRig({
       delta,
     );
     sceneCamera.lookAt(0, 0.15, portrait ? -5.9 : -6.4);
+    if (sceneCamera instanceof THREE.PerspectiveCamera) {
+      sceneCamera.fov = THREE.MathUtils.damp(
+        sceneCamera.fov,
+        39 - hitKick * 1.15,
+        13,
+        delta,
+      );
+      sceneCamera.updateProjectionMatrix();
+    }
   });
 
   return null;
@@ -282,6 +331,266 @@ function HorizonFrames({ energy }: { energy: number }) {
   );
 }
 
+function StrikeGate({
+  combo,
+  feedback,
+  hittable,
+  paused,
+  reducedMotion,
+}: {
+  combo: number;
+  feedback: SceneFeedback | null;
+  hittable: boolean;
+  paused: boolean;
+  reducedMotion: boolean;
+}) {
+  const gate = useRef<THREE.Group>(null);
+  const curtainMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const edgeMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const scan = useRef<THREE.Mesh>(null);
+  const scanMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const feedbackAge = useRef(10);
+  const energy = comboEnergy(combo);
+
+  useEffect(() => {
+    feedbackAge.current = 0;
+  }, [feedback?.id]);
+
+  useFrame((state, delta) => {
+    if (!paused) feedbackAge.current += delta;
+    const strength = feedback?.strength ?? 0.76;
+    const impact = feedback
+      ? clamp01(1 - feedbackAge.current / 0.42) * strength
+      : 0;
+    const breath = paused
+      ? 0
+      : 0.5 + Math.sin(state.clock.elapsedTime * 3.4) * 0.5;
+    const readyPulse =
+      !paused && hittable
+        ? reducedMotion
+          ? 0.65
+          : 0.5 + Math.sin(state.clock.elapsedTime * 12) * 0.5
+        : 0;
+    const miss = feedback?.type === "miss";
+
+    if (gate.current) {
+      const scale = reducedMotion ? 1 : 1 + impact * 0.035 + readyPulse * 0.012;
+      gate.current.scale.x = THREE.MathUtils.damp(
+        gate.current.scale.x,
+        scale,
+        18,
+        delta,
+      );
+      gate.current.scale.y = THREE.MathUtils.damp(
+        gate.current.scale.y,
+        1 + impact * 0.025,
+        18,
+        delta,
+      );
+    }
+    if (curtainMaterial.current) {
+      curtainMaterial.current.color.set(miss ? COLORS.miss : COLORS.accentBright);
+      curtainMaterial.current.opacity =
+        0.025 + energy * 0.018 + breath * 0.008 + readyPulse * 0.045 + impact * 0.16;
+    }
+    if (edgeMaterial.current) {
+      edgeMaterial.current.color.set(miss ? COLORS.miss : COLORS.accentBright);
+      edgeMaterial.current.opacity =
+        0.58 + energy * 0.24 + readyPulse * 0.18 + impact * 0.4;
+    }
+    if (scan.current) {
+      scan.current.position.y = reducedMotion
+        ? 0.98
+        : 0.25 + ((state.clock.elapsedTime * 0.52) % 1) * 1.5;
+    }
+    if (scanMaterial.current) {
+      scanMaterial.current.opacity = paused ? 0.08 : 0.15 + energy * 0.1;
+    }
+  });
+
+  return (
+    <group ref={gate} position={[0, 0, STRIKE_Z]}>
+      <mesh position={[0, 1.02, 0]}>
+        <planeGeometry args={[7.3, 1.92]} />
+        <meshBasicMaterial
+          ref={curtainMaterial}
+          color={COLORS.accentBright}
+          transparent
+          opacity={0.035}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          side={THREE.DoubleSide}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {[-3.64, 3.64].map((x) => (
+        <mesh key={x} position={[x, 1.02, 0.015]}>
+          <boxGeometry args={[0.045, 2.05, 0.055]} />
+          <meshBasicMaterial
+            color={COLORS.accentBright}
+            transparent
+            opacity={0.72 + energy * 0.18}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+      <mesh position={[0, 2.04, 0.015]}>
+        <boxGeometry args={[7.32, 0.045, 0.055]} />
+        <meshBasicMaterial
+          ref={edgeMaterial}
+          color={COLORS.accentBright}
+          transparent
+          opacity={0.64}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh ref={scan} position={[0, 0.98, 0.025]}>
+        <planeGeometry args={[6.95, 0.026]} />
+        <meshBasicMaterial
+          ref={scanMaterial}
+          color={COLORS.accentBright}
+          transparent
+          opacity={0.16}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
+      <mesh position={[0, 0.012, 0]}>
+        <boxGeometry args={[8.08, 0.075, 0.13]} />
+        <meshBasicMaterial
+          color={COLORS.accentBright}
+          transparent
+          opacity={0.9}
+          toneMapped={false}
+        />
+      </mesh>
+      <Text
+        position={[0, 0.032, 0.48]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.13}
+        letterSpacing={0.18}
+        color={COLORS.accentBright}
+        anchorX="center"
+        anchorY="middle"
+      >
+        STRIKE
+      </Text>
+    </group>
+  );
+}
+
+type FragmentSpec = {
+  position: readonly [number, number, number];
+  size: readonly [number, number, number];
+  velocity: readonly [number, number, number];
+  spin: number;
+};
+
+function RibbonFragments({
+  cueId,
+  state,
+  color,
+  paused,
+  reducedMotion,
+}: {
+  cueId: string;
+  state: SceneCueState;
+  color: string;
+  paused: boolean;
+  reducedMotion: boolean;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const age = useRef(10);
+  const direction = cueDirection(cueId);
+  const resolved = isClearedState(state) || isMissedState(state);
+  const missed = isMissedState(state);
+  const specs = useMemo<readonly FragmentSpec[]>(
+    () => [
+      {
+        position: [-2.55, 0.42, 0.02],
+        size: [0.52, 0.18, 0.08],
+        velocity: [-1.45, 1.15, 0.6],
+        spin: -2.2,
+      },
+      {
+        position: [2.5, 0.34, 0.02],
+        size: [0.62, 0.2, 0.08],
+        velocity: [1.65, 1.35, 0.75],
+        spin: 2.6,
+      },
+      {
+        position: [-2.25, -0.39, 0.02],
+        size: [0.72, 0.16, 0.08],
+        velocity: [-1.2, -0.25, 0.9],
+        spin: -3.1,
+      },
+      {
+        position: [2.15, -0.41, 0.02],
+        size: [0.8, 0.17, 0.08],
+        velocity: [1.28, -0.18, 0.65],
+        spin: 2.9,
+      },
+      {
+        position: [0.1, 0.48, 0.02],
+        size: [0.45, 0.14, 0.08],
+        velocity: [0.35, 1.55, 1],
+        spin: 3.4,
+      },
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    age.current = resolved ? 0 : 10;
+  }, [resolved, state]);
+
+  useFrame((_, delta) => {
+    if (!group.current) return;
+    if (!paused) age.current += delta;
+    const t = Math.min(age.current, 0.9);
+    const life = clamp01(1 - t / 0.78);
+    group.current.visible = resolved && life > 0.01;
+    if (!group.current.visible) return;
+
+    group.current.children.forEach((child, index) => {
+      const mesh = child as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+      const spec = specs[index];
+      if (!spec) return;
+      const fall = missed ? -2.4 * t * t : -1.15 * t * t;
+      const sideways = spec.velocity[0] * direction * (reducedMotion ? 0.2 : 1);
+      mesh.position.set(
+        spec.position[0] + sideways * t,
+        spec.position[1] + spec.velocity[1] * t + fall,
+        spec.position[2] + spec.velocity[2] * t,
+      );
+      mesh.rotation.z = spec.spin * direction * t;
+      mesh.rotation.y = spec.spin * 0.42 * t;
+      mesh.material.opacity = reducedMotion ? life * 0.45 : life * 0.9;
+    });
+  });
+
+  return (
+    <group ref={group} visible={false}>
+      {specs.map((spec, index) => (
+        <mesh key={index} position={spec.position}>
+          <boxGeometry args={spec.size} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function ActionRibbon({
   cue,
   showShortcut,
@@ -294,165 +603,273 @@ function ActionRibbon({
   reducedMotion: boolean;
 }) {
   const group = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
   const shellMaterial = useRef<THREE.MeshStandardMaterial>(null);
   const accentMaterial = useRef<THREE.MeshBasicMaterial>(null);
-  const currentProgress = useRef(clamp01(cue.progress));
+  const trailMaterials = useRef<THREE.MeshBasicMaterial[]>([]);
+  const currentProgress = useRef(
+    Math.min(1.45, Math.max(-0.1, cue.progress)),
+  );
+  const previousInputProgress = useRef(cue.progress);
+  const continuityOrigin = useRef(cue.progress);
+  const continuityOffset = useRef(0);
+  const outcomeAge = useRef(10);
   const state = cue.state ?? "upcoming";
   const color = cueColor(state);
   const isActive = state === "active";
+  const cleared = isClearedState(state);
+  const missed = isMissedState(state);
+  const resolved = isResolvedState(state);
+  const direction = cueDirection(cue.id);
+
+  useEffect(() => {
+    outcomeAge.current = resolved ? 0 : 10;
+  }, [resolved, state]);
 
   useFrame((clock, delta) => {
     if (!group.current) return;
-    const targetProgress = Math.min(1.12, Math.max(-0.08, cue.progress));
+    if (!paused) outcomeAge.current += delta;
+    const inputProgress = Math.min(1.45, Math.max(-0.1, cue.progress));
+
+    // Older callers restarted a promoted cue at zero. Rebase that discontinuity
+    // and bleed the offset away by the strike line so a card never flies back to
+    // the horizon. Independently scheduled callers simply take the fast path.
+    if (
+      !resolved &&
+      inputProgress < previousInputProgress.current - 0.06
+    ) {
+      continuityOrigin.current = inputProgress;
+      continuityOffset.current = Math.max(
+        0,
+        currentProgress.current - inputProgress,
+      );
+    }
+    previousInputProgress.current = inputProgress;
+
+    let targetProgress = inputProgress;
+    if (continuityOffset.current > 0 && inputProgress < 1) {
+      const remainingAtOrigin = Math.max(0.001, 1 - continuityOrigin.current);
+      const carry =
+        continuityOffset.current *
+        clamp01((1 - inputProgress) / remainingAtOrigin);
+      targetProgress += carry;
+    } else if (inputProgress >= 1) {
+      continuityOffset.current = 0;
+    }
+
     currentProgress.current = THREE.MathUtils.damp(
       currentProgress.current,
       targetProgress,
-      paused ? 14 : 8,
+      paused ? 22 : 32,
       delta,
     );
     const progress = currentProgress.current;
-    const z = THREE.MathUtils.lerp(HORIZON_Z, STRIKE_Z + 0.45, progress);
-    const x = (cue.laneOffset ?? 0) * (0.65 + progress * 0.35);
+    const exitT = resolved
+      ? reducedMotion
+        ? clamp01(outcomeAge.current / 0.26)
+        : THREE.MathUtils.smootherstep(outcomeAge.current, 0, 0.64)
+      : 0;
+    const passedT = clamp01((progress - 1) / 0.38);
+    const laneX = (cue.laneOffset ?? 0) * (0.65 + Math.min(progress, 1) * 0.35);
+    const outcomeX = resolved
+      ? direction * exitT * (cleared ? 0.62 : missed ? 0.32 : 0.12)
+      : 0;
     const hover =
-      reducedMotion || paused
+      reducedMotion || paused || resolved
         ? 0
         : Math.sin(clock.clock.elapsedTime * 2.4 + cue.id.length) * 0.025;
-    const outcomeLift = state === "hit" ? 0.28 : state === "miss" ? -0.08 : 0;
-    const targetScale = state === "hit" ? 0.86 : state === "miss" ? 0.94 : 1;
+    const outcomeY = cleared
+      ? exitT * 0.72
+      : missed
+        ? -exitT * exitT * 1.2
+        : exitT * 0.08;
+    const fade = clamp01(1 - Math.max(exitT, passedT * 0.78));
+    const targetScale = resolved ? 1 - exitT * (cleared ? 0.32 : 0.2) : 1;
 
-    group.current.position.set(x, 1.05 + hover + outcomeLift, z);
+    group.current.position.set(
+      laneX + outcomeX,
+      1.05 + hover + outcomeY,
+      progressToZ(progress),
+    );
     group.current.scale.x = THREE.MathUtils.damp(
       group.current.scale.x,
       targetScale,
-      8,
+      12,
       delta,
     );
     group.current.scale.y = THREE.MathUtils.damp(
       group.current.scale.y,
-      targetScale,
-      8,
+      resolved ? targetScale * (1 - exitT * 0.48) : targetScale,
+      12,
       delta,
     );
     group.current.rotation.z = THREE.MathUtils.damp(
       group.current.rotation.z,
-      state === "miss" ? -0.065 : 0,
-      10,
+      resolved ? direction * exitT * (missed ? 0.32 : 0.18) : 0,
+      12,
+      delta,
+    );
+    group.current.rotation.x = THREE.MathUtils.damp(
+      group.current.rotation.x,
+      resolved ? -exitT * (missed ? 0.22 : 0.1) : 0,
+      12,
       delta,
     );
 
+    if (body.current) {
+      body.current.visible = fade > 0.035;
+    }
     if (shellMaterial.current) {
+      shellMaterial.current.opacity = fade;
       shellMaterial.current.emissiveIntensity = THREE.MathUtils.damp(
         shellMaterial.current.emissiveIntensity,
-        isActive ? 0.72 : 0.24,
-        8,
+        cleared ? 2.5 * fade : missed ? 1.35 * fade : isActive ? 0.82 : 0.24,
+        cleared ? 22 : 8,
         delta,
       );
     }
     if (accentMaterial.current) {
       accentMaterial.current.opacity = THREE.MathUtils.damp(
         accentMaterial.current.opacity,
-        isActive ? 1 : 0.58,
-        8,
+        (cleared ? 1.5 : isActive ? 1 : 0.58) * fade,
+        cleared ? 24 : 8,
         delta,
       );
     }
+    trailMaterials.current.forEach((material) => {
+      material.opacity = THREE.MathUtils.damp(
+        material.opacity,
+        (isActive ? 0.28 : 0.1) * fade,
+        8,
+        delta,
+      );
+    });
   });
 
   return (
     <group ref={group}>
-      <RoundedBox args={[5.9, 1.1, 0.12]} radius={0.1} smoothness={4}>
-        <meshStandardMaterial
-          ref={shellMaterial}
-          color={state === "miss" ? "#211219" : COLORS.surfaceRaised}
-          roughness={0.55}
-          metalness={0.18}
-          emissive={color}
-          emissiveIntensity={isActive ? 0.72 : 0.24}
-        />
-      </RoundedBox>
+      <group ref={body}>
+        <RoundedBox args={[5.9, 1.1, 0.12]} radius={0.1} smoothness={4}>
+          <meshStandardMaterial
+            ref={shellMaterial}
+            color={missed ? "#211219" : COLORS.surfaceRaised}
+            roughness={0.55}
+            metalness={0.18}
+            emissive={color}
+            emissiveIntensity={isActive ? 0.82 : 0.24}
+            transparent
+            opacity={1}
+          />
+        </RoundedBox>
 
-      <RoundedBox
-        args={[0.055, 0.73, 0.025]}
-        radius={0.02}
-        smoothness={3}
-        position={[-2.66, 0, 0.077]}
-      >
-        <meshBasicMaterial
-          ref={accentMaterial}
-          color={color}
-          transparent
-          opacity={isActive ? 1 : 0.58}
-          toneMapped={false}
-        />
-      </RoundedBox>
-
-      <Text
-        position={[-2.45, showShortcut ? 0.13 : 0, 0.075]}
-        maxWidth={showShortcut ? 3.65 : 4.65}
-        fontSize={0.28}
-        lineHeight={1}
-        color={COLORS.text}
-        anchorX="left"
-        anchorY="middle"
-        textAlign="left"
-        outlineWidth={0.005}
-        outlineColor="#050507"
-      >
-        {cue.action}
-      </Text>
-
-      {showShortcut && cue.shortcut ? (
-        <>
-          <Text
-            position={[-2.45, -0.25, 0.076]}
-            maxWidth={3.5}
-            fontSize={0.19}
-            letterSpacing={0.04}
-            color={isActive ? COLORS.accentBright : COLORS.muted}
-            anchorX="left"
-            anchorY="middle"
-          >
-            {cue.shortcut}
-          </Text>
-          <RoundedBox
-            args={[1.35, 0.48, 0.03]}
-            radius={0.09}
-            smoothness={3}
-            position={[2.03, 0, 0.082]}
-          >
-            <meshBasicMaterial
-              color={color}
-              transparent
-              opacity={isActive ? 0.16 : 0.08}
-            />
-          </RoundedBox>
-          <Text
-            position={[2.03, 0, 0.102]}
-            maxWidth={1.12}
-            fontSize={0.2}
-            letterSpacing={0.035}
-            color={isActive ? COLORS.text : COLORS.muted}
-            anchorX="center"
-            anchorY="middle"
-          >
-            {cue.shortcut}
-          </Text>
-        </>
-      ) : null}
-
-      {cue.context ? (
-        <Text
-          position={[2.63, -0.42, 0.076]}
-          maxWidth={2}
-          fontSize={0.11}
-          letterSpacing={0.04}
-          color={COLORS.muted}
-          anchorX="right"
-          anchorY="middle"
+        <RoundedBox
+          args={[0.055, 0.73, 0.025]}
+          radius={0.02}
+          smoothness={3}
+          position={[-2.66, 0, 0.077]}
         >
-          {cue.context.toUpperCase()}
+          <meshBasicMaterial
+            ref={accentMaterial}
+            color={color}
+            transparent
+            opacity={isActive ? 1 : 0.58}
+            toneMapped={false}
+          />
+        </RoundedBox>
+
+        <Text
+          position={[-2.45, showShortcut ? 0.13 : 0, 0.075]}
+          maxWidth={showShortcut ? 3.65 : 4.65}
+          fontSize={0.28}
+          lineHeight={1}
+          color={COLORS.text}
+          anchorX="left"
+          anchorY="middle"
+          textAlign="left"
+          outlineWidth={0.005}
+          outlineColor="#050507"
+        >
+          {cue.action}
         </Text>
-      ) : null}
+
+        {showShortcut && cue.shortcut ? (
+          <>
+            <Text
+              position={[-2.45, -0.25, 0.076]}
+              maxWidth={3.5}
+              fontSize={0.19}
+              letterSpacing={0.04}
+              color={isActive ? COLORS.accentBright : COLORS.muted}
+              anchorX="left"
+              anchorY="middle"
+            >
+              {cue.shortcut}
+            </Text>
+            <RoundedBox
+              args={[1.35, 0.48, 0.03]}
+              radius={0.09}
+              smoothness={3}
+              position={[2.03, 0, 0.082]}
+            >
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={isActive ? 0.16 : 0.08}
+              />
+            </RoundedBox>
+            <Text
+              position={[2.03, 0, 0.102]}
+              maxWidth={1.12}
+              fontSize={0.2}
+              letterSpacing={0.035}
+              color={isActive ? COLORS.text : COLORS.muted}
+              anchorX="center"
+              anchorY="middle"
+            >
+              {cue.shortcut}
+            </Text>
+          </>
+        ) : null}
+
+        {cue.context ? (
+          <Text
+            position={[2.63, -0.42, 0.076]}
+            maxWidth={2}
+            fontSize={0.11}
+            letterSpacing={0.04}
+            color={COLORS.muted}
+            anchorX="right"
+            anchorY="middle"
+          >
+            {cue.context.toUpperCase()}
+          </Text>
+        ) : null}
+      </group>
+
+      {[-2.67, 2.67].map((x, index) => (
+        <mesh key={x} position={[x, 0, -0.64]}>
+          <boxGeometry args={[0.024, 0.024, 1.2]} />
+          <meshBasicMaterial
+            ref={(material) => {
+              if (material) trailMaterials.current[index] = material;
+            }}
+            color={color}
+            transparent
+            opacity={0.08}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+
+      <RibbonFragments
+        cueId={cue.id}
+        state={state}
+        color={color}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
     </group>
   );
 }
@@ -623,17 +1040,28 @@ function feedbackSeed(feedback: SceneFeedback): number {
 
 function FeedbackBurst({
   feedback,
+  progress,
+  paused,
   reducedMotion,
 }: {
   feedback: SceneFeedback;
+  progress: number;
+  paused: boolean;
   reducedMotion: boolean;
 }) {
   const points = useRef<THREE.Points>(null);
   const material = useRef<THREE.PointsMaterial>(null);
   const ring = useRef<THREE.Mesh>(null);
   const ringMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const gateRing = useRef<THREE.Mesh>(null);
+  const gateRingMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const horizonWave = useRef<THREE.Mesh>(null);
+  const horizonWaveMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const playerWave = useRef<THREE.Mesh>(null);
+  const playerWaveMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const flash = useRef<THREE.PointLight>(null);
   const age = useRef(0);
+  const [impactZ] = useState(() => progressToZ(progress));
   const isMiss = feedback.type === "miss";
   const color = isMiss ? COLORS.miss : feedback.type === "recovered" ? "#f4cf8a" : COLORS.hit;
   const count = reducedMotion ? 10 : feedback.type === "combo" ? 62 : 38;
@@ -661,7 +1089,7 @@ function FeedbackBurst({
   const velocityRef = useRef(particleData.velocities);
 
   useFrame((_, delta) => {
-    age.current += delta;
+    if (!paused) age.current += delta;
     const t = age.current;
     const velocities = velocityRef.current;
     const positionAttribute = points.current?.geometry.getAttribute(
@@ -689,11 +1117,31 @@ function FeedbackBurst({
       ring.current.scale.setScalar(scale);
     }
     if (ringMaterial.current) ringMaterial.current.opacity = life * 0.58;
+    if (gateRing.current) {
+      gateRing.current.scale.set(1 + t * 4.8, 0.68 + t * 2.6, 1);
+    }
+    if (gateRingMaterial.current) {
+      gateRingMaterial.current.opacity = life * life * 0.52;
+    }
+    if (horizonWave.current) {
+      horizonWave.current.position.z = -t * (reducedMotion ? 4 : 17);
+      horizonWave.current.scale.x = 1 + t * 0.14;
+    }
+    if (playerWave.current) {
+      playerWave.current.position.z = t * (reducedMotion ? 1.5 : 6.5);
+      playerWave.current.scale.x = 1 - t * 0.08;
+    }
+    if (horizonWaveMaterial.current) {
+      horizonWaveMaterial.current.opacity = life * life * (isMiss ? 0.24 : 0.54);
+    }
+    if (playerWaveMaterial.current) {
+      playerWaveMaterial.current.opacity = life * life * (isMiss ? 0.18 : 0.36);
+    }
     if (flash.current) flash.current.intensity = Math.max(0, 19 * strength * (1 - t * 5));
   });
 
   return (
-    <group position={[0, 0.12, STRIKE_Z]}>
+    <group position={[0, 0.12, impactZ]}>
       <points ref={points}>
         <bufferGeometry>
           <bufferAttribute
@@ -720,6 +1168,42 @@ function FeedbackBurst({
           color={color}
           transparent
           opacity={0.55}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh ref={gateRing} position={[0, 0.9, 0.035]}>
+        <ringGeometry args={[0.44, 0.48, 64]} />
+        <meshBasicMaterial
+          ref={gateRingMaterial}
+          color={color}
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh ref={horizonWave} position={[0, -0.085, 0]}>
+        <boxGeometry args={[7.75, 0.018, 0.22]} />
+        <meshBasicMaterial
+          ref={horizonWaveMaterial}
+          color={color}
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh ref={playerWave} position={[0, -0.075, 0]}>
+        <boxGeometry args={[7.45, 0.016, 0.13]} />
+        <meshBasicMaterial
+          ref={playerWaveMaterial}
+          color={color}
+          transparent
+          opacity={0.34}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
           toneMapped={false}
@@ -806,17 +1290,33 @@ function SceneContent({
     () => new Set(hintKeys.map(normalizeKey)),
     [hintKeys],
   );
+  const orderedCues = useMemo(
+    () => [...cues].sort((first, second) => first.progress - second.progress),
+    [cues],
+  );
 
   return (
     <>
       <color attach="background" args={[COLORS.background]} />
       <fog attach="fog" args={[COLORS.background, 15, 39]} />
-      <CameraRig combo={combo} feedback={feedback} reducedMotion={reducedMotion} />
+      <CameraRig
+        combo={combo}
+        feedback={feedback}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
       <Atmosphere combo={combo} />
       <Runway combo={combo} paused={paused} />
+      <StrikeGate
+        combo={combo}
+        feedback={feedback}
+        hittable={orderedCues.some((cue) => cue.state === "active")}
+        paused={paused}
+        reducedMotion={reducedMotion}
+      />
       <FlowParticles combo={combo} reducedMotion={reducedMotion} />
 
-      {cues.map((cue) => (
+      {orderedCues.map((cue) => (
         <ActionRibbon
           key={cue.id}
           cue={cue}
@@ -836,6 +1336,12 @@ function SceneContent({
         <FeedbackBurst
           key={feedback.id}
           feedback={feedback}
+          progress={
+            feedback.cueId
+              ? orderedCues.find((cue) => cue.id === feedback.cueId)?.progress ?? 1
+              : 1
+          }
+          paused={paused}
           reducedMotion={reducedMotion}
         />
       ) : null}
@@ -858,6 +1364,8 @@ function SceneContent({
 /**
  * Purely visual R3F scene. The parent owns timing, keyboard input, scoring,
  * audio, and cue lifecycle; this component renders the supplied snapshot.
+ * For a seamless stream, provide several independently scheduled cues and keep
+ * resolved cues mounted while their progress advances from 1 to about 1.35.
  */
 export function GameScene({
   cues,

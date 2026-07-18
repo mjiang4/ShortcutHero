@@ -66,11 +66,13 @@ export interface QueuedPrompt {
   readonly promptId: string;
   readonly shortcut: ShortcutDefinition;
   readonly requeueCount: number;
+  /** Absolute timeline positions once a session has started. */
+  readonly approachedAtMs: number;
+  readonly strikeAtMs: number;
+  readonly deadlineAtMs: number;
 }
 
 export interface ActivePrompt extends QueuedPrompt {
-  readonly approachedAtMs: number;
-  readonly deadlineAtMs: number;
   readonly wrongInputs: number;
 }
 
@@ -78,11 +80,16 @@ export type SessionPhase = "ready" | "playing" | "paused" | "finished";
 
 export type AttemptOutcome = "clean" | "recovered" | "miss";
 
+/** A successful collision's relationship to the prompt strike time. */
+export type HitJudgement = "perfect" | "good" | "early" | "late";
+
 export interface PromptAttempt {
   readonly promptId: string;
   readonly shortcut: ShortcutDefinition;
   readonly outcome: AttemptOutcome;
   readonly responseMs: number;
+  readonly timingOffsetMs: number;
+  readonly judgement: HitJudgement | "miss";
   readonly wrongInputs: number;
   readonly points: number;
   readonly requeued: boolean;
@@ -148,6 +155,17 @@ export type GameEffect =
       readonly points: number;
       readonly combo: number;
       readonly tier: ComboTier;
+      readonly judgement: HitJudgement;
+      /** Negative is early; positive is late. */
+      readonly timingOffsetMs: number;
+    }
+  | {
+      readonly type: "timing-input";
+      readonly shortcut: ShortcutDefinition;
+      readonly timing: "too-early" | "too-late";
+      /** Negative is early; positive is late. */
+      readonly timingOffsetMs: number;
+      readonly code: string;
     }
   | {
       readonly type: "combo-tier";
@@ -171,4 +189,31 @@ export interface SessionUpdate {
 
 export interface KeySessionUpdate extends SessionUpdate {
   readonly preventDefault: boolean;
+}
+
+export interface TimingWindow {
+  readonly earlyMs: number;
+  readonly perfectMs: number;
+  readonly goodMs: number;
+  readonly lateMs: number;
+}
+
+export type PromptTimingPhase = "approaching" | "hittable" | "expired";
+
+export interface PromptTiming {
+  readonly phase: PromptTimingPhase;
+  /** Negative is early; positive is late. */
+  readonly timingOffsetMs: number;
+  readonly timeToStrikeMs: number;
+  readonly hitWindowOpensAtMs: number;
+  readonly strikeAtMs: number;
+  readonly deadlineAtMs: number;
+  readonly progress: number;
+  readonly canHit: boolean;
+}
+
+export interface VisiblePromptTiming extends PromptTiming {
+  readonly promptId: string;
+  readonly shortcut: ShortcutDefinition;
+  readonly state: "active" | "upcoming";
 }

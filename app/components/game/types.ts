@@ -1,7 +1,18 @@
 import type { CSSProperties } from "react";
 
-/** Visual lifecycle for a prompt. Timing and scoring remain owned by the game. */
-export type SceneCueState = "upcoming" | "active" | "hit" | "miss";
+/**
+ * Visual lifecycle for a prompt. Timing and scoring remain owned by the game.
+ * `hit` / `miss` are retained as aliases for older callers; new callers should
+ * prefer `cleared` / `missed` and keep the cue mounted while it exits.
+ */
+export type SceneCueState =
+  | "upcoming"
+  | "active"
+  | "cleared"
+  | "missed"
+  | "exiting"
+  | "hit"
+  | "miss";
 
 export interface SceneCue {
   id: string;
@@ -11,7 +22,11 @@ export interface SceneCue {
   shortcut?: string;
   /** Normalized KeyboardEvent codes or labels used by the keyboard deck. */
   keys?: readonly string[];
-  /** 0 at the horizon, 1 at the strike line. Values just over 1 are supported. */
+  /**
+   * 0 at the horizon and 1 at the strike line. Keep resolved cues mounted and
+   * advance them beyond 1 (roughly 1.25-1.4) for a continuous through-the-gate
+   * exit instead of replacing them at the strike line.
+   */
   progress: number;
   state?: SceneCueState;
   /** Small optional context label, e.g. "Issue selected". */
@@ -29,6 +44,8 @@ export type SceneFeedbackType = "hit" | "recovered" | "miss" | "combo";
 export interface SceneFeedback {
   id: string | number;
   type: SceneFeedbackType;
+  /** Optional cue association for callers retaining several resolved cues. */
+  cueId?: SceneCue["id"];
   /** 0..1; defaults to an appropriate strength for the event type. */
   strength?: number;
 }
