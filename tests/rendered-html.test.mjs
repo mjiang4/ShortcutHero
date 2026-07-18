@@ -31,7 +31,8 @@ test("server-renders the DOM-only Shortcut Hero title screen", async () => {
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
   assert.match(html, /Master Linear shortcuts/i);
-  assert.match(html, /enter the flow/i);
+  assert.match(html, /learn (?:<!-- -->)?Linear(?:<!-- -->)? through play/i);
+  assert.match(html, /Linear(?:<!-- -->)? shortcut muscle memory/i);
   assert.match(html, /high scores/i);
   assert.match(html, /how to play/i);
   assert.match(html, /options/i);
@@ -42,10 +43,14 @@ test("server-renders the DOM-only Shortcut Hero title screen", async () => {
 });
 
 test("separates title and play routes while keeping the 3D dependencies", async () => {
-  const [page, playPage, layout, packageJson] = await Promise.all([
+  const [page, playPage, layout, keyboard, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/components/game/KeyboardInstrument.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
@@ -53,6 +58,8 @@ test("separates title and play routes while keeping the 3D dependencies", async 
   assert.doesNotMatch(page, /ShortcutHeroGame|GameScene/);
   assert.match(playPage, /ShortcutHeroGame/);
   assert.match(layout, /Shortcut Hero/);
+  assert.match(keyboard, /keyboard-instrument/);
+  assert.match(keyboard, /is-hinted/);
   assert.match(packageJson, /@react-three\/fiber/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await assert.rejects(
@@ -62,7 +69,7 @@ test("separates title and play routes while keeping the 3D dependencies", async 
 
 test("server-renders the configured play route", async () => {
   const response = await render(
-    "/play?difficulty=easy&guidance=novice&pace=standard&session=30&sound=off&effects=reduced",
+    "/play?tool=linear&difficulty=easy&guidance=novice&pace=standard&session=30&sound=off&effects=reduced",
   );
   assert.equal(response.status, 200);
   const html = await response.text();

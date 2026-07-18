@@ -9,7 +9,7 @@ Shortcut Hero is a 3D browser game that makes learning real Linear keyboard shor
 
 An action such as **Go to Inbox** travels down a perspective highway. The player enters its shortcut—`G → I`—before it reaches the strike line. Correct answers build score and combos, intensifying the visuals with particles, light, and impact effects.
 
-The first version teaches Linear shortcuts. Shortcut packs for products such as Excel, Notion, and Superhuman can be added later through data, without changing the game itself.
+The first version teaches Linear shortcuts. Each product owns a self-contained shortcut track in the tool registry, so Excel, Notion, Jira, Superhuman, and other packs can be added without changing timing, scoring, input, or rendering code.
 
 ### Target player
 
@@ -41,16 +41,19 @@ The opening is a dedicated, full-screen game title state—not a landing page or
 
 Options open as a compact sub-screen with one setting per line. Difficulty, guidance, pace, session length, music, and effects remain configurable, but are visually secondary to starting the game. Title, options, gameplay, pause, and results are separate full-screen states and never overlap.
 
+Every title, options, pause, and results action is operable with the keyboard. Arrow keys move selection or change values, Enter confirms, and Escape returns or resumes.
+
 See [DESIGN_IDENTITY.md](./DESIGN_IDENTITY.md) for the screen architecture and art direction.
 
 ### Action Highway
 
-A single 3D runway recedes into the distance. Minimal action ribbons move toward a strike line positioned above a simplified Mac keyboard.
+A single 3D runway recedes into the distance. Minimal action ribbons move toward a strike line above a readable, screen-space Mac keyboard instrument.
 
 - The action name is the focal point: `Go to Inbox`.
 - With Learn guidance, the ribbon also shows `G → I` and the relevant keyboard keys glow.
 - With Recall guidance, only the action name is shown.
-- The keyboard reacts to physical input but is not divided into note lanes.
+- The keyboard reacts to physical input, reveals only the next key in a sequence, and is not divided into note lanes.
+- Learn guidance highlights the expected keys; Recall guidance shows only physical input until a miss reveals the answer.
 - Correct input depresses the relevant keys and resolves the ribbon with a satisfying impact.
 - One prompt is playable at a time; up to two future prompts may be visible for depth and anticipation.
 
@@ -199,13 +202,14 @@ For the MVP:
 - Dedicated title screen with Start, High Scores, How to Play, Options, and Credits
 - Compact options sub-screen with difficulty, guidance, pace, session, music, and effects
 - One 45-second mixed showcase run
-- Action Highway and reactive 3D keyboard
+- Action Highway and reactive screen-space keyboard instrument
 - Single, sequence, and Shift-chord input handling
 - Score, accuracy, combo, multiplier, and results
 - Hit, recovered, and miss states
 - Particle bursts, keyboard reactions, combo escalation, and Flow State
 - Simple background audio and sound effects
 - Verified starter shortcut deck
+- Tool-track registry with Linear isolated from the game engine
 - Static deployment that works after a hard refresh
 
 ### Technical direction

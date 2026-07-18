@@ -52,10 +52,6 @@ export interface SceneFeedback {
 
 export interface GameSceneProps {
   cues: readonly SceneCue[];
-  /** Keys physically held or just pressed by the player. */
-  pressedKeys?: readonly string[];
-  /** Keys to softly illuminate in Novice mode. */
-  hintKeys?: readonly string[];
   /** Shows cue shortcut labels. Set false for Pro mode. */
   showShortcuts?: boolean;
   combo?: number;

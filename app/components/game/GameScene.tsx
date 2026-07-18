@@ -7,7 +7,6 @@ import {
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import {
-  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -43,22 +42,6 @@ const HORIZON_Z = -22;
 const EXIT_Z = 7.15;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-
-function normalizeKey(value: string): string {
-  const normalized = value.trim().toUpperCase();
-  if (
-    normalized === "SHIFT" ||
-    normalized === "SHIFTLEFT" ||
-    normalized === "SHIFTRIGHT" ||
-    normalized === "⇧"
-  ) {
-    return "SHIFT";
-  }
-  if (normalized.startsWith("KEY") && normalized.length === 4) {
-    return normalized.slice(3);
-  }
-  return normalized;
-}
 
 function cueColor(state: SceneCueState): string {
   if (state === "hit" || state === "cleared") return COLORS.hit;
@@ -1126,169 +1109,6 @@ function ActionRibbon({
   );
 }
 
-type KeySpec = { id: string; label: string; width?: number };
-
-const KEY_ROWS: readonly (readonly KeySpec[])[] = [
-  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"].map((key) => ({
-    id: key,
-    label: key,
-  })),
-  ["A", "S", "D", "F", "G", "H", "J", "K", "L"].map((key) => ({
-    id: key,
-    label: key,
-  })),
-  [
-    { id: "SHIFT", label: "shift", width: 1.35 },
-    ...["Z", "X", "C", "V", "B", "N", "M"].map((key) => ({
-      id: key,
-      label: key,
-    })),
-    { id: "SHIFT", label: "shift", width: 1.35 },
-  ],
-] as const;
-
-function ReactiveKey({
-  spec,
-  x,
-  z,
-  pressed,
-  hinted,
-}: {
-  spec: KeySpec;
-  x: number;
-  z: number;
-  pressed: boolean;
-  hinted: boolean;
-}) {
-  const group = useRef<THREE.Group>(null);
-  const material = useRef<THREE.MeshStandardMaterial>(null);
-  const width = spec.width ?? 0.64;
-
-  useFrame((state, delta) => {
-    if (!group.current || !material.current) return;
-    group.current.position.y = THREE.MathUtils.damp(
-      group.current.position.y,
-      pressed ? -0.07 : hinted ? 0.045 : 0,
-      pressed ? 26 : 12,
-      delta,
-    );
-    const hintPulse = hinted ? 0.1 + Math.sin(state.clock.elapsedTime * 3.5) * 0.04 : 0;
-    material.current.emissiveIntensity = THREE.MathUtils.damp(
-      material.current.emissiveIntensity,
-      pressed ? 2.8 : hinted ? 0.78 + hintPulse : 0.08,
-      pressed ? 24 : 9,
-      delta,
-    );
-  });
-
-  return (
-    <group ref={group} position={[x, 0, z]}>
-      <mesh>
-        <boxGeometry args={[width, 0.14, 0.61]} />
-        <meshStandardMaterial
-          ref={material}
-          color={pressed ? "#e9e5ff" : hinted ? "#25213d" : "#1d1c24"}
-          emissive={pressed ? COLORS.accentBright : COLORS.accent}
-          emissiveIntensity={pressed ? 2.8 : hinted ? 0.78 : 0.08}
-          roughness={0.5}
-          metalness={0.14}
-        />
-      </mesh>
-      <mesh position={[0, 0.079, 0]}>
-        <boxGeometry args={[Math.max(0.2, width - 0.055), 0.018, 0.555]} />
-        <meshBasicMaterial
-          color={pressed ? "#f7f5ff" : hinted ? COLORS.accent : "#2b2933"}
-          transparent
-          opacity={pressed ? 0.95 : hinted ? 0.4 : 0.46}
-          toneMapped={false}
-        />
-      </mesh>
-      <Text
-        position={[0, 0.101, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={spec.id === "SHIFT" ? 0.12 : 0.18}
-        letterSpacing={spec.id === "SHIFT" ? 0.025 : 0.01}
-        color={pressed ? "#15131f" : hinted ? COLORS.text : "#898691"}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {spec.label}
-      </Text>
-    </group>
-  );
-}
-
-function KeyboardDeck({
-  pressedKeys,
-  hintKeys,
-  combo,
-}: {
-  pressedKeys: ReadonlySet<string>;
-  hintKeys: ReadonlySet<string>;
-  combo: number;
-}) {
-  const energy = comboEnergy(combo);
-  const rowGap = 0.71;
-  const keyGap = 0.07;
-
-  return (
-    <group position={[0, 0.16, 3.58]}>
-      <mesh position={[0, -0.13, 0.05]}>
-        <boxGeometry args={[8.1, 0.2, 2.65]} />
-        <meshStandardMaterial
-          color="#101016"
-          roughness={0.58}
-          metalness={0.28}
-          emissive={COLORS.accent}
-          emissiveIntensity={0.03 + energy * 0.12}
-        />
-      </mesh>
-
-      {[-4.08, 4.08].map((x) => (
-        <mesh key={x} position={[x, -0.045, 0.05]}>
-          <boxGeometry args={[0.025, 0.08, 2.68]} />
-          <meshBasicMaterial
-            color={COLORS.accent}
-            transparent
-            opacity={0.28 + energy * 0.28}
-            toneMapped={false}
-          />
-        </mesh>
-      ))}
-
-      {KEY_ROWS.map((row, rowIndex) => {
-        const rowWidth = row.reduce(
-          (sum, spec, index) =>
-            sum + (spec.width ?? 0.64) + (index > 0 ? keyGap : 0),
-          0,
-        );
-        let cursor = -rowWidth / 2;
-        const z = -0.72 + rowIndex * rowGap;
-
-        return (
-          <Fragment key={rowIndex}>
-            {row.map((spec, keyIndex) => {
-              const width = spec.width ?? 0.64;
-              const x = cursor + width / 2;
-              cursor += width + keyGap;
-              return (
-                <ReactiveKey
-                  key={`${spec.id}-${keyIndex}`}
-                  spec={spec}
-                  x={x}
-                  z={z}
-                  pressed={pressedKeys.has(spec.id)}
-                  hinted={hintKeys.has(spec.id)}
-                />
-              );
-            })}
-          </Fragment>
-        );
-      })}
-    </group>
-  );
-}
-
 function mulberry32(seed: number) {
   return () => {
     let value = (seed += 0x6d2b79f5);
@@ -1531,8 +1351,6 @@ function FlowParticles({ combo, reducedMotion }: { combo: number; reducedMotion:
 
 function SceneContent({
   cues,
-  pressedKeys,
-  hintKeys,
   showShortcuts,
   combo,
   runProgress,
@@ -1544,8 +1362,6 @@ function SceneContent({
   Pick<
     GameSceneProps,
     | "cues"
-    | "pressedKeys"
-    | "hintKeys"
     | "showShortcuts"
     | "combo"
     | "runProgress"
@@ -1554,14 +1370,6 @@ function SceneContent({
     | "bloom"
   >
 > & { feedback: SceneFeedback | null }) {
-  const normalizedPressedKeys = useMemo(
-    () => new Set(pressedKeys.map(normalizeKey)),
-    [pressedKeys],
-  );
-  const normalizedHintKeys = useMemo(
-    () => new Set(hintKeys.map(normalizeKey)),
-    [hintKeys],
-  );
   const orderedCues = useMemo(
     () => [...cues].sort((first, second) => first.progress - second.progress),
     [cues],
@@ -1603,12 +1411,6 @@ function SceneContent({
         />
       ))}
 
-      <KeyboardDeck
-        pressedKeys={normalizedPressedKeys}
-        hintKeys={normalizedHintKeys}
-        combo={combo}
-      />
-
       {feedback ? (
         <FeedbackBurst
           key={feedback.id}
@@ -1646,8 +1448,6 @@ function SceneContent({
  */
 export function GameScene({
   cues,
-  pressedKeys = [],
-  hintKeys = [],
   showShortcuts = true,
   combo = 0,
   runProgress = 0,
@@ -1688,8 +1488,6 @@ export function GameScene({
       >
         <SceneContent
           cues={cues}
-          pressedKeys={pressedKeys}
-          hintKeys={hintKeys}
           showShortcuts={showShortcuts}
           combo={combo}
           runProgress={runProgress}

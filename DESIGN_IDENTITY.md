@@ -35,6 +35,7 @@ The title screen is a game state, not a marketing landing page or settings form.
 - One vertical text menu: **start**, **high scores**, **how to play**, **options**, **credits**
 - `start` immediately launches with the last-used settings
 - Keyboard and pointer navigation
+- All menu, options, pause, and results actions work without a pointer
 - Active item becomes brighter, shifts slightly, and receives a minimal cursor or underline
 - No cards, feature copy, numbered sections, status chips, page header, or dashboard framing
 

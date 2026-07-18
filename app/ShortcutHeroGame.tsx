@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useGameAudio } from "./audio";
-import { GameScene, type SceneCue, type SceneFeedback } from "./components/game";
+import {
+  GameScene,
+  KeyboardInstrument,
+  type KeyboardFeedbackTone,
+  type SceneCue,
+  type SceneFeedback,
+} from "./components/game";
 import type { EffectsMode } from "./components/settings/settings";
 import {
   APPROACH_DURATION_MS,
@@ -38,6 +44,12 @@ type DepartingCue = {
   state: "cleared" | "missed";
   resolvedAtMs: number;
   startProgress: number;
+};
+type KeyboardSignal = {
+  id: number;
+  keys: readonly string[];
+  tone: KeyboardFeedbackTone;
+  status: string;
 };
 
 const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -104,6 +116,9 @@ export function ShortcutHeroGame({
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [judgement, setJudgement] = useState<Judgement | null>(null);
   const [departingCues, setDepartingCues] = useState<readonly DepartingCue[]>([]);
+  const [keyboardSignal, setKeyboardSignal] = useState<KeyboardSignal | null>(null);
+  const [pauseMenuIndex, setPauseMenuIndex] = useState(0);
+  const [resultsMenuIndex, setResultsMenuIndex] = useState(0);
   const [, setHighScore] = useState(0);
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
@@ -112,6 +127,7 @@ export function ShortcutHeroGame({
   const judgementId = useRef(0);
   const judgementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finishAudioTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keyboardSignalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     isReady,
@@ -150,6 +166,19 @@ export function ShortcutHeroGame({
     (type: SceneFeedback["type"], strength = 0.7, cueId?: string) => {
       feedbackId.current += 1;
       setFeedback({ id: feedbackId.current, type, strength, cueId });
+    },
+    [],
+  );
+
+  const showKeyboardSignal = useCallback(
+    (keys: readonly string[], tone: KeyboardFeedbackTone, status: string) => {
+      feedbackId.current += 1;
+      setKeyboardSignal({ id: feedbackId.current, keys, tone, status });
+      if (keyboardSignalTimer.current) clearTimeout(keyboardSignalTimer.current);
+      keyboardSignalTimer.current = setTimeout(
+        () => setKeyboardSignal(null),
+        760,
+      );
     },
     [],
   );
@@ -204,9 +233,15 @@ export function ShortcutHeroGame({
             break;
           case "wrong-input":
             emitFeedback("recovered", 0.32);
+            showKeyboardSignal([effect.code], "wrong", "wrong key · action missed");
             showJudgement("Wrong key", "miss");
             break;
           case "timing-input":
+            showKeyboardSignal(
+              [effect.code],
+              "wrong",
+              effect.timing === "too-early" ? "too early · action missed" : "too late",
+            );
             showJudgement(
               effect.timing === "too-early" ? "Too early" : "Too late",
               "wait",
@@ -219,19 +254,17 @@ export function ShortcutHeroGame({
                 : effect.judgement === "good"
                   ? 0.82
                   : 0.62;
-            playHit(effect.judgement, effect.combo);
-            emitFeedback(
-              effect.outcome === "clean" ? "hit" : "recovered",
-              strength,
-              resolvedPrompt?.promptId,
+            const clean = effect.outcome === "clean";
+            if (clean) playHit(effect.judgement, effect.combo);
+            else playMiss();
+            emitFeedback(clean ? "hit" : "miss", strength, resolvedPrompt?.promptId);
+            retainResolvedCue(resolvedPrompt, clean ? "cleared" : "missed", nowMs);
+            showKeyboardSignal(
+              shortcutKeys(effect.shortcut),
+              clean ? "hit" : "miss",
+              clean ? `${effect.judgement} hit` : "recovered · counted as miss",
             );
-            retainResolvedCue(resolvedPrompt, "cleared", nowMs);
-            showJudgement(
-              effect.outcome === "recovered"
-                ? "Recovered"
-                : effect.judgement,
-              effect.judgement,
-            );
+            showJudgement(clean ? effect.judgement : "Miss", clean ? effect.judgement : "miss");
             break;
           }
           case "combo-tier":
@@ -246,6 +279,11 @@ export function ShortcutHeroGame({
             playMiss();
             emitFeedback("miss", 0.86, resolvedPrompt?.promptId);
             retainResolvedCue(resolvedPrompt, "missed", nowMs);
+            showKeyboardSignal(
+              shortcutKeys(effect.shortcut),
+              "miss",
+              `correct shortcut: ${effect.shortcut.input.display}`,
+            );
             showJudgement("Miss", "miss");
             break;
           case "finished":
@@ -253,6 +291,7 @@ export function ShortcutHeroGame({
             playCombo(12);
             if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
             finishAudioTimer.current = setTimeout(stopAudio, 900);
+            setResultsMenuIndex(0);
             setViewPhase("results");
             break;
         }
@@ -266,6 +305,7 @@ export function ShortcutHeroGame({
       playMiss,
       retainResolvedCue,
       showJudgement,
+      showKeyboardSignal,
       stopAudio,
     ],
   );
@@ -355,6 +395,7 @@ export function ShortcutHeroGame({
       if (event.code === "Escape") {
         event.preventDefault();
         if (current.phase === "playing") {
+          setPauseMenuIndex(0);
           setSession(pauseSession(current, performance.now()));
           pauseAudio();
         }
@@ -382,6 +423,7 @@ export function ShortcutHeroGame({
     const pauseOnBlur = () => {
       const current = sessionRef.current;
       if (current?.phase === "playing") {
+        setPauseMenuIndex(0);
         setSession(pauseSession(current, performance.now()));
         pauseAudio();
       }
@@ -412,6 +454,7 @@ export function ShortcutHeroGame({
     () => () => {
       if (judgementTimer.current) clearTimeout(judgementTimer.current);
       if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
+      if (keyboardSignalTimer.current) clearTimeout(keyboardSignalTimer.current);
     },
     [],
   );
@@ -421,6 +464,7 @@ export function ShortcutHeroGame({
     setFeedback(null);
     setJudgement(null);
     setDepartingCues([]);
+    setKeyboardSignal(null);
     setSession(null);
     setCountdown(3);
     if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
@@ -434,14 +478,15 @@ export function ShortcutHeroGame({
     setSession(null);
     setResults(null);
     setFeedback(null);
+    setKeyboardSignal(null);
     setDepartingCues([]);
     window.location.assign("/");
   }, [setSession, stopAudio]);
 
-  const resume = useCallback(async () => {
+  const resume = useCallback(() => {
     const current = sessionRef.current;
     if (!current || current.phase !== "paused") return;
-    await startAudio(settings.speed);
+    void startAudio(settings.speed);
     const now = performance.now();
     const beatMs = 60_000 / SPEED_BPM[settings.speed];
     const pausedAt = current.pausedAtMs ?? now;
@@ -461,6 +506,56 @@ export function ShortcutHeroGame({
     setFrameNow(now);
     setSession(resumeSession(current, now + alignmentDelay));
   }, [setSession, settings.speed, startAudio]);
+
+  useEffect(() => {
+    const paused = viewPhase === "game" && session?.phase === "paused";
+    const showingResults = viewPhase === "results" && results !== null;
+    if (!paused && !showingResults) return;
+
+    const onMenuKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const itemCount = paused ? 3 : 2;
+      const currentIndex = paused ? pauseMenuIndex : resultsMenuIndex;
+      const setIndex = paused ? setPauseMenuIndex : setResultsMenuIndex;
+
+      if (event.code === "ArrowDown" || event.code === "ArrowRight" || event.code === "KeyS" || event.code === "KeyD") {
+        event.preventDefault();
+        setIndex((current) => (current + 1) % itemCount);
+        return;
+      }
+      if (event.code === "ArrowUp" || event.code === "ArrowLeft" || event.code === "KeyW" || event.code === "KeyA") {
+        event.preventDefault();
+        setIndex((current) => (current - 1 + itemCount) % itemCount);
+        return;
+      }
+      if (event.code === "Escape") {
+        event.preventDefault();
+        if (paused) void resume();
+        else returnToSettings();
+        return;
+      }
+      if (event.code !== "Enter" && event.code !== "Space") return;
+      event.preventDefault();
+      if (paused) {
+        if (currentIndex === 0) void resume();
+        else if (currentIndex === 1) beginRun();
+        else returnToSettings();
+      } else if (currentIndex === 0) beginRun();
+      else returnToSettings();
+    };
+
+    window.addEventListener("keydown", onMenuKey);
+    return () => window.removeEventListener("keydown", onMenuKey);
+  }, [
+    beginRun,
+    pauseMenuIndex,
+    results,
+    resultsMenuIndex,
+    resume,
+    returnToSettings,
+    session?.phase,
+    viewPhase,
+  ]);
 
   const visiblePromptTimings = useMemo(
     () => (session ? getVisiblePromptTimings(session, frameNow, 5) : []),
@@ -512,7 +607,7 @@ export function ShortcutHeroGame({
     completed === 0
       ? 100
       : Math.round(
-          (session!.attempts.filter((attempt) => attempt.outcome !== "miss").length /
+          (session!.attempts.filter((attempt) => attempt.outcome === "clean").length /
             completed) *
             100,
         );
@@ -523,15 +618,21 @@ export function ShortcutHeroGame({
         ? "Acceleration"
         : runProgress < 0.84
           ? "Flow"
-          : "Overload";
+        : "Overload";
+  const keyboardHints = hintKeysFor(session);
+  const keyboardStatus = keyboardSignal?.status ?? (
+    session?.active
+      ? settings.assistance === "novice"
+        ? `shortcut: ${session.active.shortcut.input.display}`
+        : "recall the shortcut"
+      : "waiting for next action"
+  );
 
   return (
     <main className="shortcut-hero">
       <div className="game-canvas" aria-hidden="true">
         <GameScene
           cues={sceneCues}
-          pressedKeys={pressedKeys}
-          hintKeys={hintKeysFor(session)}
           showShortcuts={settings.assistance === "novice"}
           combo={session?.combo ?? 0}
           runProgress={runProgress}
@@ -588,6 +689,7 @@ export function ShortcutHeroGame({
                   onClick={() => {
                     const current = sessionRef.current;
                     if (current?.phase === "playing") {
+                      setPauseMenuIndex(0);
                       setSession(pauseSession(current, performance.now()));
                       pauseAudio();
                     }
@@ -610,6 +712,16 @@ export function ShortcutHeroGame({
               </span>
             </div>
 
+            <KeyboardInstrument
+              key={keyboardSignal?.id ?? "live-keyboard"}
+              pressedKeys={pressedKeys}
+              hintKeys={keyboardSignal ? [] : keyboardHints}
+              feedbackKeys={keyboardSignal?.keys}
+              feedbackTone={keyboardSignal?.tone}
+              status={keyboardStatus}
+              guidance={settings.assistance === "novice" ? "learn" : "recall"}
+            />
+
             {judgement ? (
               <div
                 key={judgement.id}
@@ -626,13 +738,34 @@ export function ShortcutHeroGame({
                   <h2>Paused</h2>
                   <p>Resume, restart, or return to the title screen.</p>
                   <div className="pause-actions">
-                    <button type="button" className="primary-button" onClick={resume}>
+                    <button
+                      type="button"
+                      className={`primary-button${pauseMenuIndex === 0 ? " is-selected" : ""}`}
+                      aria-current={pauseMenuIndex === 0 ? "true" : undefined}
+                      onMouseEnter={() => setPauseMenuIndex(0)}
+                      onFocus={() => setPauseMenuIndex(0)}
+                      onClick={resume}
+                    >
                       Resume
                     </button>
-                    <button type="button" className="secondary-button" onClick={beginRun}>
+                    <button
+                      type="button"
+                      className={`secondary-button${pauseMenuIndex === 1 ? " is-selected" : ""}`}
+                      aria-current={pauseMenuIndex === 1 ? "true" : undefined}
+                      onMouseEnter={() => setPauseMenuIndex(1)}
+                      onFocus={() => setPauseMenuIndex(1)}
+                      onClick={beginRun}
+                    >
                       Restart
                     </button>
-                    <button type="button" className="secondary-button" onClick={returnToSettings}>
+                    <button
+                      type="button"
+                      className={`secondary-button${pauseMenuIndex === 2 ? " is-selected" : ""}`}
+                      aria-current={pauseMenuIndex === 2 ? "true" : undefined}
+                      onMouseEnter={() => setPauseMenuIndex(2)}
+                      onFocus={() => setPauseMenuIndex(2)}
+                      onClick={returnToSettings}
+                    >
                       Title
                     </button>
                   </div>
@@ -710,10 +843,24 @@ export function ShortcutHeroGame({
               ) : null}
 
               <div className="results-actions">
-                <button type="button" className="primary-button" onClick={beginRun}>
+                <button
+                  type="button"
+                  className={`primary-button${resultsMenuIndex === 0 ? " is-selected" : ""}`}
+                  aria-current={resultsMenuIndex === 0 ? "true" : undefined}
+                  onMouseEnter={() => setResultsMenuIndex(0)}
+                  onFocus={() => setResultsMenuIndex(0)}
+                  onClick={beginRun}
+                >
                   Play again
                 </button>
-                <button type="button" className="secondary-button" onClick={returnToSettings}>
+                <button
+                  type="button"
+                  className={`secondary-button${resultsMenuIndex === 1 ? " is-selected" : ""}`}
+                  aria-current={resultsMenuIndex === 1 ? "true" : undefined}
+                  onMouseEnter={() => setResultsMenuIndex(1)}
+                  onFocus={() => setResultsMenuIndex(1)}
+                  onClick={returnToSettings}
+                >
                   Title
                 </button>
               </div>

@@ -6,6 +6,7 @@ export type SoundMode = "on" | "off";
 export type EffectsMode = "full" | "system" | "reduced";
 
 export interface LaunchSettings {
+  readonly tool: AvailableToolId;
   readonly difficulty: GameDifficulty;
   readonly guidance: GuidanceMode;
   readonly pace: TempoPreset;
@@ -15,6 +16,7 @@ export interface LaunchSettings {
 }
 
 export const DEFAULT_LAUNCH_SETTINGS: LaunchSettings = {
+  tool: "linear",
   difficulty: "easy",
   guidance: "novice",
   pace: "standard",
@@ -42,6 +44,7 @@ function includes<T extends string | number>(
  * Invalid or missing values can therefore never reach the game runtime.
  */
 export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): LaunchSettings {
+  const tool = params.get("tool");
   const difficulty = params.get("difficulty");
   const guidance = params.get("guidance");
   const pace = params.get("pace");
@@ -50,6 +53,7 @@ export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): Launc
   const effects = params.get("effects");
 
   return {
+    tool: isAvailableToolId(tool) ? tool : DEFAULT_LAUNCH_SETTINGS.tool,
     difficulty: includes(DIFFICULTIES, difficulty)
       ? difficulty
       : DEFAULT_LAUNCH_SETTINGS.difficulty,
@@ -73,6 +77,7 @@ export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): Launc
 
 export function createPlayHref(settings: LaunchSettings): string {
   const params = new URLSearchParams({
+    tool: settings.tool,
     difficulty: settings.difficulty,
     guidance: settings.guidance,
     pace: settings.pace,
@@ -83,3 +88,7 @@ export function createPlayHref(settings: LaunchSettings): string {
 
   return `/play?${params.toString()}`;
 }
+import {
+  isAvailableToolId,
+  type AvailableToolId,
+} from "../../tools";

@@ -27,6 +27,7 @@ export default async function PlayPage({
   return (
     <ShortcutHeroGame
       settings={{
+        trackId: launchSettings.tool,
         mode: launchSettings.difficulty,
         assistance: launchSettings.guidance,
         speed: launchSettings.pace,

@@ -44,6 +44,8 @@ export interface ShortcutDefinition {
 }
 
 export interface GameSettings {
+  /** Shortcut-library identifier. The engine treats it as an opaque track key. */
+  readonly trackId?: string;
   readonly mode: GameMode;
   readonly assistance: AssistanceMode;
   readonly speed: SpeedPreset;

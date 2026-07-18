@@ -160,7 +160,7 @@ export function createGameSession(
   settings: GameSettings,
   options: CreateSessionOptions = {},
 ): GameSession {
-  const deck = options.deck ?? getShortcutDeck(settings.mode);
+  const deck = options.deck ?? getShortcutDeck(settings.mode, settings.trackId);
   const queuedDeck = queueDeck(deck, settings);
 
   return {
@@ -695,5 +695,5 @@ export function getSessionResults(session: GameSession): GameResults {
 }
 
 export function getHighScoreKey(settings: GameSettings): string {
-  return `shortcut-hero:high-score:${settings.mode}:${settings.assistance}:${settings.speed}:${getSessionDurationSeconds(settings)}s`;
+  return `shortcut-hero:high-score:${settings.trackId ?? "linear"}:${settings.mode}:${settings.assistance}:${settings.speed}:${getSessionDurationSeconds(settings)}s`;
 }

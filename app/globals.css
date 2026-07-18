@@ -227,6 +227,14 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+.title-menu__description {
+  max-width: 430px;
+  margin: -10px 0 30px;
+  color: rgba(244, 241, 234, 0.68);
+  font-size: clamp(14px, 1.35vw, 18px);
+  line-height: 1.45;
+}
+
 .title-menu__items {
   display: flex;
   flex-direction: column;
@@ -371,6 +379,16 @@ a:focus-visible {
   gap: 22px;
   min-height: 58px;
   border-bottom: 1px solid rgba(244, 241, 234, 0.2);
+}
+
+.option-row.is-active {
+  background: linear-gradient(90deg, rgba(168, 151, 255, 0.13), transparent 78%);
+  box-shadow: inset 2px 0 var(--sun);
+}
+
+.option-row.is-active .option-row__label,
+.option-row.is-active .option-row__control button {
+  color: var(--sun);
 }
 
 .option-row__label {
@@ -598,6 +616,132 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+/* Readable gameplay instrument */
+
+.keyboard-instrument {
+  --keyboard-gap: 5px;
+  position: absolute;
+  z-index: 4;
+  bottom: 14px;
+  left: 50%;
+  width: min(720px, calc(100vw - 32px));
+  padding: 10px 14px 13px;
+  transform: translateX(-50%);
+  border-top: 1px solid rgba(168, 151, 255, 0.68);
+  border-right: 1px solid rgba(244, 241, 234, 0.1);
+  border-left: 1px solid rgba(244, 241, 234, 0.1);
+  background:
+    linear-gradient(180deg, rgba(25, 22, 47, 0.8), rgba(7, 8, 18, 0.94)),
+    var(--night);
+  box-shadow:
+    0 -18px 60px rgba(7, 7, 18, 0.46),
+    0 0 32px rgba(124, 108, 255, 0.08);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%, 0 12px);
+  pointer-events: none;
+}
+
+.keyboard-instrument__header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 8px;
+  color: rgba(244, 241, 234, 0.4);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.keyboard-instrument__header strong {
+  overflow: hidden;
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 560;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyboard-instrument__header span:last-child {
+  color: var(--sun);
+  text-align: right;
+}
+
+.keyboard-instrument__deck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--keyboard-gap);
+}
+
+.keyboard-instrument__row {
+  display: flex;
+  justify-content: center;
+  gap: var(--keyboard-gap);
+}
+
+.keyboard-instrument__row:nth-child(2) {
+  padding-inline: 24px;
+}
+
+.keyboard-instrument__row:nth-child(3) {
+  padding-inline: 42px;
+}
+
+.keyboard-key {
+  display: grid;
+  height: 29px;
+  min-width: 0;
+  flex: var(--key-flex) 1 0;
+  place-items: center;
+  border: 1px solid rgba(244, 241, 234, 0.13);
+  border-bottom-color: rgba(244, 241, 234, 0.24);
+  color: rgba(244, 241, 234, 0.48);
+  background: rgba(244, 241, 234, 0.035);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition:
+    transform 70ms ease,
+    color 100ms ease,
+    border-color 100ms ease,
+    background 100ms ease,
+    box-shadow 100ms ease;
+}
+
+.keyboard-key.is-hinted {
+  border-color: var(--gold);
+  color: var(--paper);
+  background: rgba(244, 162, 97, 0.15);
+  box-shadow: 0 0 18px rgba(244, 162, 97, 0.34);
+  animation: keyboard-hint 760ms ease-in-out infinite alternate;
+}
+
+.keyboard-key.is-pressed {
+  transform: translateY(2px);
+  border-color: var(--paper);
+  color: var(--night);
+  background: var(--paper);
+  box-shadow: 0 0 18px rgba(244, 241, 234, 0.5);
+}
+
+.keyboard-key.is-hit {
+  border-color: var(--success);
+  color: var(--night);
+  background: var(--success);
+  box-shadow: 0 0 22px rgba(183, 245, 211, 0.58);
+}
+
+.keyboard-key.is-wrong,
+.keyboard-key.is-miss {
+  border-color: var(--danger);
+  color: var(--paper);
+  background: rgba(255, 112, 107, 0.28);
+  box-shadow: 0 0 22px rgba(255, 112, 107, 0.54);
+}
+
 .countdown-overlay {
   position: absolute;
   inset: 0;
@@ -732,8 +876,16 @@ a:focus-visible {
 }
 
 .primary-button:hover,
-.secondary-button:hover {
+.secondary-button:hover,
+.primary-button.is-selected,
+.secondary-button.is-selected {
   color: var(--sun);
+}
+
+.primary-button.is-selected,
+.secondary-button.is-selected {
+  border-bottom-color: var(--sun);
+  transform: translateY(-2px);
 }
 
 .results-score {
@@ -934,6 +1086,11 @@ a:focus-visible {
   100% { opacity: 0; transform: translate(-50%, -18px) scale(1.03); }
 }
 
+@keyframes keyboard-hint {
+  from { filter: brightness(0.88); }
+  to { filter: brightness(1.22); }
+}
+
 @media (max-width: 760px) {
   .title-brand__edition,
   .title-footer span:last-child,
@@ -984,6 +1141,32 @@ a:focus-visible {
     display: none;
   }
 
+  .keyboard-instrument {
+    --keyboard-gap: 3px;
+    bottom: 8px;
+    width: calc(100vw - 16px);
+    padding: 8px 8px 10px;
+  }
+
+  .keyboard-instrument__header {
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+  }
+
+  .keyboard-instrument__row:nth-child(2) {
+    padding-inline: 12px;
+  }
+
+  .keyboard-instrument__row:nth-child(3) {
+    padding-inline: 20px;
+  }
+
+  .keyboard-key {
+    height: 27px;
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+
   .pause-actions,
   .results-actions {
     flex-direction: column;
@@ -1026,6 +1209,15 @@ a:focus-visible {
 
   .results-score-value {
     font-size: clamp(44px, 10vh, 76px);
+  }
+
+  .keyboard-instrument {
+    bottom: 6px;
+    padding-block: 7px 8px;
+  }
+
+  .keyboard-key {
+    height: 24px;
   }
 }
 
