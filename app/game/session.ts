@@ -14,6 +14,7 @@ import type {
   GameResults,
   GameSession,
   GameSettings,
+  GameMode,
   HitJudgement,
   KeySessionUpdate,
   PromptAttempt,
@@ -28,17 +29,37 @@ import type {
 
 /** Travel time from the horizon to the strike line. */
 export const APPROACH_DURATION_MS: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 3_000,
-  standard: 1_600,
-  turbo: 1_200,
+  relaxed: 1_600,
+  standard: 1_000,
+  turbo: 800,
 };
 
-/** Musical spacing between prompts. Prompts overlap on the highway. */
+/**
+ * Backwards-compatible showcase cadence. New scheduling should use
+ * getPromptCadenceMs so prompt density can vary independently by difficulty.
+ */
 export const PROMPT_CADENCE_MS: Readonly<Record<SpeedPreset, number>> = {
   relaxed: 1_500,
-  standard: 800,
-  turbo: 600,
+  standard: 1_200,
+  turbo: 900,
 };
+
+/** Musical spacing between prompts. Prompts can overlap on the highway. */
+export const PROMPT_CADENCE_BY_MODE_MS: Readonly<
+  Record<GameMode, Readonly<Record<SpeedPreset, number>>>
+> = {
+  easy: { relaxed: 2_000, standard: 1_600, turbo: 1_200 },
+  medium: { relaxed: 2_400, standard: 2_000, turbo: 1_500 },
+  hard: { relaxed: 2_000, standard: 1_600, turbo: 1_200 },
+  showcase: PROMPT_CADENCE_MS,
+};
+
+export function getPromptCadenceMs(
+  mode: GameMode,
+  speed: SpeedPreset,
+): number {
+  return PROMPT_CADENCE_BY_MODE_MS[mode][speed];
+}
 
 export const TIMING_WINDOWS_MS: Readonly<
   Record<SpeedPreset, TimingWindow>
@@ -48,32 +69,78 @@ export const TIMING_WINDOWS_MS: Readonly<
   turbo: { earlyMs: 190, perfectMs: 70, goodMs: 125, lateMs: 180 },
 };
 
+/** Extra forgiveness for the single-key learning deck. */
+export const EASY_TIMING_WINDOWS_MS: Readonly<
+  Record<SpeedPreset, TimingWindow>
+> = {
+  relaxed: { earlyMs: 400, perfectMs: 140, goodMs: 260, lateMs: 400 },
+  standard: { earlyMs: 340, perfectMs: 120, goodMs: 220, lateMs: 340 },
+  turbo: { earlyMs: 280, perfectMs: 100, goodMs: 190, lateMs: 280 },
+};
+
+export const DEFAULT_SESSION_DURATION_SECONDS = 45;
+const QUEUE_LOOKAHEAD_PROMPTS = 8;
+
+type TimingContext = SpeedPreset | Pick<GameSettings, "mode" | "speed">;
+
+function timingWindowFor(context: TimingContext): TimingWindow {
+  if (typeof context === "string") return TIMING_WINDOWS_MS[context];
+  return context.mode === "easy"
+    ? EASY_TIMING_WINDOWS_MS[context.speed]
+    : TIMING_WINDOWS_MS[context.speed];
+}
+
+export function getSessionDurationSeconds(settings: GameSettings): number {
+  return settings.durationSeconds ?? DEFAULT_SESSION_DURATION_SECONDS;
+}
+
 export interface CreateSessionOptions {
   readonly deck?: readonly ShortcutDefinition[];
   readonly maxRequeues?: number;
 }
 
+interface QueuedDeck {
+  readonly queue: readonly QueuedPrompt[];
+  readonly nextDeckIndex: number;
+  readonly nextPromptSerial: number;
+}
+
 function queueDeck(
   deck: readonly ShortcutDefinition[],
-  speed: SpeedPreset,
-): readonly QueuedPrompt[] {
-  const approachDurationMs = APPROACH_DURATION_MS[speed];
-  const cadenceMs = PROMPT_CADENCE_MS[speed];
-  const lateMs = TIMING_WINDOWS_MS[speed].lateMs;
+  settings: GameSettings,
+): QueuedDeck {
+  if (deck.length === 0) {
+    return { queue: [], nextDeckIndex: 0, nextPromptSerial: 0 };
+  }
+
+  const approachDurationMs = APPROACH_DURATION_MS[settings.speed];
+  const cadenceMs = getPromptCadenceMs(settings.mode, settings.speed);
+  const lateMs = timingWindowFor(settings).lateMs;
+  const durationMs = getSessionDurationSeconds(settings) * 1_000;
+  const queue: QueuedPrompt[] = [];
 
   // These are relative positions until startSession shifts the full timeline.
-  return deck.map((shortcut, index) => {
+  for (let index = 0; index < QUEUE_LOOKAHEAD_PROMPTS; index += 1) {
+    const shortcut = deck[index % deck.length];
     const approachedAtMs = index * cadenceMs;
     const strikeAtMs = approachedAtMs + approachDurationMs;
-    return {
+    const deadlineAtMs = strikeAtMs + lateMs;
+    if (deadlineAtMs > durationMs) break;
+    queue.push({
       promptId: `${shortcut.id}:${index}`,
       shortcut,
       requeueCount: 0,
       approachedAtMs,
       strikeAtMs,
-      deadlineAtMs: strikeAtMs + lateMs,
-    };
-  });
+      deadlineAtMs,
+    });
+  }
+
+  return {
+    queue,
+    nextDeckIndex: queue.length % deck.length,
+    nextPromptSerial: queue.length,
+  };
 }
 
 function shiftPromptTiming<T extends QueuedPrompt>(prompt: T, byMs: number): T {
@@ -94,13 +161,15 @@ export function createGameSession(
   options: CreateSessionOptions = {},
 ): GameSession {
   const deck = options.deck ?? getShortcutDeck(settings.mode);
-  const queue = queueDeck(deck, settings.speed);
+  const queuedDeck = queueDeck(deck, settings);
 
   return {
     phase: "ready",
     settings,
+    deck,
+    nextDeckIndex: queuedDeck.nextDeckIndex,
     active: null,
-    queue,
+    queue: queuedDeck.queue,
     attempts: [],
     input: EMPTY_INPUT_STATE,
     capturedCodes: getCapturedCodes(deck),
@@ -108,11 +177,62 @@ export function createGameSession(
     combo: 0,
     longestCombo: 0,
     maxRequeues: Math.max(0, Math.floor(options.maxRequeues ?? 1)),
-    nextPromptSerial: queue.length,
+    nextPromptSerial: queuedDeck.nextPromptSerial,
     startedAtMs: null,
     pausedAtMs: null,
     finishedAtMs: null,
   };
+}
+
+function getSessionEndsAtMs(session: GameSession): number | null {
+  if (session.startedAtMs === null) return null;
+  return (
+    session.startedAtMs + getSessionDurationSeconds(session.settings) * 1_000
+  );
+}
+
+function replenishQueue(session: GameSession): GameSession {
+  if (session.deck.length === 0 || session.queue.length >= QUEUE_LOOKAHEAD_PROMPTS) {
+    return session;
+  }
+
+  const endAtMs = getSessionEndsAtMs(session);
+  const timelineEndMs =
+    endAtMs ?? getSessionDurationSeconds(session.settings) * 1_000;
+  const cadenceMs = getPromptCadenceMs(
+    session.settings.mode,
+    session.settings.speed,
+  );
+  const approachMs = APPROACH_DURATION_MS[session.settings.speed];
+  const lateMs = timingWindowFor(session.settings).lateMs;
+  const queue = [...session.queue];
+  let nextDeckIndex = session.nextDeckIndex;
+  let nextPromptSerial = session.nextPromptSerial;
+
+  while (queue.length < QUEUE_LOOKAHEAD_PROMPTS) {
+    const tail = queue[queue.length - 1] ?? session.active;
+    const approachedAtMs = tail
+      ? tail.approachedAtMs + cadenceMs
+      : session.startedAtMs ?? 0;
+    const strikeAtMs = approachedAtMs + approachMs;
+    const deadlineAtMs = strikeAtMs + lateMs;
+    if (deadlineAtMs > timelineEndMs) break;
+
+    const shortcut = session.deck[nextDeckIndex];
+    queue.push({
+      promptId: `${shortcut.id}:${nextPromptSerial}`,
+      shortcut,
+      requeueCount: 0,
+      approachedAtMs,
+      strikeAtMs,
+      deadlineAtMs,
+    });
+    nextDeckIndex = (nextDeckIndex + 1) % session.deck.length;
+    nextPromptSerial += 1;
+  }
+
+  if (queue.length === session.queue.length) return session;
+  return { ...session, queue, nextDeckIndex, nextPromptSerial };
 }
 
 export function startSession(session: GameSession, nowMs: number): GameSession {
@@ -187,25 +307,42 @@ function advanceToNextPrompt(
 ): SessionUpdate {
   const [next, ...rest] = session.queue;
   if (next) {
+    const advanced = replenishQueue({
+      ...session,
+      active: activatePrompt(next),
+      queue: rest,
+      input: EMPTY_INPUT_STATE,
+    });
     return {
-      session: {
-        ...session,
-        active: activatePrompt(next),
-        queue: rest,
-        input: EMPTY_INPUT_STATE,
-      },
+      session: advanced,
       effects: [],
     };
   }
 
+  // The last fully hittable prompt can resolve just before the session clock.
+  // Keep the session alive until that clock expires rather than shortening it.
+  const waiting: GameSession = {
+    ...session,
+    active: null,
+    input: EMPTY_INPUT_STATE,
+  };
+
+  const endsAtMs = getSessionEndsAtMs(waiting);
+  if (endsAtMs !== null && nowMs < endsAtMs) {
+    return { session: waiting, effects: [] };
+  }
+
+  return finishSession(waiting, endsAtMs ?? nowMs);
+}
+
+function finishSession(session: GameSession, finishedAtMs: number): SessionUpdate {
   const finished: GameSession = {
     ...session,
     phase: "finished",
     active: null,
     input: EMPTY_INPUT_STATE,
-    finishedAtMs: nowMs,
+    finishedAtMs,
   };
-
   return {
     session: finished,
     effects: [{ type: "finished", results: resultsFor(finished) }],
@@ -234,11 +371,10 @@ export function getPromptProgress(
 export function getPromptTiming(
   prompt: Pick<QueuedPrompt, "approachedAtMs" | "strikeAtMs" | "deadlineAtMs">,
   nowMs: number,
-  speed: SpeedPreset,
+  context: TimingContext,
 ): PromptTiming {
   const timingOffsetMs = nowMs - prompt.strikeAtMs;
-  const hitWindowOpensAtMs =
-    prompt.strikeAtMs - TIMING_WINDOWS_MS[speed].earlyMs;
+  const hitWindowOpensAtMs = prompt.strikeAtMs - timingWindowFor(context).earlyMs;
   const phase =
     nowMs < hitWindowOpensAtMs
       ? "approaching"
@@ -260,9 +396,9 @@ export function getPromptTiming(
 
 export function getHitJudgement(
   timingOffsetMs: number,
-  speed: SpeedPreset,
+  context: TimingContext,
 ): HitJudgement {
-  const window = TIMING_WINDOWS_MS[speed];
+  const window = timingWindowFor(context);
   const distanceMs = Math.abs(timingOffsetMs);
   if (distanceMs <= window.perfectMs) return "perfect";
   if (distanceMs <= window.goodMs) return "good";
@@ -274,7 +410,17 @@ export function handleSessionKey(
   event: GameKeyEvent,
   nowMs: number,
 ): KeySessionUpdate {
-  if (session.phase !== "playing" || !session.active) {
+  if (session.phase !== "playing") {
+    return { session, effects: [], preventDefault: false };
+  }
+
+  const endsAtMs = getSessionEndsAtMs(session);
+  if (endsAtMs !== null && nowMs >= endsAtMs) {
+    const finished = finishSession(session, endsAtMs);
+    return { ...finished, preventDefault: false };
+  }
+
+  if (!session.active) {
     return { session, effects: [], preventDefault: false };
   }
 
@@ -286,7 +432,7 @@ export function handleSessionKey(
     event,
     nowMs,
   );
-  const timing = getPromptTiming(active, nowMs, session.settings.speed);
+  const timing = getPromptTiming(active, nowMs, session.settings);
 
   if (timing.phase === "expired") {
     const timedOut = tickSession(session, nowMs);
@@ -383,7 +529,7 @@ export function handleSessionKey(
   const responseMs = Math.max(0, nowMs - active.approachedAtMs);
   const judgement = getHitJudgement(
     timing.timingOffsetMs,
-    session.settings.speed,
+    session.settings,
   );
   const points = scoreHit({ judgement, combo: nextCombo, recovered });
   const attempt: PromptAttempt = {
@@ -430,29 +576,43 @@ export function handleSessionKey(
 function requeuePrompt(
   session: GameSession,
   active: ActivePrompt,
-): QueuedPrompt {
+): QueuedPrompt | null {
   const tail = session.queue[session.queue.length - 1] ?? active;
-  const cadenceMs = PROMPT_CADENCE_MS[session.settings.speed];
+  const cadenceMs = getPromptCadenceMs(
+    session.settings.mode,
+    session.settings.speed,
+  );
   const approachMs = APPROACH_DURATION_MS[session.settings.speed];
-  const lateMs = TIMING_WINDOWS_MS[session.settings.speed].lateMs;
+  const lateMs = timingWindowFor(session.settings).lateMs;
   const approachedAtMs = Math.max(
     tail.approachedAtMs + cadenceMs,
     active.deadlineAtMs,
   );
   const strikeAtMs = approachedAtMs + approachMs;
+  const deadlineAtMs = strikeAtMs + lateMs;
+  const endsAtMs = getSessionEndsAtMs(session);
+  if (endsAtMs !== null && deadlineAtMs > endsAtMs) return null;
   return {
     promptId: `${active.shortcut.id}:${session.nextPromptSerial}`,
     shortcut: active.shortcut,
     requeueCount: active.requeueCount + 1,
     approachedAtMs,
     strikeAtMs,
-    deadlineAtMs: strikeAtMs + lateMs,
+    deadlineAtMs,
   };
 }
 
 export function tickSession(session: GameSession, nowMs: number): SessionUpdate {
+  if (session.phase !== "playing") {
+    return { session, effects: [] };
+  }
+
+  const endsAtMs = getSessionEndsAtMs(session);
+  if (endsAtMs !== null && nowMs >= endsAtMs) {
+    return finishSession(session, endsAtMs);
+  }
+
   if (
-    session.phase !== "playing" ||
     !session.active ||
     nowMs <= session.active.deadlineAtMs
   ) {
@@ -460,8 +620,11 @@ export function tickSession(session: GameSession, nowMs: number): SessionUpdate 
   }
 
   const active = session.active;
-  const shouldRequeue = active.requeueCount < session.maxRequeues;
-  const requeued = shouldRequeue ? requeuePrompt(session, active) : null;
+  const requeued =
+    active.requeueCount < session.maxRequeues
+      ? requeuePrompt(session, active)
+      : null;
+  const shouldRequeue = requeued !== null;
   const attempt: PromptAttempt = {
     promptId: active.promptId,
     shortcut: active.shortcut,
@@ -479,7 +642,7 @@ export function tickSession(session: GameSession, nowMs: number): SessionUpdate 
     queue: requeued ? [...session.queue, requeued] : session.queue,
     combo: 0,
     input: EMPTY_INPUT_STATE,
-    nextPromptSerial: session.nextPromptSerial + (requeued ? 1 : 0),
+    nextPromptSerial: session.nextPromptSerial + (shouldRequeue ? 1 : 0),
   };
   const advanced = advanceToNextPrompt(updated, nowMs);
 
@@ -513,7 +676,7 @@ export function getVisiblePromptTimings(
     promptId: prompt.promptId,
     shortcut: prompt.shortcut,
     state: index === 0 && session.active ? "active" : "upcoming",
-    ...getPromptTiming(prompt, nowMs, session.settings.speed),
+    ...getPromptTiming(prompt, nowMs, session.settings),
   }));
 }
 
@@ -532,5 +695,5 @@ export function getSessionResults(session: GameSession): GameResults {
 }
 
 export function getHighScoreKey(settings: GameSettings): string {
-  return `shortcut-hero:high-score:${settings.mode}:${settings.assistance}:${settings.speed}`;
+  return `shortcut-hero:high-score:${settings.mode}:${settings.assistance}:${settings.speed}:${getSessionDurationSeconds(settings)}s`;
 }

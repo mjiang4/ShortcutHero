@@ -6,6 +6,8 @@ export type AssistanceMode = "novice" | "pro";
 
 export type SpeedPreset = "relaxed" | "standard" | "turbo";
 
+export type SessionDurationSeconds = 30 | 45 | 60;
+
 export type LetterCode = `Key${string}`;
 
 export interface SingleShortcutInput {
@@ -45,6 +47,8 @@ export interface GameSettings {
   readonly mode: GameMode;
   readonly assistance: AssistanceMode;
   readonly speed: SpeedPreset;
+  /** Defaults to 45 seconds when omitted for backwards compatibility. */
+  readonly durationSeconds?: SessionDurationSeconds;
 }
 
 export interface GameKeyEvent {
@@ -121,6 +125,9 @@ export interface GameResults {
 export interface GameSession {
   readonly phase: SessionPhase;
   readonly settings: GameSettings;
+  /** Source material used to continuously replenish the scheduled highway. */
+  readonly deck: readonly ShortcutDefinition[];
+  readonly nextDeckIndex: number;
   readonly active: ActivePrompt | null;
   readonly queue: readonly QueuedPrompt[];
   readonly attempts: readonly PromptAttempt[];

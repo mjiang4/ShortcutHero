@@ -1,5 +1,5 @@
-import { ShortcutHeroGame } from "./ShortcutHeroGame";
+import { SettingsScreen } from "./components/settings";
 
 export default function Home() {
-  return <ShortcutHeroGame />;
+  return <SettingsScreen />;
 }

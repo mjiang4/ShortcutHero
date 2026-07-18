@@ -4,11 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useGameAudio } from "./audio";
 import { GameScene, type SceneCue, type SceneFeedback } from "./components/game";
+import type { EffectsMode } from "./components/settings/settings";
 import {
   APPROACH_DURATION_MS,
   createGameSession,
   getApproachProgress,
   getHighScoreKey,
+  getSessionDurationSeconds,
   getVisiblePromptTimings,
   handleSessionKey,
   pauseSession,
@@ -16,18 +18,15 @@ import {
   startSession,
   tickSession,
   type GameEffect,
-  type GameMode,
   type GameResults,
   type GameSession,
   type GameSettings,
   type HitJudgement,
   type ActivePrompt,
   type ShortcutDefinition,
-  type SpeedPreset,
-  type AssistanceMode,
 } from "./game";
 
-type ViewPhase = "menu" | "countdown" | "game" | "results";
+type ViewPhase = "countdown" | "game" | "results";
 type JudgementTone = HitJudgement | "miss" | "wait" | "sequence";
 type Judgement = {
   id: number;
@@ -46,40 +45,26 @@ const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-const MODE_OPTIONS: readonly { value: GameMode; label: string }[] = [
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-  { value: "showcase", label: "Mix" },
-];
-
-const ASSISTANCE_OPTIONS: readonly {
-  value: AssistanceMode;
-  label: string;
-}[] = [
-  { value: "novice", label: "Novice" },
-  { value: "pro", label: "Pro" },
-];
-
-const SPEED_OPTIONS: readonly { value: SpeedPreset; label: string }[] = [
-  { value: "relaxed", label: "Relaxed" },
-  { value: "standard", label: "Fast" },
-  { value: "turbo", label: "Turbo" },
-];
-
-const SPEED_BPM: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 120,
-  standard: 150,
-  turbo: 200,
+const SPEED_BPM = {
+  relaxed: 140,
+  standard: 180,
+  turbo: 220,
 };
 
-const DEPARTURE_DURATION_MS = 820;
-
-const DEFAULT_SETTINGS: GameSettings = {
-  mode: "showcase",
-  assistance: "novice",
-  speed: "standard",
+const DIFFICULTY_LABELS = {
+  easy: "Novice · Single",
+  medium: "Medium · Sequence",
+  hard: "Hard · Chord",
+  showcase: "All skills",
 };
+
+const DEPARTURE_DURATION_MS = 560;
+
+export interface ShortcutHeroGameProps {
+  readonly settings: GameSettings;
+  readonly effectsMode: EffectsMode;
+  readonly soundEnabled: boolean;
+}
 
 function shortcutKeys(shortcut: ShortcutDefinition): readonly string[] {
   const { input } = shortcut;
@@ -106,9 +91,12 @@ function isTextEntry(target: EventTarget | null): boolean {
   );
 }
 
-export function ShortcutHeroGame() {
-  const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
-  const [viewPhase, setViewPhase] = useState<ViewPhase>("menu");
+export function ShortcutHeroGame({
+  settings,
+  effectsMode,
+  soundEnabled,
+}: ShortcutHeroGameProps) {
+  const [viewPhase, setViewPhase] = useState<ViewPhase>("countdown");
   const [countdown, setCountdown] = useState(3);
   const [session, setSessionState] = useState<GameSession | null>(null);
   const [results, setResults] = useState<GameResults | null>(null);
@@ -118,7 +106,7 @@ export function ShortcutHeroGame() {
   const [judgement, setJudgement] = useState<Judgement | null>(null);
   const [departingCues, setDepartingCues] = useState<readonly DepartingCue[]>([]);
   const [highScore, setHighScore] = useState(0);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [systemReducedMotion, setSystemReducedMotion] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
   const feedbackId = useRef(0);
   const judgementId = useRef(0);
@@ -126,16 +114,22 @@ export function ShortcutHeroGame() {
   const finishAudioTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
+    isReady,
     isMuted,
     start: startAudio,
     pause: pauseAudio,
     stop: stopAudio,
+    setMuted,
     toggleMuted,
     playStart,
     playHit,
     playMiss,
     playCombo,
   } = useGameAudio();
+
+  const reducedMotion =
+    effectsMode === "reduced" ||
+    (effectsMode === "system" && systemReducedMotion);
 
   const setSession = useCallback((next: GameSession | null) => {
     sessionRef.current = next;
@@ -295,11 +289,16 @@ export function ShortcutHeroGame() {
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(query.matches);
+    const update = () => setSystemReducedMotion(query.matches);
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    setMuted(!soundEnabled);
+    void startAudio(settings.speed);
+  }, [setMuted, settings.speed, soundEnabled, startAudio]);
 
   useEffect(() => {
     const key = getHighScoreKey(settings);
@@ -366,6 +365,7 @@ export function ShortcutHeroGame() {
 
     const pressKey = (event: KeyboardEvent) => {
       if (isTextEntry(event.target)) return;
+      if (!isReady) void startAudio(settings.speed);
       const current = sessionRef.current;
       if (!current) return;
 
@@ -415,7 +415,15 @@ export function ShortcutHeroGame() {
       window.removeEventListener("blur", pauseOnBlur);
       document.removeEventListener("visibilitychange", pauseOnBlur);
     };
-  }, [pauseAudio, processEffects, setSession, viewPhase]);
+  }, [
+    isReady,
+    pauseAudio,
+    processEffects,
+    setSession,
+    settings.speed,
+    startAudio,
+    viewPhase,
+  ]);
 
   useEffect(
     () => () => {
@@ -437,14 +445,14 @@ export function ShortcutHeroGame() {
     setViewPhase("countdown");
   }, [setSession, settings.speed, startAudio]);
 
-  const returnToMenu = useCallback(() => {
+  const returnToSettings = useCallback(() => {
     if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
     stopAudio();
     setSession(null);
     setResults(null);
     setFeedback(null);
     setDepartingCues([]);
-    setViewPhase("menu");
+    window.location.assign("/");
   }, [setSession, stopAudio]);
 
   const resume = useCallback(async () => {
@@ -476,20 +484,6 @@ export function ShortcutHeroGame() {
     [frameNow, session],
   );
   const sceneCues = useMemo<readonly SceneCue[]>(() => {
-    if (viewPhase === "menu") {
-      return [
-        {
-          id: "menu-preview",
-          action: "Go to Inbox",
-          shortcut: "G  →  I",
-          keys: ["KeyG", "KeyI"],
-          progress: 0.58,
-          state: "active",
-          context: "Linear navigation",
-        },
-      ];
-    }
-
     const live = visiblePromptTimings
       .filter((timing) => timing.progress > -0.1)
       .map<SceneCue>((timing) => ({
@@ -519,12 +513,18 @@ export function ShortcutHeroGame() {
         };
       });
     return [...resolved, ...live];
-  }, [departingCues, frameNow, settings.speed, viewPhase, visiblePromptTimings]);
+  }, [departingCues, frameNow, settings.speed, visiblePromptTimings]);
 
   const completed = session?.attempts.length ?? 0;
-  const remaining = (session?.queue.length ?? 0) + (session?.active ? 1 : 0);
-  const totalPrompts = completed + remaining;
-  const runProgress = totalPrompts === 0 ? 0 : completed / totalPrompts;
+  const sessionDurationMs = getSessionDurationSeconds(settings) * 1_000;
+  const elapsedMs = session?.startedAtMs
+    ? Math.max(0, frameNow - session.startedAtMs)
+    : 0;
+  const runProgress = Math.min(1, elapsedMs / sessionDurationMs);
+  const remainingSeconds = Math.max(
+    0,
+    Math.ceil((sessionDurationMs - elapsedMs) / 1_000),
+  );
   const accuracy =
     completed === 0
       ? 100
@@ -572,65 +572,6 @@ export function ShortcutHeroGame() {
           </div>
         </header>
 
-        {viewPhase === "menu" ? (
-          <section className="screen menu-screen" aria-labelledby="game-title">
-            <div className="menu-panel">
-              <p className="eyebrow">Build recall. Enter flow.</p>
-              <h1 className="hero-title" id="game-title">
-                Shortcut <span>Hero</span>
-              </h1>
-              <p className="hero-copy">
-                Hit the Linear shortcut as the action crosses the strike gate.
-                Timing—not speed—builds your combo and wakes up the runway.
-              </p>
-
-              <div className="menu-controls">
-                <SettingControl
-                  label="Difficulty"
-                  value={settings.mode}
-                  options={MODE_OPTIONS}
-                  onChange={(mode) => setSettings((current) => ({ ...current, mode }))}
-                />
-                <SettingControl
-                  label="Guidance"
-                  value={settings.assistance}
-                  options={ASSISTANCE_OPTIONS}
-                  onChange={(assistance) =>
-                    setSettings((current) => ({ ...current, assistance }))
-                  }
-                />
-                <SettingControl
-                  label="Speed"
-                  value={settings.speed}
-                  options={SPEED_OPTIONS}
-                  onChange={(speed) => setSettings((current) => ({ ...current, speed }))}
-                />
-              </div>
-
-              <div className="menu-actions">
-                <button type="button" className="primary-button" onClick={beginRun}>
-                  Start {settings.mode === "showcase" ? "showcase" : `${settings.mode} run`}
-                  <span aria-hidden="true">→</span>
-                </button>
-              </div>
-
-              <div className="menu-meta">
-                <span className="high-score">
-                  Personal best
-                  <strong>{SCORE_FORMATTER.format(highScore)}</strong>
-                </span>
-                <span className="keycaps-demo" aria-label="Example shortcut G then I">
-                  <span className="keycap">G</span>
-                  <span className="key-separator">→</span>
-                  <span className="keycap">I</span>
-                </span>
-              </div>
-              <p className="unsupported-note">A physical keyboard is required to play.</p>
-            </div>
-            <div className="menu-preview" aria-hidden="true" />
-          </section>
-        ) : null}
-
         {viewPhase === "countdown" ? (
           <div className="countdown-overlay" aria-live="assertive">
             <span className="countdown-number" key={countdown}>
@@ -645,6 +586,7 @@ export function ShortcutHeroGame() {
               <div className="hud-cluster">
                 <HudStat label="Score" value={SCORE_FORMATTER.format(session.score)} />
                 <HudStat label="Accuracy" value={`${accuracy}%`} />
+                <HudStat label="Best" value={SCORE_FORMATTER.format(highScore)} />
               </div>
               <div className="combo-display" aria-live="polite">
                 <span className="combo-value">{session.combo}</span>
@@ -655,7 +597,7 @@ export function ShortcutHeroGame() {
               <div className="hud-cluster is-right">
                 <HudStat
                   label="Mode"
-                  value={`${settings.mode === "showcase" ? "Mix" : settings.mode} · ${settings.assistance}`}
+                  value={`${DIFFICULTY_LABELS[settings.mode]} · ${settings.assistance === "novice" ? "Learn" : "Recall"}`}
                 />
                 <button
                   type="button"
@@ -681,7 +623,7 @@ export function ShortcutHeroGame() {
                 />
               </div>
               <span className="progress-time">
-                {completed}/{Math.max(totalPrompts, completed)}
+                {remainingSeconds}s
               </span>
             </div>
 
@@ -708,7 +650,7 @@ export function ShortcutHeroGame() {
                     <button type="button" className="primary-button" onClick={resume}>
                       Resume
                     </button>
-                    <button type="button" className="secondary-button" onClick={returnToMenu}>
+                    <button type="button" className="secondary-button" onClick={returnToSettings}>
                       End run
                     </button>
                   </div>
@@ -731,7 +673,7 @@ export function ShortcutHeroGame() {
               </h1>
               <p className="results-subtitle">
                 {results.practice.length === 0
-                  ? "Clean run. Try Pro mode or turn up the speed."
+                  ? "Clean run. Try Recall guidance or turn up the pace."
                   : "The misses below are already queued for your next run."}
               </p>
 
@@ -763,8 +705,8 @@ export function ShortcutHeroGame() {
                 <button type="button" className="primary-button" onClick={beginRun}>
                   Play again
                 </button>
-                <button type="button" className="secondary-button" onClick={returnToMenu}>
-                  Change mode
+                <button type="button" className="secondary-button" onClick={returnToSettings}>
+                  Change settings
                 </button>
               </div>
             </div>
@@ -778,37 +720,6 @@ export function ShortcutHeroGame() {
         </p>
       </div>
     </main>
-  );
-}
-
-function SettingControl<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: readonly { value: T; label: string }[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div className="control-row">
-      <span className="control-label">{label}</span>
-      <div className="segmented" role="group" aria-label={label}>
-        {options.map((option) => (
-          <button
-            type="button"
-            className={`segment ${option.value === value ? "is-active" : ""}`}
-            aria-pressed={option.value === value}
-            key={option.value}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 

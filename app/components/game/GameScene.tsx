@@ -2,7 +2,6 @@
 
 import {
   AdaptiveDpr,
-  RoundedBox,
   Text,
 } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -234,6 +233,10 @@ function Runway({ combo, paused }: { combo: number; paused: boolean }) {
     () => Array.from({ length: 22 }, (_, index) => -20.5 + index * 1.08),
     [],
   );
+  const approachMarks = useMemo(
+    () => Array.from({ length: 6 }, (_, index) => STRIKE_Z - 1.05 - index * 1.08),
+    [],
+  );
 
   return (
     <group>
@@ -266,6 +269,26 @@ function Runway({ combo, paused }: { combo: number; paused: boolean }) {
             opacity={index % 4 === 0 ? 0.26 : 0.16}
           />
         </mesh>
+      ))}
+
+      {approachMarks.map((z, index) => (
+        <group key={z} position={[0, -0.018, z]}>
+          {[-1, 1].map((side) => (
+            <mesh
+              key={side}
+              position={[side * (3.48 - index * 0.035), 0, 0]}
+              rotation={[0, side * 0.68, 0]}
+            >
+              <boxGeometry args={[0.46, 0.025, 0.035]} />
+              <meshBasicMaterial
+                color={COLORS.accentBright}
+                transparent
+                opacity={0.34 - index * 0.035 + energy * 0.12}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+        </group>
       ))}
 
       <mesh position={[0, 0.015, STRIKE_Z]}>
@@ -425,15 +448,29 @@ function StrikeGate({
       </mesh>
 
       {[-3.64, 3.64].map((x) => (
-        <mesh key={x} position={[x, 1.02, 0.015]}>
-          <boxGeometry args={[0.045, 2.05, 0.055]} />
-          <meshBasicMaterial
-            color={COLORS.accentBright}
-            transparent
-            opacity={0.72 + energy * 0.18}
-            toneMapped={false}
-          />
-        </mesh>
+        <group key={x}>
+          <mesh position={[x, 1.02, 0.015]}>
+            <boxGeometry args={[0.045, 2.05, 0.055]} />
+            <meshBasicMaterial
+              color={COLORS.accentBright}
+              transparent
+              opacity={0.72 + energy * 0.18}
+              toneMapped={false}
+            />
+          </mesh>
+          <mesh
+            position={[x - Math.sign(x) * 0.15, 1.91, 0.018]}
+            rotation={[0, 0, Math.sign(x) * 0.72]}
+          >
+            <boxGeometry args={[0.46, 0.045, 0.06]} />
+            <meshBasicMaterial
+              color={COLORS.accentBright}
+              transparent
+              opacity={0.76 + energy * 0.16}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
       ))}
       <mesh position={[0, 2.04, 0.015]}>
         <boxGeometry args={[7.32, 0.045, 0.055]} />
@@ -670,26 +707,34 @@ function ActionRibbon({
         : THREE.MathUtils.smootherstep(outcomeAge.current, 0, 0.64)
       : 0;
     const passedT = clamp01((progress - 1) / 0.38);
+    const motionScale = reducedMotion ? 0.24 : 1;
     const laneX = (cue.laneOffset ?? 0) * (0.65 + Math.min(progress, 1) * 0.35);
     const outcomeX = resolved
-      ? direction * exitT * (cleared ? 0.62 : missed ? 0.32 : 0.12)
+      ? direction * exitT * (cleared ? 0.82 : missed ? 0.4 : 0.12) * motionScale
       : 0;
     const hover =
       reducedMotion || paused || resolved
         ? 0
         : Math.sin(clock.clock.elapsedTime * 2.4 + cue.id.length) * 0.025;
     const outcomeY = cleared
-      ? exitT * 0.72
+      ? exitT * 1.05 * motionScale
       : missed
-        ? -exitT * exitT * 1.2
+        ? -exitT * exitT * 1.65 * motionScale
         : exitT * 0.08;
+    const outcomeZ = resolved
+      ? exitT * (cleared ? 4.4 : missed ? 2.4 : 1.2) * motionScale
+      : 0;
     const fade = clamp01(1 - Math.max(exitT, passedT * 0.78));
-    const targetScale = resolved ? 1 - exitT * (cleared ? 0.32 : 0.2) : 1;
+    const targetScale = resolved
+      ? cleared
+        ? 1 + exitT * 0.1 * motionScale
+        : 1 - exitT * 0.18
+      : 1;
 
     group.current.position.set(
       laneX + outcomeX,
       1.05 + hover + outcomeY,
-      progressToZ(progress),
+      progressToZ(progress) + outcomeZ,
     );
     group.current.scale.x = THREE.MathUtils.damp(
       group.current.scale.x,
@@ -699,19 +744,23 @@ function ActionRibbon({
     );
     group.current.scale.y = THREE.MathUtils.damp(
       group.current.scale.y,
-      resolved ? targetScale * (1 - exitT * 0.48) : targetScale,
+      resolved
+        ? targetScale * (1 - exitT * (cleared ? 0.72 : 0.42))
+        : targetScale,
       12,
       delta,
     );
     group.current.rotation.z = THREE.MathUtils.damp(
       group.current.rotation.z,
-      resolved ? direction * exitT * (missed ? 0.32 : 0.18) : 0,
+      resolved
+        ? direction * exitT * (missed ? 0.42 : 0.1) * motionScale
+        : 0,
       12,
       delta,
     );
     group.current.rotation.x = THREE.MathUtils.damp(
       group.current.rotation.x,
-      resolved ? -exitT * (missed ? 0.22 : 0.1) : 0,
+      resolved ? -exitT * (missed ? 0.34 : 0.12) * motionScale : 0,
       12,
       delta,
     );
@@ -749,7 +798,8 @@ function ActionRibbon({
   return (
     <group ref={group}>
       <group ref={body}>
-        <RoundedBox args={[5.9, 1.1, 0.12]} radius={0.1} smoothness={4}>
+        <mesh>
+          <boxGeometry args={[5.9, 1.02, 0.12]} />
           <meshStandardMaterial
             ref={shellMaterial}
             color={missed ? "#211219" : COLORS.surfaceRaised}
@@ -760,14 +810,38 @@ function ActionRibbon({
             transparent
             opacity={1}
           />
-        </RoundedBox>
+        </mesh>
 
-        <RoundedBox
-          args={[0.055, 0.73, 0.025]}
-          radius={0.02}
-          smoothness={3}
-          position={[-2.66, 0, 0.077]}
-        >
+        {[-0.52, 0.52].map((y) => (
+          <mesh key={y} position={[0, y, 0.014]}>
+            <boxGeometry args={[5.98, 0.025, 0.15]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={isActive ? 0.62 : 0.2}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
+
+        {[-1, 1].map((side) => (
+          <mesh
+            key={side}
+            position={[side * 2.87, side * 0.43, 0.045]}
+            rotation={[0, 0, side * 0.72]}
+          >
+            <boxGeometry args={[0.34, 0.035, 0.08]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={isActive ? 0.82 : 0.3}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
+
+        <mesh position={[-2.66, 0, 0.077]}>
+          <boxGeometry args={[0.055, 0.73, 0.025]} />
           <meshBasicMaterial
             ref={accentMaterial}
             color={color}
@@ -775,7 +849,7 @@ function ActionRibbon({
             opacity={isActive ? 1 : 0.58}
             toneMapped={false}
           />
-        </RoundedBox>
+        </mesh>
 
         <Text
           position={[-2.45, showShortcut ? 0.13 : 0, 0.075]}
@@ -805,18 +879,25 @@ function ActionRibbon({
             >
               {cue.shortcut}
             </Text>
-            <RoundedBox
-              args={[1.35, 0.48, 0.03]}
-              radius={0.09}
-              smoothness={3}
-              position={[2.03, 0, 0.082]}
-            >
+            <mesh position={[2.03, 0, 0.082]}>
+              <boxGeometry args={[1.35, 0.48, 0.03]} />
               <meshBasicMaterial
                 color={color}
                 transparent
                 opacity={isActive ? 0.16 : 0.08}
               />
-            </RoundedBox>
+            </mesh>
+            {[-0.69, 0.69].map((x) => (
+              <mesh key={x} position={[2.03 + x, 0, 0.099]}>
+                <boxGeometry args={[0.025, 0.48, 0.018]} />
+                <meshBasicMaterial
+                  color={color}
+                  transparent
+                  opacity={isActive ? 0.82 : 0.32}
+                  toneMapped={false}
+                />
+              </mesh>
+            ))}
             <Text
               position={[2.03, 0, 0.102]}
               maxWidth={1.12}
@@ -931,7 +1012,8 @@ function ReactiveKey({
 
   return (
     <group ref={group} position={[x, 0, z]}>
-      <RoundedBox args={[width, 0.16, 0.61]} radius={0.075} smoothness={3}>
+      <mesh>
+        <boxGeometry args={[width, 0.14, 0.61]} />
         <meshStandardMaterial
           ref={material}
           color={pressed ? "#e9e5ff" : hinted ? "#25213d" : "#1d1c24"}
@@ -940,9 +1022,18 @@ function ReactiveKey({
           roughness={0.5}
           metalness={0.14}
         />
-      </RoundedBox>
+      </mesh>
+      <mesh position={[0, 0.079, 0]}>
+        <boxGeometry args={[Math.max(0.2, width - 0.055), 0.018, 0.555]} />
+        <meshBasicMaterial
+          color={pressed ? "#f7f5ff" : hinted ? COLORS.accent : "#2b2933"}
+          transparent
+          opacity={pressed ? 0.95 : hinted ? 0.4 : 0.46}
+          toneMapped={false}
+        />
+      </mesh>
       <Text
-        position={[0, 0.096, 0]}
+        position={[0, 0.101, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         fontSize={spec.id === "SHIFT" ? 0.12 : 0.18}
         letterSpacing={spec.id === "SHIFT" ? 0.025 : 0.01}
@@ -971,12 +1062,8 @@ function KeyboardDeck({
 
   return (
     <group position={[0, 0.03, 4.28]}>
-      <RoundedBox
-        args={[8.1, 0.2, 2.65]}
-        radius={0.19}
-        smoothness={5}
-        position={[0, -0.13, 0.05]}
-      >
+      <mesh position={[0, -0.13, 0.05]}>
+        <boxGeometry args={[8.1, 0.2, 2.65]} />
         <meshStandardMaterial
           color="#101016"
           roughness={0.58}
@@ -984,7 +1071,19 @@ function KeyboardDeck({
           emissive={COLORS.accent}
           emissiveIntensity={0.03 + energy * 0.12}
         />
-      </RoundedBox>
+      </mesh>
+
+      {[-4.08, 4.08].map((x) => (
+        <mesh key={x} position={[x, -0.045, 0.05]}>
+          <boxGeometry args={[0.025, 0.08, 2.68]} />
+          <meshBasicMaterial
+            color={COLORS.accent}
+            transparent
+            opacity={0.28 + energy * 0.28}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
 
       {KEY_ROWS.map((row, rowIndex) => {
         const rowWidth = row.reduce(
@@ -1162,7 +1261,7 @@ function FeedbackBurst({
         />
       </points>
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <ringGeometry args={[0.35, 0.39, 64]} />
+        <ringGeometry args={[0.35, 0.39, 20]} />
         <meshBasicMaterial
           ref={ringMaterial}
           color={color}
@@ -1174,7 +1273,7 @@ function FeedbackBurst({
         />
       </mesh>
       <mesh ref={gateRing} position={[0, 0.9, 0.035]}>
-        <ringGeometry args={[0.44, 0.48, 64]} />
+        <ringGeometry args={[0.44, 0.48, 12]} />
         <meshBasicMaterial
           ref={gateRingMaterial}
           color={color}
