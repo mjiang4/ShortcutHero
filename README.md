@@ -1,22 +1,41 @@
 # Shortcut Hero
 
-A fast, 3D browser game for learning Linear keyboard shortcuts. Actions travel down a Guitar Hero-inspired highway; enter the matching shortcut before each prompt reaches the keyboard.
+Learn the shortcuts that make great software feel fast.
 
-Product and visual direction:
+Shortcut Hero is a 3D browser game that helps new users build keyboard-shortcut muscle memory. Actions race down a Guitar Hero-inspired highway; press the right shortcut at the strike line, chain accurate hits, and turn repetitive memorization into a game.
 
-- [Hackathon product spec](./PROJECT_SPEC.md)
-- [Design and visual identity](./DESIGN_IDENTITY.md)
+Linear is supported today. Shortcut libraries for Excel, Notion, Jira, Superhuman, and more are coming soon.
 
-## Play modes
+## How it works
 
-- Novice: single-key actions
-- Medium: two-key sequences
-- Hard: Shift chords
-- Mix: a 45-second showcase across all three input styles
-- Learn guidance shows the shortcut; Recall hides it
-- Focus, Fast, and Turbo tempo presets
+1. Read the approaching action.
+2. Press its shortcut at the strike line.
+3. Chain accurate hits to build your combo and score.
+4. Review what you knew—and what to practise—after each round.
 
-The game currently targets physical macOS keyboards. It only suppresses allowlisted game keys while a run is active and leaves Command, Control, and Option shortcuts to the browser.
+## Game modes
+
+- **Novice:** single-key shortcuts
+- **Medium:** key sequences
+- **Hard:** keyboard chords
+- **Mix:** all three input styles in one run
+- **Learn:** shows each shortcut as it approaches
+- **Recall:** hides the answer for true memory practice
+
+Adjust the pace, session length, music, and visual effects before each run. The game currently targets physical macOS keyboards and protects Command, Control, Option, and browser shortcuts from capture.
+
+## Why Shortcut Hero?
+
+Keyboard shortcuts are usually learned through documentation, tooltips, or accidental discovery. Shortcut Hero turns them into active recall: quick, repeated practice with immediate timing feedback, combos, particles, sound, and a clear round summary.
+
+The goal is a reusable learning layer for the tools people use every day:
+
+- Linear — available now
+- Excel — coming soon
+- Notion — coming soon
+- Jira — coming soon
+- Superhuman — coming soon
+- More shortcut libraries and custom tracks — planned
 
 ## Run locally
 
@@ -27,11 +46,20 @@ npm install
 npm run dev
 ```
 
-Validation:
+Then open `http://localhost:3000`.
+
+Run the checks with:
 
 ```bash
 npm run lint
 npm test
 ```
 
-The game uses React, Three.js, React Three Fiber, and procedural Web Audio. No database or external asset service is required.
+## Built with
+
+React, Three.js, React Three Fiber, post-processing effects, and procedural Web Audio. The prototype runs entirely in the browser and requires no database or external asset service.
+
+## Project docs
+
+- [Hackathon product spec](./PROJECT_SPEC.md)
+- [Design and visual identity](./DESIGN_IDENTITY.md)
