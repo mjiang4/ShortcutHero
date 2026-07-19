@@ -105,7 +105,7 @@ Acceptance:
 Note: Three.js `Clock` deprecation output currently originates in React Three
 Fiber `9.6.1`, the latest published version, rather than application code.
 
-### 5. Refactor onboarding, menus, and styles — next
+### 5. Refactor onboarding, menus, and styles — complete
 
 - Split onboarding, main menu, options, scores, and credits.
 - Extract platform detection, local profile persistence, high-score access, and keyboard-menu navigation.
@@ -117,7 +117,7 @@ Acceptance:
 - Keyboard-only navigation remains complete.
 - Local-storage keys and migrations are centralized.
 
-### 6. Add production failure handling
+### 6. Add production failure handling — next
 
 - Add route and global error boundaries.
 - Add WebGL-unavailable, audio-unavailable, and reduced-performance fallbacks.
