@@ -77,7 +77,7 @@ Acceptance:
 - The primary first-run-to-results path is covered.
 - Tests can run headlessly in CI without audio output or a dedicated GPU.
 
-### 3. Refactor the application controller — next
+### 3. Refactor the application controller — complete
 
 - Extract session lifecycle, timing loop, keyboard input, audio coordination, result persistence, and feedback into focused hooks/modules.
 - Split the HUD, pause menu, results screen, and result analytics into components.
@@ -89,7 +89,7 @@ Acceptance:
 - Existing engine and browser tests stay green.
 - `ShortcutHeroGame.tsx` has one clear responsibility and is materially smaller.
 
-### 4. Refactor the 3D scene
+### 4. Refactor the 3D scene — next
 
 - Split world, highway, cues, strike gate, particles, and feedback effects.
 - Centralize scene constants and visual-performance settings.
