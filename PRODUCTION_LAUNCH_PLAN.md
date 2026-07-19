@@ -141,7 +141,7 @@ Acceptance:
 - Unsupported visitors see a deliberate product experience.
 - Supported visitors reach the game with minimal friction.
 
-### 8. Add typed analytics — implementation complete; production decision pending
+### 8. Add typed analytics — complete; project token pending deployment
 
 - Add one analytics interface with a no-op local implementation and a PostHog production implementation.
 - Define event names and properties in TypeScript.
@@ -174,11 +174,10 @@ Decision gate:
 
 - Confirm PostHog region, project key, replay policy, and retention before production enablement.
 
-Current status: the typed client, privacy controls, event instrumentation, and
-dashboard definitions are committed-ready. Capture remains disabled until the
-decision gate is resolved and production environment variables are supplied.
+Decision: PostHog US, 12-month product-event retention, and session replay off.
+Capture remains disabled until the production project token is supplied.
 
-### 9. Add D1 persistence
+### 9. Add D1 persistence — next
 
 - Enable the logical D1 binding.
 - Define and generate reviewed migrations.

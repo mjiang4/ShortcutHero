@@ -6,8 +6,9 @@ The typed analytics client is implemented. Local development, tests, and
 production builds without credentials use a no-op adapter. Production PostHog
 capture starts only when both the project token and host are configured.
 
-Session replay is disabled by default. Do not enable it until region, sampling,
-retention, and privacy have been approved.
+Launch policy: use PostHog US, keep session replay off, and retain product
+analytics events for 12 months. Review this policy after the first 90 days of
+real traffic.
 
 ## Production configuration
 
@@ -20,8 +21,8 @@ NEXT_PUBLIC_POSTHOG_REPLAY_ENABLED=false
 NEXT_PUBLIC_POSTHOG_REPLAY_SAMPLE_RATE=0.05
 ```
 
-Use the EU ingestion host instead if the PostHog project is created in the EU.
-The host and project must be chosen together.
+The launch project must be created in PostHog US so its project token matches
+the configured ingestion host.
 
 ## Privacy rules
 
@@ -79,11 +80,14 @@ trends beside the funnel.
 - Personal-best rate and completed rounds per anonymous visitor.
 - Day-1 and day-7 return cohorts after the first `game_completed`.
 
-## Decision gate
+## Approved launch policy
 
-Before production capture, confirm:
+- Region: PostHog US.
+- Product analytics retention: 12 months.
+- Session replay: off.
+- Future error-log retention: 30 days.
+- Anonymous raw round retention in D1: 90 days.
+- Referral attribution and aggregate mastery retention: 12 months.
 
-1. PostHog US or EU region and project token.
-2. Whether session replay remains off or launches at a reviewed sample rate.
-3. Event and replay retention periods.
-4. Whether a privacy notice is required before capture in launch markets.
+Production capture still requires the public project token and a privacy notice
+review before deployment.
