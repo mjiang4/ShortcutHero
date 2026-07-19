@@ -3,6 +3,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { SystemScreen } from "./SystemScreen";
+import { analytics } from "../../analytics";
 
 type GameRuntimeBoundaryState = {
   readonly error: Error | null;
@@ -19,7 +20,13 @@ export class GameRuntimeBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("Shortcut Hero game runtime failed", error, info);
+    analytics.captureException(error, {
+      boundary: "game",
+      route: window.location.pathname,
+    });
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Shortcut Hero game runtime failed", error, info);
+    }
   }
 
   render() {

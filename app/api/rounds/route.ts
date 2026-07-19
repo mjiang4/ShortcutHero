@@ -1,4 +1,5 @@
 import { DatabaseUnavailableError, getD1Database } from "../../../db";
+import { invalidJsonResponse, readJsonRequest } from "../request";
 import {
   parseRoundWritePayload,
   type RoundWritePayload,
@@ -11,24 +12,18 @@ import {
   claimFirstReferral,
   verifyOrCreateVisitor,
 } from "../../referrals/server";
+import {
+  consumeRateLimit,
+  rateLimitResponse,
+  ROUND_WRITE_LIMIT,
+} from "../../security/rate-limit";
 
 const MAX_BODY_BYTES = 64 * 1_024;
 
 export async function POST(request: Request): Promise<Response> {
-  if (bodyIsTooLarge(request)) {
-    return json({ error: "Request is too large." }, 413);
-  }
-
-  let payload: RoundWritePayload | null;
-  try {
-    const rawBody = await request.text();
-    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
-      return json({ error: "Request is too large." }, 413);
-    }
-    payload = parseRoundWritePayload(JSON.parse(rawBody));
-  } catch {
-    payload = null;
-  }
+  const body = await readJsonRequest(request, MAX_BODY_BYTES);
+  if (!body.ok) return invalidJsonResponse(body.status);
+  const payload: RoundWritePayload | null = parseRoundWritePayload(body.value);
   if (!payload) {
     return json({ error: "Invalid round summary." }, 400);
   }
@@ -38,6 +33,15 @@ export async function POST(request: Request): Promise<Response> {
     const now = Date.now();
     if (!(await verifyOrCreateVisitor(db, payload, now))) {
       return json({ error: "Identity could not be verified." }, 403);
+    }
+    const rateLimit = await consumeRateLimit(
+      db,
+      payload.visitorId,
+      ROUND_WRITE_LIMIT,
+      now,
+    );
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfterSeconds);
     }
 
     if (await roundExists(db, payload.roundId, payload.visitorId)) {
@@ -125,13 +129,6 @@ async function roundHasReferralConversion(
     .bind(roundId, visitorId)
     .first<{ readonly id: string }>();
   return row !== null;
-}
-
-function bodyIsTooLarge(request: Request): boolean {
-  const rawLength = request.headers.get("content-length");
-  if (!rawLength) return false;
-  const length = Number(rawLength);
-  return Number.isFinite(length) && length > MAX_BODY_BYTES;
 }
 
 function json(body: unknown, status: number): Response {

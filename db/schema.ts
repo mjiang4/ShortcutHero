@@ -118,3 +118,14 @@ export const referralConversions = sqliteTable(
     index("referral_conversions_expires_at_idx").on(table.expiresAt),
   ],
 );
+
+export const rateLimits = sqliteTable(
+  "rate_limits",
+  {
+    key: text("key").primaryKey(),
+    windowStartedAt: integer("window_started_at").notNull(),
+    count: integer("count").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [index("rate_limits_expires_at_idx").on(table.expiresAt)],
+);

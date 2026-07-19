@@ -23,17 +23,24 @@ export function useCountdown({
   useEffect(() => {
     if (!active || !sceneReady) return;
 
+    let cancelled = false;
     let next = 3;
-    const timer = window.setInterval(() => {
+    let timer = 0;
+    const advance = () => {
+      if (cancelled) return;
       next -= 1;
       if (next > 0) {
         setCountdown(next);
+        timer = window.setTimeout(advance, 60_000 / SPEED_BPM[speed]);
         return;
       }
-      window.clearInterval(timer);
       onComplete();
-    }, 60_000 / SPEED_BPM[speed]);
+    };
+    timer = window.setTimeout(advance, 60_000 / SPEED_BPM[speed]);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [active, onComplete, sceneReady, setCountdown, speed]);
 }

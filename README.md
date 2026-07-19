@@ -75,3 +75,4 @@ production credentials are configured.
 - [Design and visual identity](./DESIGN_IDENTITY.md)
 - [Production launch plan](./PRODUCTION_LAUNCH_PLAN.md)
 - [Analytics contract and dashboard setup](./ANALYTICS.md)
+- [Security and privacy controls](./SECURITY.md)

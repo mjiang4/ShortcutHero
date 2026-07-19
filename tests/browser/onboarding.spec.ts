@@ -50,6 +50,26 @@ test("a first-time player can complete onboarding with the keyboard", async ({
   await expect(page.getByText("learn Linear through play")).toBeVisible();
 });
 
+test("legal pages expose direct policies and launch security headers", async ({
+  page,
+}) => {
+  const response = await page.goto("/privacy");
+  expect(response).not.toBeNull();
+  expect(response?.headers()["content-security-policy"]).toContain(
+    "frame-ancestors 'none'",
+  );
+  expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
+  await expect(page.getByRole("heading", { name: "privacy" })).toBeVisible();
+  await page.getByRole("button", { name: "delete my saved progress" }).click();
+  await expect(
+    page.getByRole("button", { name: "confirm: delete my progress" }),
+  ).toBeVisible();
+
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { name: "terms" })).toBeVisible();
+  await expect(page.getByText("No account or purchase")).toBeVisible();
+});
+
 test.describe("unsupported operating systems", () => {
   test.use({
     userAgent:

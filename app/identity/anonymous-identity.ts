@@ -54,6 +54,15 @@ export function createRoundId(): string {
   return `r_${randomHex(16)}`;
 }
 
+export function clearAnonymousIdentity(): void {
+  cachedIdentity = null;
+  try {
+    window.localStorage.removeItem(IDENTITY_STORAGE_KEY);
+  } catch {
+    // The in-memory identity is already cleared.
+  }
+}
+
 function randomHex(byteLength: number): string {
   const bytes = new Uint8Array(byteLength);
   crypto.getRandomValues(bytes);

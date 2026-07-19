@@ -11,7 +11,7 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test app/analytics/client.test.ts app/game/session.test.ts app/persistence/round-payload.test.ts app/platform/launch-compatibility.test.ts app/referrals/client.test.ts app/tools/registry.test.ts",
+    "test:unit": "tsx --test app/analytics/client.test.ts app/api/request.test.ts app/game/session.test.ts app/persistence/round-payload.test.ts app/platform/launch-compatibility.test.ts app/referrals/client.test.ts app/security/headers.test.ts app/tools/registry.test.ts",
     "test:render": "npm run build && node --test tests/rendered-html.test.mjs",
     "test:browser": "playwright test",
     "test": "npm run test:unit && npm run test:render && npm run test:browser",
@@ -32,8 +32,8 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260702.1",
+    "@cloudflare/vite-plugin": "^1.45.1",
+    "@cloudflare/workers-types": "^5.20260719.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
@@ -49,8 +49,13 @@
     "tsx": "4.22.1",
     "typescript": "5.9.3",
     "vinext": "0.0.50",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "vite": "^8.1.5",
+    "wrangler": "^4.112.0"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.14"
+    }
   },
   "type": "module"
 }

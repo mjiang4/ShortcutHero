@@ -38,6 +38,14 @@ the configured ingestion host.
 The runtime sanitizer drops forbidden personal and shortcut-input fields even
 if they are accidentally passed around the typed boundary.
 
+## Error reporting
+
+Error boundaries use PostHog's manual exception API with automatic exception
+capture disabled. Reports contain only a sanitized error type, boundary, route,
+opaque framework digest, and `NEXT_PUBLIC_APP_RELEASE`. Raw messages, component
+data, shortcut content, and entered values are not sent. Set error retention to
+30 days in the production PostHog project.
+
 ## Event contract
 
 | Event | When |

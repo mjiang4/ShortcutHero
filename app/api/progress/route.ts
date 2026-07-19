@@ -1,14 +1,12 @@
 import { DatabaseUnavailableError, getD1Database } from "../../../db";
+import { invalidJsonResponse, readJsonRequest } from "../request";
 import { parseDeletionRequest } from "../../persistence/round-payload";
 import { hashDeletionToken } from "../../persistence/server";
 
 export async function DELETE(request: Request): Promise<Response> {
-  let identity: ReturnType<typeof parseDeletionRequest>;
-  try {
-    identity = parseDeletionRequest(await request.json());
-  } catch {
-    identity = null;
-  }
+  const body = await readJsonRequest(request, 2_048);
+  if (!body.ok) return invalidJsonResponse(body.status);
+  const identity = parseDeletionRequest(body.value);
   if (!identity) {
     return Response.json(
       { error: "Invalid deletion request." },

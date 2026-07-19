@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { SystemScreen } from "./components/system";
+import { analytics } from "./analytics";
 
 export default function GlobalError({
   error,
@@ -12,7 +13,14 @@ export default function GlobalError({
   readonly reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Shortcut Hero root failed", error);
+    analytics.captureException(error, {
+      boundary: "root",
+      route: window.location.pathname,
+      digest: error.digest,
+    });
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Shortcut Hero root failed", error);
+    }
   }, [error]);
 
   return (

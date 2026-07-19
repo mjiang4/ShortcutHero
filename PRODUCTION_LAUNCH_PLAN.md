@@ -227,7 +227,7 @@ Implementation: first-touch attribution is stored anonymously, same-visitor
 self-referrals and repeated conversion credit are rejected server-side, and the
 results prompt is capped to once every three completed rounds.
 
-### 11. Add security, privacy, and observability — next
+### 11. Add security, privacy, and observability — complete
 
 - Resolve actionable dependency advisories.
 - Add security headers and a Content Security Policy compatible with analytics and WebGL assets.
@@ -242,7 +242,12 @@ Acceptance:
 - Secrets are server-only and represented in `.env.example` without values.
 - Error reports and replay do not contain typed names or shortcut inputs.
 
-### 12. Prepare the Twitter launch surface
+Implementation: production dependencies audit clean; remaining moderate audit
+findings are isolated to Drizzle's local migration CLI. CSP and browser headers,
+bounded request parsing, D1-backed write limits, direct privacy/terms pages,
+confirmed deletion, and sanitized manual error capture are in place.
+
+### 12. Prepare the Twitter launch surface — next
 
 - Regenerate the Open Graph/Twitter image to match the current game.
 - Update stale metadata and image alt text.

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import type { ShortcutTrack } from "../../tools/types";
 import type { ScreenView } from "./title-types";
@@ -28,7 +29,11 @@ export function TitleShell({
 
       <footer className="title-footer">
         <span>{summary}</span>
-        <span>{footerInstructions(view)}</span>
+        <span className="title-footer__actions">
+          <span>{footerInstructions(view)}</span>
+          <Link href="/privacy">privacy</Link>
+          <Link href="/terms">terms</Link>
+        </span>
       </footer>
     </main>
   );

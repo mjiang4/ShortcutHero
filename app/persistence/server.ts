@@ -118,5 +118,6 @@ export async function pruneExpiredData(
     db.prepare("DELETE FROM rounds WHERE expires_at < ?").bind(now),
     db.prepare("DELETE FROM shortcut_mastery WHERE expires_at < ?").bind(now),
     db.prepare("DELETE FROM visitors WHERE expires_at < ?").bind(now),
+    db.prepare("DELETE FROM rate_limits WHERE expires_at < ?").bind(now),
   ]);
 }

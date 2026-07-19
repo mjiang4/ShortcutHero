@@ -9,9 +9,20 @@ type PendingEvent = {
   readonly name: AnalyticsEventName;
   readonly properties: SafeProperties;
 };
+type PendingException = {
+  readonly errorName: string;
+  readonly properties: SafeProperties;
+};
 type AnalyticsSink = {
   capture(name: string, properties: SafeProperties): void;
+  captureException(errorName: string, properties: SafeProperties): void;
   getAnonymousId(): string | null;
+  reset(): void;
+};
+type ErrorContext = {
+  readonly boundary: "app" | "root" | "play" | "game";
+  readonly route: string;
+  readonly digest?: string;
 };
 
 const PROJECT_TOKEN = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
@@ -25,6 +36,8 @@ const IS_CONFIGURED = Boolean(PROJECT_TOKEN && POSTHOG_HOST);
 const SHOULD_INITIALIZE =
   process.env.NODE_ENV === "production" && IS_CONFIGURED;
 const MAX_QUEUED_EVENTS = 50;
+const MAX_QUEUED_EXCEPTIONS = 10;
+const APP_RELEASE = process.env.NEXT_PUBLIC_APP_RELEASE ?? "unknown";
 const FORBIDDEN_PROPERTY_KEYS = new Set([
   "action",
   "email",
@@ -40,6 +53,7 @@ let sink: AnalyticsSink | null = null;
 let anonymousId: string | null = null;
 let initialization: Promise<void> | null = null;
 const queue: PendingEvent[] = [];
+const exceptionQueue: PendingException[] = [];
 
 export const analytics = {
   capture<Name extends AnalyticsEventName>(
@@ -62,6 +76,30 @@ export const analytics = {
     anonymousId ??= getOrCreateAnonymousIdentity().visitorId;
     return sink?.getAnonymousId() ?? anonymousId;
   },
+
+  captureException(error: unknown, context: ErrorContext): void {
+    if (!SHOULD_INITIALIZE) return;
+    const errorName = sanitizeErrorName(error);
+    const properties = sanitizeAnalyticsProperties({
+      error_type: errorName,
+      boundary: context.boundary,
+      route: context.route,
+      digest: context.digest ?? "none",
+      release: APP_RELEASE,
+    });
+    if (sink) {
+      sink.captureException(errorName, properties);
+      return;
+    }
+    if (exceptionQueue.length < MAX_QUEUED_EXCEPTIONS) {
+      exceptionQueue.push({ errorName, properties });
+    }
+  },
+
+  resetIdentity(): void {
+    anonymousId = null;
+    sink?.reset();
+  },
 };
 
 export function initializeAnalytics(): Promise<void> {
@@ -80,6 +118,7 @@ async function initializePostHog(): Promise<void> {
       capture_pageview: false,
       capture_pageleave: false,
       person_profiles: "never",
+      capture_exceptions: false,
       disable_session_recording: !REPLAY_ENABLED,
       session_recording: {
         maskAllInputs: true,
@@ -95,14 +134,26 @@ async function initializePostHog(): Promise<void> {
     posthog.identify(anonymousId);
     sink = {
       capture: (name, properties) => posthog.capture(name, properties),
+      captureException: (errorName, properties) => {
+        const sanitizedError = new Error("Sanitized client exception");
+        sanitizedError.name = errorName;
+        posthog.captureException(sanitizedError, properties);
+      },
       getAnonymousId: () => posthog.get_distinct_id(),
+      reset: () => posthog.reset(),
     };
     for (const event of queue.splice(0)) {
       sink.capture(event.name, event.properties);
     }
+    for (const exception of exceptionQueue.splice(0)) {
+      sink.captureException(exception.errorName, exception.properties);
+    }
   } catch (error) {
     queue.length = 0;
-    console.warn("Shortcut Hero analytics could not initialize", error);
+    exceptionQueue.length = 0;
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Shortcut Hero analytics could not initialize", error);
+    }
   }
 }
 
@@ -117,10 +168,20 @@ export function sanitizeAnalyticsProperties(
       typeof value === "number" ||
       typeof value === "boolean"
     ) {
-      safe[key] = value;
+      if (typeof value === "string") safe[key] = value.slice(0, 120);
+      else if (typeof value === "number" && Number.isFinite(value)) {
+        safe[key] = value;
+      } else if (typeof value === "boolean") safe[key] = value;
     }
   }
   return safe;
+}
+
+export function sanitizeErrorName(error: unknown): string {
+  const candidate = error instanceof Error ? error.name : "Error";
+  return /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(candidate)
+    ? candidate
+    : "Error";
 }
 
 function clampSampleRate(value: number): number {

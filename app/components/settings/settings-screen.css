@@ -242,6 +242,21 @@
   letter-spacing: 0.035em;
 }
 
+.title-footer__actions {
+  display: flex;
+  gap: 16px;
+}
+
+.title-footer__actions a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.title-footer__actions a:hover,
+.title-footer__actions a:focus-visible {
+  color: var(--paper);
+}
+
 /* Title sub-screens */
 
 .title-panel {

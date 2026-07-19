@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sanitizeAnalyticsProperties } from "./client";
+import { sanitizeAnalyticsProperties, sanitizeErrorName } from "./client";
 
 test("analytics properties remove personal and shortcut input data", () => {
   assert.deepEqual(
@@ -21,4 +21,12 @@ test("analytics properties remove personal and shortcut input data", () => {
       completed: true,
     },
   );
+});
+
+test("error reporting keeps only a bounded error type", () => {
+  const error = new Error("Ada pressed Command K");
+  error.name = "TypeError";
+  assert.equal(sanitizeErrorName(error), "TypeError");
+  error.name = "Ada pressed Command K";
+  assert.equal(sanitizeErrorName(error), "Error");
 });
