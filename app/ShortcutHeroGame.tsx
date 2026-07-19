@@ -631,7 +631,11 @@ export function ShortcutHeroGame({
   );
 
   return (
-    <main className="shortcut-hero">
+    <main
+      className="shortcut-hero"
+      data-view-phase={viewPhase}
+      data-reduced-motion={reducedMotion ? "true" : "false"}
+    >
       <div className="game-canvas" aria-hidden="true">
         <GameScene
           cues={sceneCues}

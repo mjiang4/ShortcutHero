@@ -66,7 +66,7 @@ Acceptance:
 - Pull requests cannot merge when a quality step fails.
 - CI does not require production secrets.
 
-### 2. Protect critical behavior with browser tests — next
+### 2. Protect critical behavior with browser tests — complete
 
 - Add browser tests for onboarding, system confirmation, guide, main menu, options confirmation/cancel, countdown, pause/resume, results, and retry.
 - Add one test proving Command, Control, and Option browser shortcuts are not captured.
@@ -77,7 +77,7 @@ Acceptance:
 - The primary first-run-to-results path is covered.
 - Tests can run headlessly in CI without audio output or a dedicated GPU.
 
-### 3. Refactor the application controller
+### 3. Refactor the application controller — next
 
 - Extract session lifecycle, timing loop, keyboard input, audio coordination, result persistence, and feedback into focused hooks/modules.
 - Split the HUD, pause menu, results screen, and result analytics into components.

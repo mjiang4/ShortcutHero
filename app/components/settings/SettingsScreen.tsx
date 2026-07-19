@@ -190,6 +190,7 @@ export function SettingsScreen() {
     DEFAULT_LAUNCH_SETTINGS,
   );
   const [scores, setScores] = useState<readonly ScoreEntry[]>([]);
+  const [hasRestoredSettings, setHasRestoredSettings] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -199,19 +200,21 @@ export function SettingsScreen() {
       setScores(readHighScores());
       setSystemInfo(detectSystem());
       const onboarding = restoreOnboarding();
-      setUserName(onboarding.name);
+      setUserName((current) => current || onboarding.name);
       if (onboarding.complete) setView("menu");
+      setHasRestoredSettings(true);
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
+    if (!hasRestoredSettings) return;
     try {
       window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch {
       // Persistence is optional; the title screen remains usable without it.
     }
-  }, [settings]);
+  }, [hasRestoredSettings, settings]);
 
   const startGame = useCallback(() => {
     void primeGameAudio(settings.pace, settings.sound === "off");
@@ -428,6 +431,7 @@ export function SettingsScreen() {
               <span>name</span>
               <input
                 autoFocus
+                disabled={!hasRestoredSettings}
                 maxLength={32}
                 value={userName}
                 onChange={(event) => setUserName(event.target.value)}
@@ -437,7 +441,7 @@ export function SettingsScreen() {
             <button
               type="button"
               className="primary-button onboarding-action"
-              disabled={!userName.trim()}
+              disabled={!hasRestoredSettings || !userName.trim()}
               onClick={continueFromName}
             >
               continue

@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "tsx --test app/game/session.test.ts app/tools/registry.test.ts",
     "test:render": "npm run build && node --test tests/rendered-html.test.mjs",
-    "test": "npm run test:unit && npm run test:render",
+    "test:browser": "playwright test",
+    "test": "npm run test:unit && npm run test:render && npm run test:browser",
     "check": "npm run lint && npm run typecheck && npm test",
     "db:generate": "drizzle-kit generate"
   },
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260702.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

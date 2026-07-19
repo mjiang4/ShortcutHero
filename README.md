@@ -43,6 +43,7 @@ Requires Node.js 22.13 or newer.
 
 ```bash
 npm install
+npx playwright install chromium
 npm run dev
 ```
 
@@ -55,7 +56,7 @@ npm run check
 ```
 
 This runs linting, TypeScript validation, engine tests, the production build,
-and rendered-route tests.
+rendered-route tests, and the headless browser suite.
 
 ## Built with
 
@@ -65,3 +66,4 @@ React, Three.js, React Three Fiber, post-processing effects, and procedural Web 
 
 - [Hackathon product spec](./PROJECT_SPEC.md)
 - [Design and visual identity](./DESIGN_IDENTITY.md)
+- [Production launch plan](./PRODUCTION_LAUNCH_PLAN.md)
