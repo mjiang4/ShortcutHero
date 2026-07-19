@@ -65,13 +65,16 @@ test("separates title and play routes while keeping the 3D dependencies", async 
   );
 });
 
-test("server-renders the configured play route", async () => {
+test("server-renders the configured play route loading shell", async () => {
   const response = await render(
     "/play?tool=linear&difficulty=easy&guidance=novice&pace=standard&session=30&sound=off&effects=reduced",
   );
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
-  assert.match(html, /game-canvas/i);
+  assert.match(html, /preparing the highway/i);
+  assert.match(html, /ShortcutHeroGame/i);
+  assert.match(html, /durationSeconds\\?":30/i);
+  assert.doesNotMatch(html, /game-canvas/i);
   assert.doesNotMatch(html, /enter the flow|high scores/i);
 });

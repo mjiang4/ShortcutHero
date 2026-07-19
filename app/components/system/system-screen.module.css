@@ -1,0 +1,122 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  min-width: 320px;
+  min-height: 100svh;
+  overflow: hidden;
+  place-items: center;
+  padding: 32px;
+  color: #f4f1ea;
+  background:
+    linear-gradient(155deg, rgba(50, 31, 67, 0.92), transparent 48%),
+    #080a14;
+}
+
+.glow {
+  position: absolute;
+  top: 50%;
+  left: 68%;
+  width: min(44vw, 620px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255, 214, 163, 0.2);
+  box-shadow: 0 0 130px rgba(244, 162, 97, 0.18);
+  pointer-events: none;
+}
+
+.card,
+.loading {
+  position: relative;
+  z-index: 1;
+  width: min(680px, 100%);
+}
+
+.eyebrow,
+.loading p {
+  margin: 0 0 18px;
+  color: #ffd6a3;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.card h1 {
+  max-width: 650px;
+  margin: 0;
+  font-size: clamp(58px, 10vw, 126px);
+  font-weight: 330;
+  letter-spacing: -0.075em;
+  line-height: 0.88;
+}
+
+.message {
+  max-width: 540px;
+  margin: 28px 0 0;
+  color: rgba(244, 241, 234, 0.68);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 28px;
+  margin-top: 38px;
+}
+
+.actions button,
+.actions a {
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.4);
+  color: #f4f1ea;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 17px;
+  text-decoration: none;
+  text-transform: lowercase;
+}
+
+.actions button {
+  border-bottom-color: #ffd6a3;
+}
+
+.actions button:hover,
+.actions a:hover {
+  color: #ffd6a3;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: auto;
+}
+
+.loading p {
+  margin: 0;
+}
+
+.pulse {
+  width: 9px;
+  height: 9px;
+  background: #ffd6a3;
+  box-shadow: 0 0 24px rgba(255, 214, 163, 0.7);
+  animation: system-pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes system-pulse {
+  from { opacity: 0.3; transform: scale(0.75); }
+  to { opacity: 1; transform: scale(1.08); }
+}
+
+@media (max-width: 600px) {
+  .screen { padding: 24px; }
+  .actions { flex-direction: column; align-items: flex-start; gap: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+}

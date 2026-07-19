@@ -75,6 +75,21 @@ a:focus-visible {
   pointer-events: none;
 }
 
+.capability-notice {
+  position: absolute;
+  z-index: 6;
+  right: clamp(22px, 4vw, 58px);
+  bottom: 24px;
+  max-width: 320px;
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--sun);
+  color: rgba(244, 241, 234, 0.76);
+  background: rgba(8, 10, 20, 0.78);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .hud {
   position: absolute;
   top: 26px;

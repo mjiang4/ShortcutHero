@@ -2,6 +2,69 @@ import { expect, test } from "@playwright/test";
 
 import { FAST_TEST_RUN } from "./helpers";
 
+test("a browser without WebGL gets a recoverable graphics fallback", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function getContextWithoutWebGL(
+      this: HTMLCanvasElement,
+      contextId: string,
+      ...options: unknown[]
+    ) {
+      if (contextId.startsWith("webgl") || contextId === "experimental-webgl") {
+        return null;
+      }
+      return getContext.call(this, contextId, ...options);
+    } as typeof HTMLCanvasElement.prototype.getContext;
+  });
+
+  await page.goto(FAST_TEST_RUN.replace("sound=off", "sound=on"));
+
+  await expect(page.getByRole("heading", { name: "WebGL is off" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "return to title" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+});
+
+test("constrained devices lower visual cost and continue without audio", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "hardwareConcurrency", {
+      configurable: true,
+      value: 2,
+    });
+    Object.defineProperty(window, "AudioContext", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window, "webkitAudioContext", {
+      configurable: true,
+      value: undefined,
+    });
+  });
+
+  await page.goto(FAST_TEST_RUN.replace("sound=off", "sound=on"));
+
+  const game = page.locator("main.shortcut-hero");
+  await expect(game).toHaveAttribute("data-render-quality", "reduced");
+  await expect(page.getByText("Sound is unavailable.")).toBeVisible();
+  await expect(page.locator(".countdown-number")).toHaveText("3", {
+    timeout: 15_000,
+  });
+
+  await page.locator("canvas").evaluate((canvas) => {
+    canvas.dispatchEvent(
+      new Event("webglcontextlost", { bubbles: false, cancelable: true }),
+    );
+  });
+  await expect(
+    page.getByRole("heading", { name: "the stage went dark" }),
+  ).toBeVisible();
+});
+
 test("the full-effects WebGL scene initializes", async ({ page }) => {
   await page.goto(FAST_TEST_RUN.replace("effects=system", "effects=full"));
 

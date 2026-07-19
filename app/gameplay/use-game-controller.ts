@@ -109,7 +109,7 @@ export function useGameController({
 
   useEffect(() => {
     setMuted(!soundEnabled);
-    if (sceneReady) void startAudio(settings.speed);
+    if (sceneReady && soundEnabled) void startAudio(settings.speed);
   }, [sceneReady, setMuted, settings.speed, soundEnabled, startAudio]);
 
   const completeCountdown = useCallback(() => {
@@ -147,6 +147,7 @@ export function useGameController({
 
   useGameplayInput({
     active: viewPhase === "game",
+    audioEnabled: soundEnabled,
     audioReady,
     speed: settings.speed,
     sessionRef,
@@ -162,9 +163,9 @@ export function useGameController({
     resetFeedback();
     setSession(null);
     setCountdown(3);
-    void startAudio(settings.speed);
+    if (soundEnabled) void startAudio(settings.speed);
     setViewPhase("countdown");
-  }, [resetFeedback, setSession, settings.speed, startAudio]);
+  }, [resetFeedback, setSession, settings.speed, soundEnabled, startAudio]);
 
   const returnToSettings = useCallback(() => {
     stopAudio();
@@ -177,7 +178,7 @@ export function useGameController({
   const resume = useCallback(() => {
     const current = sessionRef.current;
     if (!current || current.phase !== "paused") return;
-    void startAudio(settings.speed);
+    if (soundEnabled) void startAudio(settings.speed);
     const now = performance.now();
     const beatMs = 60_000 / SPEED_BPM[settings.speed];
     const pausedAt = current.pausedAtMs ?? now;
@@ -191,7 +192,7 @@ export function useGameController({
     shiftDepartingCues(pausedFor);
     setFrameNow(now);
     setSession(resumeSession(current, now + alignmentDelay));
-  }, [setSession, settings.speed, shiftDepartingCues, startAudio]);
+  }, [setSession, settings.speed, shiftDepartingCues, soundEnabled, startAudio]);
 
   useOverlayMenuNavigation({
     paused: viewPhase === "game" && session?.phase === "paused",

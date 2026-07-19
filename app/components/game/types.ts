@@ -62,8 +62,12 @@ export interface GameSceneProps {
   reducedMotion?: boolean;
   /** Disable post-processing on constrained devices or in tests. */
   bloom?: boolean;
+  /** Lowers pixel density and antialiasing without changing game timing. */
+  renderQuality?: "full" | "reduced";
   /** Fires when the WebGL canvas has been created and can begin the count-in. */
   onReady?: () => void;
+  /** Fires if the browser loses the WebGL context during a run. */
+  onContextLost?: () => void;
   className?: string;
   style?: CSSProperties;
 }

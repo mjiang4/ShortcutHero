@@ -22,10 +22,14 @@ export async function primeGameAudio(
   tempo: AudioTempo,
   muted = false,
 ): Promise<boolean> {
-  const engine = getSharedEngine();
-  engine.setTempo(tempo);
-  engine.setMuted(muted);
-  return engine.unlock();
+  try {
+    const engine = getSharedEngine();
+    engine.setTempo(tempo);
+    engine.setMuted(muted);
+    return await engine.unlock();
+  } catch {
+    return false;
+  }
 }
 
 export type GameAudioControls = {
@@ -53,9 +57,14 @@ export function useGameAudio(): GameAudioControls {
   useEffect(() => () => engineRef.current.stop(), []);
 
   const start = useCallback(async (tempo?: AudioTempo) => {
-    const ready = await engineRef.current.start(tempo);
-    setIsReady(ready);
-    return ready;
+    try {
+      const ready = await engineRef.current.start(tempo);
+      setIsReady(ready);
+      return ready;
+    } catch {
+      setIsReady(false);
+      return false;
+    }
   }, []);
 
   const pause = useCallback(() => {

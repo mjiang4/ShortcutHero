@@ -3,7 +3,7 @@
 import { AdaptiveDpr } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { ActionRibbon } from "./ActionRibbon";
@@ -124,10 +124,39 @@ export function GameScene({
   paused = false,
   reducedMotion = false,
   bloom = true,
+  renderQuality = "full",
   onReady,
+  onContextLost,
   className,
   style,
 }: GameSceneProps) {
+  const removeContextListener = useRef<(() => void) | null>(null);
+  const handleCreated = useCallback(
+    ({ gl }: { gl: THREE.WebGLRenderer }) => {
+      removeContextListener.current?.();
+      const canvas = gl.domElement;
+      const handleContextLost = (event: Event) => {
+        event.preventDefault();
+        onContextLost?.();
+      };
+      canvas.addEventListener("webglcontextlost", handleContextLost, {
+        once: true,
+      });
+      removeContextListener.current = () =>
+        canvas.removeEventListener("webglcontextlost", handleContextLost);
+      onReady?.();
+    },
+    [onContextLost, onReady],
+  );
+
+  useEffect(
+    () => () => {
+      removeContextListener.current?.();
+      removeContextListener.current = null;
+    },
+    [],
+  );
+
   return (
     <div
       className={className}
@@ -142,18 +171,22 @@ export function GameScene({
       aria-hidden="true"
     >
       <Canvas
-        dpr={SCENE_PERFORMANCE.dpr}
+        dpr={
+          renderQuality === "reduced"
+            ? SCENE_PERFORMANCE.reducedDpr
+            : SCENE_PERFORMANCE.dpr
+        }
         camera={SCENE_PERFORMANCE.camera}
         frameloop={paused ? "demand" : "always"}
         gl={{
-          antialias: true,
+          antialias: renderQuality === "full",
           alpha: false,
           powerPreference: "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.05,
         }}
         shadows={false}
-        onCreated={onReady}
+        onCreated={handleCreated}
         style={{ display: "block", width: "100%", height: "100%" }}
       >
         <SceneContent

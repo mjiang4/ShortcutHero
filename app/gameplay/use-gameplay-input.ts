@@ -20,6 +20,7 @@ function isTextEntry(target: EventTarget | null): boolean {
 
 type GameplayInputOptions = {
   readonly active: boolean;
+  readonly audioEnabled: boolean;
   readonly audioReady: boolean;
   readonly speed: GameSettings["speed"];
   readonly sessionRef: RefObject<GameSession | null>;
@@ -32,6 +33,7 @@ type GameplayInputOptions = {
 
 export function useGameplayInput({
   active,
+  audioEnabled,
   audioReady,
   speed,
   sessionRef,
@@ -46,7 +48,7 @@ export function useGameplayInput({
 
     const pressKey = (event: KeyboardEvent) => {
       if (isTextEntry(event.target)) return;
-      if (!audioReady) void startAudio(speed);
+      if (audioEnabled && !audioReady) void startAudio(speed);
       const current = sessionRef.current;
       if (!current) return;
 
@@ -94,6 +96,7 @@ export function useGameplayInput({
     };
   }, [
     active,
+    audioEnabled,
     audioReady,
     pause,
     processEffects,

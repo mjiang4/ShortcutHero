@@ -76,7 +76,12 @@ export class ShortcutHeroAudio {
 
   /** Call directly inside a user gesture handler. */
   async unlock(): Promise<boolean> {
-    const context = this.ensureContext();
+    let context: AudioContext | null = null;
+    try {
+      context = this.ensureContext();
+    } catch {
+      return false;
+    }
     if (!context) return false;
 
     if (context.state === "suspended") {

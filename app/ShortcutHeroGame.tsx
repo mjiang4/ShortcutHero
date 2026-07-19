@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { GameScene, KeyboardInstrument } from "./components/game";
 import {
   PauseOverlay,
@@ -7,8 +9,14 @@ import {
   SessionHud,
 } from "./components/session";
 import type { EffectsMode } from "./components/settings/settings";
+import {
+  GameLoadingScreen,
+  GameRuntimeBoundary,
+  SystemScreen,
+} from "./components/system";
 import type { GameSettings } from "./game";
 import { useGameController } from "./gameplay";
+import { useBrowserCapabilities } from "./platform/browser-capabilities";
 
 // The rendering remains available for the dedicated keyboard mode planned
 // after the main action-highway launch.
@@ -25,6 +33,24 @@ export function ShortcutHeroGame({
   effectsMode,
   soundEnabled,
 }: ShortcutHeroGameProps) {
+  return (
+    <GameRuntimeBoundary>
+      <ShortcutHeroGameRuntime
+        settings={settings}
+        effectsMode={effectsMode}
+        soundEnabled={soundEnabled}
+      />
+    </GameRuntimeBoundary>
+  );
+}
+
+function ShortcutHeroGameRuntime({
+  settings,
+  effectsMode,
+  soundEnabled,
+}: ShortcutHeroGameProps) {
+  const capabilities = useBrowserCapabilities();
+  const [graphicsContextLost, setGraphicsContextLost] = useState(false);
   const controller = useGameController({
     settings,
     effectsMode,
@@ -32,11 +58,37 @@ export function ShortcutHeroGame({
   });
   const { session, results, metrics } = controller;
 
+  if (capabilities.graphics === "checking") {
+    return <GameLoadingScreen />;
+  }
+
+  if (capabilities.graphics === "unavailable" || graphicsContextLost) {
+    return (
+      <SystemScreen
+        eyebrow="3D graphics unavailable"
+        title={graphicsContextLost ? "the stage went dark" : "WebGL is off"}
+        message={
+          graphicsContextLost
+            ? "The browser lost its graphics connection during this run. Reload to rebuild the stage."
+            : "Shortcut Hero needs WebGL to draw the action highway. Turn on hardware acceleration or try a current desktop browser."
+        }
+        primaryLabel="reload game"
+        onPrimary={() => window.location.reload()}
+      />
+    );
+  }
+
+  const renderQuality =
+    controller.reducedMotion || capabilities.renderQuality === "reduced"
+      ? "reduced"
+      : "full";
+
   return (
     <main
       className="shortcut-hero"
       data-view-phase={controller.viewPhase}
       data-reduced-motion={controller.reducedMotion ? "true" : "false"}
+      data-render-quality={renderQuality}
     >
       <div className="game-canvas" aria-hidden="true">
         <GameScene
@@ -47,12 +99,20 @@ export function ShortcutHeroGame({
           feedback={controller.feedback}
           paused={session?.phase === "paused"}
           reducedMotion={controller.reducedMotion}
-          bloom={!controller.reducedMotion}
+          bloom={!controller.reducedMotion && renderQuality === "full"}
+          renderQuality={renderQuality}
           onReady={() => controller.setSceneReady(true)}
+          onContextLost={() => setGraphicsContextLost(true)}
         />
       </div>
 
       <div className="ui-layer">
+        {soundEnabled && capabilities.audio === "unavailable" ? (
+          <p className="capability-notice" role="status">
+            Sound is unavailable. The game will continue silently.
+          </p>
+        ) : null}
+
         {controller.viewPhase === "countdown" ? (
           <div className="countdown-overlay" aria-live="assertive">
             {controller.sceneReady ? (

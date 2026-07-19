@@ -117,7 +117,7 @@ Acceptance:
 - Keyboard-only navigation remains complete.
 - Local-storage keys and migrations are centralized.
 
-### 6. Add production failure handling — next
+### 6. Add production failure handling — complete
 
 - Add route and global error boundaries.
 - Add WebGL-unavailable, audio-unavailable, and reduced-performance fallbacks.
@@ -129,7 +129,7 @@ Acceptance:
 - A rendering or audio failure never leaves a blank page.
 - Users can return to the menu after a recoverable failure.
 
-### 7. Handle launch traffic correctly
+### 7. Handle launch traffic correctly — next
 
 - Detect physical-keyboard capability and supported operating systems.
 - Give mobile visitors a polished explanation, share action, and “open on desktop” flow.

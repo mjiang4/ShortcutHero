@@ -24,6 +24,7 @@ export const EXIT_Z = 7.15;
 
 export const SCENE_PERFORMANCE = {
   dpr: [1, 1.8] as [number, number],
+  reducedDpr: [1, 1.25] as [number, number],
   camera: {
     position: [0, 6.35, 10.7] as [number, number, number],
     fov: 39,
