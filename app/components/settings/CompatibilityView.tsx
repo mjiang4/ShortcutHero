@@ -38,7 +38,9 @@ export function CompatibilityView({
             type="button"
             className="primary-button"
             autoFocus
-            onClick={() => void shareGameLink().then(setShareResult)}
+            onClick={() =>
+              void shareGameLink("mobile_title").then(setShareResult)
+            }
           >
             {shareLabel}
           </button>

@@ -60,10 +60,13 @@ rendered-route tests, and the headless browser suite.
 
 ## Built with
 
-React, Three.js, React Three Fiber, post-processing effects, and procedural Web Audio. The prototype runs entirely in the browser and requires no database or external asset service.
+React, Three.js, React Three Fiber, post-processing effects, and procedural Web
+Audio. Optional typed PostHog analytics stays disabled unless production
+credentials are configured.
 
 ## Project docs
 
 - [Hackathon product spec](./PROJECT_SPEC.md)
 - [Design and visual identity](./DESIGN_IDENTITY.md)
 - [Production launch plan](./PRODUCTION_LAUNCH_PLAN.md)
+- [Analytics contract and dashboard setup](./ANALYTICS.md)

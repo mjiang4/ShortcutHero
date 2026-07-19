@@ -8,6 +8,11 @@ import {
   useState,
 } from "react";
 
+import {
+  analytics,
+  buildGameAnalyticsContext,
+  buildResultAnalyticsSummary,
+} from "../analytics";
 import { useGameAudio } from "../audio";
 import type { EffectsMode } from "../components/settings/settings";
 import {
@@ -55,6 +60,7 @@ export function useGameController({
   const [resultsMenuIndex, setResultsMenuIndex] = useState(0);
   const [sceneReady, setSceneReady] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
+  const runNumberRef = useRef(0);
   const {
     isReady: audioReady,
     isMuted,
@@ -69,6 +75,10 @@ export function useGameController({
     playCombo,
   } = useGameAudio();
   const reducedMotion = useSystemReducedMotion(effectsMode);
+  const analyticsContext = useMemo(
+    () => buildGameAnalyticsContext(settings, effectsMode, soundEnabled),
+    [effectsMode, settings, soundEnabled],
+  );
 
   const setSession = useCallback((next: GameSession | null) => {
     sessionRef.current = next;
@@ -77,12 +87,28 @@ export function useGameController({
 
   const handleFinished = useCallback(
     (finished: GameResults, sourceSession: GameSession) => {
-      persistHighScore(finished, sourceSession);
+      const isPersonalBest = persistHighScore(finished, sourceSession);
+      const resultSummary = buildResultAnalyticsSummary(finished);
+      analytics.capture("game_completed", {
+        ...analyticsContext,
+        ...resultSummary,
+      });
+      analytics.capture("results_viewed", {
+        ...analyticsContext,
+        ...resultSummary,
+      });
+      if (isPersonalBest) {
+        analytics.capture("personal_best_achieved", {
+          ...analyticsContext,
+          score: finished.score,
+          accuracy_pct: finished.accuracyPct,
+        });
+      }
       setResults(finished);
       setResultsMenuIndex(0);
       setViewPhase("results");
     },
-    [],
+    [analyticsContext],
   );
 
   const feedbackAudio = useMemo(
@@ -117,9 +143,14 @@ export function useGameController({
     const nextSession = startSession(createGameSession(settings), now);
     setFrameNow(now);
     setSession(nextSession);
+    runNumberRef.current += 1;
+    analytics.capture("game_started", {
+      ...analyticsContext,
+      run_number: runNumberRef.current,
+    });
     playStart();
     setViewPhase("game");
-  }, [playStart, setSession, settings]);
+  }, [analyticsContext, playStart, setSession, settings]);
 
   useCountdown({
     active: viewPhase === "countdown",
@@ -158,22 +189,49 @@ export function useGameController({
     processEffects,
   });
 
+  const captureAbandonment = useCallback(
+    (reason: "restart" | "title" | "page_exit") => {
+      const current = sessionRef.current;
+      if (
+        !current ||
+        (current.phase !== "playing" && current.phase !== "paused")
+      ) {
+        return;
+      }
+      analytics.capture("game_abandoned", {
+        ...analyticsContext,
+        reason,
+        attempts: current.attempts.length,
+        score: current.score,
+      });
+    },
+    [analyticsContext],
+  );
+
+  useEffect(() => {
+    const onPageExit = () => captureAbandonment("page_exit");
+    window.addEventListener("pagehide", onPageExit);
+    return () => window.removeEventListener("pagehide", onPageExit);
+  }, [captureAbandonment]);
+
   const beginRun = useCallback(() => {
+    captureAbandonment("restart");
     setResults(null);
     resetFeedback();
     setSession(null);
     setCountdown(3);
     if (soundEnabled) void startAudio(settings.speed);
     setViewPhase("countdown");
-  }, [resetFeedback, setSession, settings.speed, soundEnabled, startAudio]);
+  }, [captureAbandonment, resetFeedback, setSession, settings.speed, soundEnabled, startAudio]);
 
   const returnToSettings = useCallback(() => {
+    captureAbandonment("title");
     stopAudio();
     setSession(null);
     setResults(null);
     resetFeedback();
     window.location.assign("/");
-  }, [resetFeedback, setSession, stopAudio]);
+  }, [captureAbandonment, resetFeedback, setSession, stopAudio]);
 
   const resume = useCallback(() => {
     const current = sessionRef.current;

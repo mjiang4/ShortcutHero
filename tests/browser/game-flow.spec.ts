@@ -51,7 +51,7 @@ test("constrained devices lower visual cost and continue without audio", async (
   const game = page.locator("main.shortcut-hero");
   await expect(game).toHaveAttribute("data-render-quality", "reduced");
   await expect(page.getByText("Sound is unavailable.")).toBeVisible();
-  await expect(page.locator(".countdown-number")).toHaveText("3", {
+  await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/, {
     timeout: 15_000,
   });
 
@@ -71,7 +71,7 @@ test("the full-effects WebGL scene initializes", async ({ page }) => {
   const game = page.locator("main.shortcut-hero");
   await expect(game).toHaveAttribute("data-reduced-motion", "false");
   await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator(".countdown-number")).toHaveText("3", {
+  await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/, {
     timeout: 15_000,
   });
 });

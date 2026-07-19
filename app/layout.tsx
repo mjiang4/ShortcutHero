@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
+import { AnalyticsBootstrap } from "./analytics";
 import "./globals.css";
 import "./components/settings/settings-screen.css";
 
@@ -73,6 +74,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <AnalyticsBootstrap />
         {children}
       </body>
     </html>

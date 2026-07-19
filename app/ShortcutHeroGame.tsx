@@ -83,7 +83,9 @@ function ShortcutHeroGameRuntime({
         title="continue on desktop"
         message="Shortcut Hero needs timing-sensitive keyboard input. Open this game on a Mac with Chrome, Safari, or Firefox."
         primaryLabel={shareLabel}
-        onPrimary={() => void shareGameLink().then(setShareResult)}
+        onPrimary={() =>
+          void shareGameLink("mobile_game").then(setShareResult)
+        }
       />
     );
   }

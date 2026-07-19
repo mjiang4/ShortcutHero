@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { analytics } from "../../analytics";
 import { primeGameAudio } from "../../audio/use-game-audio";
 import { getToolTrack } from "../../tools";
 import { CompatibilityView } from "./CompatibilityView";
@@ -66,18 +67,24 @@ export function SettingsScreen() {
     const frame = window.requestAnimationFrame(() => {
       const restored = restoreSettings();
       const onboarding = restoreOnboarding();
+      const detectedSystem = detectSystem(window.navigator.userAgent, {
+        maxTouchPoints: window.navigator.maxTouchPoints,
+        coarsePointer: window.matchMedia("(pointer: coarse)").matches,
+        viewportWidth: window.innerWidth,
+      });
       setSettings(restored);
       setDraftSettings(restored);
       setScores(readHighScores());
-      setSystemInfo(
-        detectSystem(window.navigator.userAgent, {
-          maxTouchPoints: window.navigator.maxTouchPoints,
-          coarsePointer: window.matchMedia("(pointer: coarse)").matches,
-          viewportWidth: window.innerWidth,
-        }),
-      );
+      setSystemInfo(detectedSystem);
       setUserName((current) => current || onboarding.name);
       if (onboarding.complete) setView("menu");
+      else {
+        analytics.capture("onboarding_started", {
+          operating_system: detectedSystem.operatingSystem,
+          browser: detectedSystem.browser,
+          launch_support: detectedSystem.launchSupport,
+        });
+      }
       setHasRestoredSettings(true);
     });
     return () => window.cancelAnimationFrame(frame);
@@ -98,8 +105,13 @@ export function SettingsScreen() {
 
   const completeOnboarding = useCallback(() => {
     persistOnboarding(userName);
+    analytics.capture("onboarding_completed", {
+      operating_system: systemInfo.operatingSystem,
+      browser: systemInfo.browser,
+      launch_support: systemInfo.launchSupport,
+    });
     setView("menu");
-  }, [userName]);
+  }, [systemInfo, userName]);
 
   const openView = useCallback(
     (action: MenuAction) => {
