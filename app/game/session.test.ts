@@ -23,14 +23,14 @@ const BASE_SETTINGS: GameSettings = {
 
 test("uses fast travel independently from difficulty-specific cue cadence", () => {
   assert.deepEqual(APPROACH_DURATION_MS, {
-    relaxed: 1_600,
-    standard: 1_000,
-    turbo: 800,
+    relaxed: 2_000,
+    standard: 1_250,
+    turbo: 1_000,
   });
-  assert.equal(getPromptCadenceMs("easy", "standard"), 1_600);
-  assert.equal(getPromptCadenceMs("medium", "standard"), 2_000);
-  assert.equal(getPromptCadenceMs("hard", "standard"), 1_600);
-  assert.equal(getPromptCadenceMs("showcase", "standard"), 1_200);
+  assert.equal(getPromptCadenceMs("easy", "standard"), 2_000);
+  assert.equal(getPromptCadenceMs("medium", "standard"), 2_500);
+  assert.equal(getPromptCadenceMs("hard", "standard"), 2_000);
+  assert.equal(getPromptCadenceMs("showcase", "standard"), 1_500);
 });
 
 test("defaults sessions to 45 seconds and honours supported durations", () => {
@@ -82,11 +82,11 @@ test("gives the novice single-key deck a wider standard hit window", () => {
   };
 
   assert.equal(
-    getPromptTiming(prompt, 700, BASE_SETTINGS).phase,
+    getPromptTiming(prompt, 650, BASE_SETTINGS).phase,
     "hittable",
   );
   assert.equal(
-    getPromptTiming(prompt, 700, {
+    getPromptTiming(prompt, 650, {
       ...BASE_SETTINGS,
       mode: "hard",
     }).phase,

@@ -29,9 +29,9 @@ import type {
 
 /** Travel time from the horizon to the strike line. */
 export const APPROACH_DURATION_MS: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 1_600,
-  standard: 1_000,
-  turbo: 800,
+  relaxed: 2_000,
+  standard: 1_250,
+  turbo: 1_000,
 };
 
 /**
@@ -39,18 +39,18 @@ export const APPROACH_DURATION_MS: Readonly<Record<SpeedPreset, number>> = {
  * getPromptCadenceMs so prompt density can vary independently by difficulty.
  */
 export const PROMPT_CADENCE_MS: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 1_500,
-  standard: 1_200,
-  turbo: 900,
+  relaxed: 1_875,
+  standard: 1_500,
+  turbo: 1_125,
 };
 
 /** Musical spacing between prompts. Prompts can overlap on the highway. */
 export const PROMPT_CADENCE_BY_MODE_MS: Readonly<
   Record<GameMode, Readonly<Record<SpeedPreset, number>>>
 > = {
-  easy: { relaxed: 2_000, standard: 1_600, turbo: 1_200 },
-  medium: { relaxed: 2_400, standard: 2_000, turbo: 1_500 },
-  hard: { relaxed: 2_000, standard: 1_600, turbo: 1_200 },
+  easy: { relaxed: 2_500, standard: 2_000, turbo: 1_500 },
+  medium: { relaxed: 3_000, standard: 2_500, turbo: 1_875 },
+  hard: { relaxed: 2_500, standard: 2_000, turbo: 1_500 },
   showcase: PROMPT_CADENCE_MS,
 };
 
@@ -64,18 +64,18 @@ export function getPromptCadenceMs(
 export const TIMING_WINDOWS_MS: Readonly<
   Record<SpeedPreset, TimingWindow>
 > = {
-  relaxed: { earlyMs: 340, perfectMs: 110, goodMs: 220, lateMs: 320 },
-  standard: { earlyMs: 260, perfectMs: 90, goodMs: 170, lateMs: 240 },
-  turbo: { earlyMs: 190, perfectMs: 70, goodMs: 125, lateMs: 180 },
+  relaxed: { earlyMs: 425, perfectMs: 138, goodMs: 275, lateMs: 400 },
+  standard: { earlyMs: 325, perfectMs: 113, goodMs: 213, lateMs: 300 },
+  turbo: { earlyMs: 238, perfectMs: 88, goodMs: 156, lateMs: 225 },
 };
 
 /** Extra forgiveness for the single-key learning deck. */
 export const EASY_TIMING_WINDOWS_MS: Readonly<
   Record<SpeedPreset, TimingWindow>
 > = {
-  relaxed: { earlyMs: 400, perfectMs: 140, goodMs: 260, lateMs: 400 },
-  standard: { earlyMs: 340, perfectMs: 120, goodMs: 220, lateMs: 340 },
-  turbo: { earlyMs: 280, perfectMs: 100, goodMs: 190, lateMs: 280 },
+  relaxed: { earlyMs: 500, perfectMs: 175, goodMs: 325, lateMs: 500 },
+  standard: { earlyMs: 425, perfectMs: 150, goodMs: 275, lateMs: 425 },
+  turbo: { earlyMs: 350, perfectMs: 125, goodMs: 238, lateMs: 350 },
 };
 
 export const DEFAULT_SESSION_DURATION_SECONDS = 45;

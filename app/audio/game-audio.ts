@@ -36,9 +36,9 @@ const MUSIC_GAIN = 0.62;
 const SCHEDULE_AHEAD_SECONDS = 0.12;
 const SCHEDULER_INTERVAL_MS = 25;
 const TEMPO_BPM = {
-  relaxed: 140,
-  standard: 180,
-  turbo: 220,
+  relaxed: 112,
+  standard: 144,
+  turbo: 176,
 } as const;
 
 function resolveTempo(tempo: AudioTempo): number {

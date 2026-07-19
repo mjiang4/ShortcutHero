@@ -23,7 +23,7 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the DOM-only Shortcut Hero title screen", async () => {
+test("server-renders the first-run Shortcut Hero onboarding", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -31,12 +31,10 @@ test("server-renders the DOM-only Shortcut Hero title screen", async () => {
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
   assert.match(html, /Master Linear shortcuts/i);
-  assert.match(html, /learn (?:<!-- -->)?Linear(?:<!-- -->)? through play/i);
-  assert.match(html, /Linear(?:<!-- -->)? shortcut muscle memory/i);
-  assert.match(html, /high scores/i);
-  assert.match(html, /how to play/i);
-  assert.match(html, /options/i);
-  assert.match(html, /start/i);
+  assert.match(html, /welcome to shortcut hero/i);
+  assert.match(html, /what should we call you/i);
+  assert.match(html, /your name/i);
+  assert.match(html, /continue/i);
   assert.match(html, /og\.png/i);
   assert.doesNotMatch(html, /game-canvas|Go to Inbox/i);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);

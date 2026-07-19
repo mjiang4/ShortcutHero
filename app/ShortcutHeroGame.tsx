@@ -57,9 +57,9 @@ const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
 });
 
 const SPEED_BPM = {
-  relaxed: 140,
-  standard: 180,
-  turbo: 220,
+  relaxed: 112,
+  standard: 144,
+  turbo: 176,
 };
 
 const DIFFICULTY_LABELS = {
@@ -70,6 +70,8 @@ const DIFFICULTY_LABELS = {
 };
 
 const DEPARTURE_DURATION_MS = 560;
+// Kept for the dedicated keyboard mode planned after the hackathon build.
+const SHOW_KEYBOARD_MODE = false;
 
 export interface ShortcutHeroGameProps {
   readonly settings: GameSettings;
@@ -712,15 +714,17 @@ export function ShortcutHeroGame({
               </span>
             </div>
 
-            <KeyboardInstrument
-              key={keyboardSignal?.id ?? "live-keyboard"}
-              pressedKeys={pressedKeys}
-              hintKeys={keyboardSignal ? [] : keyboardHints}
-              feedbackKeys={keyboardSignal?.keys}
-              feedbackTone={keyboardSignal?.tone}
-              status={keyboardStatus}
-              guidance={settings.assistance === "novice" ? "learn" : "recall"}
-            />
+            {SHOW_KEYBOARD_MODE ? (
+              <KeyboardInstrument
+                key={keyboardSignal?.id ?? "live-keyboard"}
+                pressedKeys={pressedKeys}
+                hintKeys={keyboardSignal ? [] : keyboardHints}
+                feedbackKeys={keyboardSignal?.keys}
+                feedbackTone={keyboardSignal?.tone}
+                status={keyboardStatus}
+                guidance={settings.assistance === "novice" ? "learn" : "recall"}
+              />
+            ) : null}
 
             {judgement ? (
               <div
