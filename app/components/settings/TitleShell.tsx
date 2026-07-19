@@ -61,6 +61,7 @@ function footerInstructions(view: ScreenView): string {
     return "type your name · enter continue";
   }
   if (view.startsWith("onboarding")) return "enter continue · esc back";
+  if (view === "compatibility") return "choose an action · esc back";
   return "enter or esc back";
 }
 

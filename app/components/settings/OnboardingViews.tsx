@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 
+import { supportMessage } from "./platform";
 import { TitlePanel } from "./TitleShell";
 import type { OnboardingView, SystemInfo } from "./title-types";
 
@@ -70,9 +71,7 @@ export function OnboardingViews({
               <dd>{systemInfo.browser}</dd>
             </div>
           </dl>
-          <p className="title-panel__note">
-            This prototype uses the Mac shortcut layout.
-          </p>
+          <p className="title-panel__note">{supportMessage(systemInfo)}</p>
           <button
             type="button"
             className="primary-button onboarding-action"

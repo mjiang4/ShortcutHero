@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { primeGameAudio } from "../../audio/use-game-audio";
 import { getToolTrack } from "../../tools";
+import { CompatibilityView } from "./CompatibilityView";
 import { InfoView } from "./InfoViews";
 import { MainMenu } from "./MainMenu";
 import { OnboardingViews } from "./OnboardingViews";
@@ -68,7 +69,13 @@ export function SettingsScreen() {
       setSettings(restored);
       setDraftSettings(restored);
       setScores(readHighScores());
-      setSystemInfo(detectSystem(window.navigator.userAgent));
+      setSystemInfo(
+        detectSystem(window.navigator.userAgent, {
+          maxTouchPoints: window.navigator.maxTouchPoints,
+          coarsePointer: window.matchMedia("(pointer: coarse)").matches,
+          viewportWidth: window.innerWidth,
+        }),
+      );
       setUserName((current) => current || onboarding.name);
       if (onboarding.complete) setView("menu");
       setHasRestoredSettings(true);
@@ -97,6 +104,13 @@ export function SettingsScreen() {
   const openView = useCallback(
     (action: MenuAction) => {
       if (action === "start") {
+        if (
+          systemInfo.launchSupport === "mobile" ||
+          systemInfo.launchSupport === "untested"
+        ) {
+          setView("compatibility");
+          return;
+        }
         startGame();
         return;
       }
@@ -107,7 +121,7 @@ export function SettingsScreen() {
       }
       setView(action);
     },
-    [settings, startGame],
+    [settings, startGame, systemInfo.launchSupport],
   );
 
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
@@ -220,6 +234,14 @@ export function SettingsScreen() {
           onChange={setDraftSettings}
           onConfirm={confirmOptions}
           onCancel={cancelOptions}
+        />
+      ) : null}
+
+      {view === "compatibility" ? (
+        <CompatibilityView
+          systemInfo={systemInfo}
+          onContinue={startGame}
+          onBack={() => setView("menu")}
         />
       ) : null}
 

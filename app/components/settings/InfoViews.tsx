@@ -6,7 +6,7 @@ export function InfoView({
   scores,
   onBack,
 }: {
-  readonly view: Exclude<TitleView, "menu" | "options">;
+  readonly view: Extract<TitleView, "scores" | "help" | "credits">;
   readonly scores: readonly ScoreEntry[];
   readonly onBack: () => void;
 }) {

@@ -17,6 +17,8 @@ import {
 import type { GameSettings } from "./game";
 import { useGameController } from "./gameplay";
 import { useBrowserCapabilities } from "./platform/browser-capabilities";
+import { useSystemInfo } from "./platform/launch-compatibility";
+import { shareGameLink, type ShareResult } from "./platform/share-game";
 
 // The rendering remains available for the dedicated keyboard mode planned
 // after the main action-highway launch.
@@ -50,7 +52,11 @@ function ShortcutHeroGameRuntime({
   soundEnabled,
 }: ShortcutHeroGameProps) {
   const capabilities = useBrowserCapabilities();
+  const systemInfo = useSystemInfo();
   const [graphicsContextLost, setGraphicsContextLost] = useState(false);
+  const [compatibilityAcknowledged, setCompatibilityAcknowledged] =
+    useState(false);
+  const [shareResult, setShareResult] = useState<ShareResult | null>(null);
   const controller = useGameController({
     settings,
     effectsMode,
@@ -58,8 +64,43 @@ function ShortcutHeroGameRuntime({
   });
   const { session, results, metrics } = controller;
 
-  if (capabilities.graphics === "checking") {
+  if (capabilities.graphics === "checking" || systemInfo === null) {
     return <GameLoadingScreen />;
+  }
+
+  if (systemInfo.launchSupport === "mobile") {
+    const shareLabel =
+      shareResult === "copied"
+        ? "link copied"
+        : shareResult === "shared"
+          ? "link sent"
+          : shareResult === "unavailable"
+            ? "copy this page's URL"
+            : "send to desktop";
+    return (
+      <SystemScreen
+        eyebrow="physical keyboard required"
+        title="continue on desktop"
+        message="Shortcut Hero needs timing-sensitive keyboard input. Open this game on a Mac with Chrome, Safari, or Firefox."
+        primaryLabel={shareLabel}
+        onPrimary={() => void shareGameLink().then(setShareResult)}
+      />
+    );
+  }
+
+  if (
+    systemInfo.launchSupport === "untested" &&
+    !compatibilityAcknowledged
+  ) {
+    return (
+      <SystemScreen
+        eyebrow="browser check"
+        title="this setup is untested"
+        message="Shortcut Hero is launch-tested on macOS with Chrome, Safari, and Firefox. You can continue, but graphics or keyboard input may vary."
+        primaryLabel="continue anyway"
+        onPrimary={() => setCompatibilityAcknowledged(true)}
+      />
+    );
   }
 
   if (capabilities.graphics === "unavailable" || graphicsContextLost) {
@@ -107,11 +148,18 @@ function ShortcutHeroGameRuntime({
       </div>
 
       <div className="ui-layer">
-        {soundEnabled && capabilities.audio === "unavailable" ? (
-          <p className="capability-notice" role="status">
-            Sound is unavailable. The game will continue silently.
-          </p>
-        ) : null}
+        <div className="capability-notices">
+          {systemInfo.launchSupport === "mac-layout" ? (
+            <p className="capability-notice" role="status">
+              Preview mode: shortcuts use the Mac keyboard layout.
+            </p>
+          ) : null}
+          {soundEnabled && capabilities.audio === "unavailable" ? (
+            <p className="capability-notice" role="status">
+              Sound is unavailable. The game will continue silently.
+            </p>
+          ) : null}
+        </div>
 
         {controller.viewPhase === "countdown" ? (
           <div className="countdown-overlay" aria-live="assertive">

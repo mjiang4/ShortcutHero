@@ -91,6 +91,13 @@ export function useTitleKeyboardNavigation({
         }
         return;
       }
+      if (view === "compatibility") {
+        if (event.code === "Escape" || event.code === "Backspace") {
+          event.preventDefault();
+          setView("menu");
+        }
+        return;
+      }
       if (view !== "menu") {
         if (
           event.code === "Escape" ||

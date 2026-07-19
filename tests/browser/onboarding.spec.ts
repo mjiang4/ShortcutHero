@@ -36,7 +36,9 @@ test.describe("unsupported operating systems", () => {
 
     await expect(page.getByText("Windows", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("This prototype uses the Mac shortcut layout."),
+      page.getByText(
+        "This version shows Mac shortcuts. You can still preview the game.",
+      ),
     ).toBeVisible();
   });
 });

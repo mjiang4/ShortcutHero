@@ -570,6 +570,17 @@
   margin: 0 0 20px;
 }
 
+.compatibility-copy {
+  max-width: 600px;
+}
+
+.compatibility-copy p {
+  margin: 0 0 28px;
+  color: rgba(244, 241, 234, 0.72);
+  font-size: clamp(17px, 2vw, 22px);
+  line-height: 1.55;
+}
+
 @keyframes sun-breathe {
   from { transform: translate(-50%, -50%) scale(0.98); opacity: 0.78; }
   to { transform: translate(-50%, -50%) scale(1.03); opacity: 0.9; }

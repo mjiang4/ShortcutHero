@@ -129,7 +129,7 @@ Acceptance:
 - A rendering or audio failure never leaves a blank page.
 - Users can return to the menu after a recoverable failure.
 
-### 7. Handle launch traffic correctly — next
+### 7. Handle launch traffic correctly — complete
 
 - Detect physical-keyboard capability and supported operating systems.
 - Give mobile visitors a polished explanation, share action, and “open on desktop” flow.
@@ -141,7 +141,7 @@ Acceptance:
 - Unsupported visitors see a deliberate product experience.
 - Supported visitors reach the game with minimal friction.
 
-### 8. Add typed analytics
+### 8. Add typed analytics — next
 
 - Add one analytics interface with a no-op local implementation and a PostHog production implementation.
 - Define event names and properties in TypeScript.
