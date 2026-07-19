@@ -89,7 +89,7 @@ Acceptance:
 - Existing engine and browser tests stay green.
 - `ShortcutHeroGame.tsx` has one clear responsibility and is materially smaller.
 
-### 4. Refactor the 3D scene — next
+### 4. Refactor the 3D scene — complete
 
 - Split world, highway, cues, strike gate, particles, and feedback effects.
 - Centralize scene constants and visual-performance settings.
@@ -102,7 +102,10 @@ Acceptance:
 - Starting and ending repeated rounds does not create unbounded resource growth.
 - Reduced-effects mode avoids unnecessary post-processing work.
 
-### 5. Refactor onboarding, menus, and styles
+Note: Three.js `Clock` deprecation output currently originates in React Three
+Fiber `9.6.1`, the latest published version, rather than application code.
+
+### 5. Refactor onboarding, menus, and styles — next
 
 - Split onboarding, main menu, options, scores, and credits.
 - Extract platform detection, local profile persistence, high-score access, and keyboard-menu navigation.

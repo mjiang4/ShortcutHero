@@ -2,6 +2,17 @@ import { expect, test } from "@playwright/test";
 
 import { FAST_TEST_RUN } from "./helpers";
 
+test("the full-effects WebGL scene initializes", async ({ page }) => {
+  await page.goto(FAST_TEST_RUN.replace("effects=system", "effects=full"));
+
+  const game = page.locator("main.shortcut-hero");
+  await expect(game).toHaveAttribute("data-reduced-motion", "false");
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".countdown-number")).toHaveText("3", {
+    timeout: 15_000,
+  });
+});
+
 test("a reduced-motion round supports pause, results, and retry", async ({
   page,
 }) => {
