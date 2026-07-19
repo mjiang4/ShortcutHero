@@ -173,11 +173,12 @@ test("finishes on the configured session clock instead of deck exhaustion", () =
   assert.equal(beforeEnd.session.phase, "playing");
 
   const atEnd = tickSession(beforeEnd.session, 35_000);
+  const finalEffect = atEnd.effects.at(-1);
   assert.equal(atEnd.session.phase, "finished");
   assert.equal(atEnd.session.finishedAtMs, 35_000);
-  assert.equal(atEnd.effects.at(-1)?.type, "finished");
-  if (atEnd.effects.at(-1)?.type === "finished") {
-    assert.equal(atEnd.effects.at(-1)?.results.durationMs, 30_000);
+  assert.equal(finalEffect?.type, "finished");
+  if (finalEffect?.type === "finished") {
+    assert.equal(finalEffect.results.durationMs, 30_000);
   }
 });
 

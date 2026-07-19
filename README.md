@@ -48,12 +48,14 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
-Run the checks with:
+Run the same complete quality gate used by CI with:
 
 ```bash
-npm run lint
-npm test
+npm run check
 ```
+
+This runs linting, TypeScript validation, engine tests, the production build,
+and rendered-route tests.
 
 ## Built with
 

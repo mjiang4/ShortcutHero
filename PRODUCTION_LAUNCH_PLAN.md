@@ -52,7 +52,7 @@ Acceptance:
 
 - A named commit contains the current playable baseline.
 
-### 1. Establish the quality gate — next
+### 1. Establish the quality gate — complete
 
 - Add explicit `typecheck`, unit-test, rendered-route-test, and combined `check` scripts.
 - Make the TypeScript test runner a direct development dependency instead of relying on a transitive package.
@@ -66,7 +66,7 @@ Acceptance:
 - Pull requests cannot merge when a quality step fails.
 - CI does not require production secrets.
 
-### 2. Protect critical behavior with browser tests
+### 2. Protect critical behavior with browser tests — next
 
 - Add browser tests for onboarding, system confirmation, guide, main menu, options confirmation/cancel, countdown, pause/resume, results, and retry.
 - Add one test proving Command, Control, and Option browser shortcuts are not captured.
