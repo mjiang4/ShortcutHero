@@ -81,8 +81,11 @@ export function SettingsScreen() {
       setScores(readHighScores());
       setSystemInfo(detectedSystem);
       setUserName((current) => current || onboarding.name);
-      if (onboarding.complete) setView("menu");
-      else {
+      if (detectedSystem.launchSupport === "mobile") {
+        setView("compatibility");
+      } else if (onboarding.complete) {
+        setView("menu");
+      } else {
         analytics.capture("onboarding_started", {
           operating_system: detectedSystem.operatingSystem,
           browser: detectedSystem.browser,

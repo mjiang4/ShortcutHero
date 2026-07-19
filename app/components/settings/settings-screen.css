@@ -622,13 +622,23 @@
 
 @media (max-width: 760px) {
   .title-brand__edition,
-  .title-footer span:last-child {
+  .title-footer__instructions,
+  .title-footer > span:first-child {
     display: none;
+  }
+
+  .title-footer {
+    justify-content: flex-end;
+  }
+
+  .title-footer__actions {
+    gap: 20px;
   }
 
   .title-menu,
   .title-panel {
     left: 28px;
+    width: calc(100vw - 56px);
   }
 
   .title-menu__item {
@@ -647,6 +657,14 @@
 
   .option-row {
     grid-template-columns: minmax(105px, 0.65fr) minmax(190px, 1.35fr);
+  }
+
+  .compatibility-copy {
+    max-width: 440px;
+  }
+
+  .compatibility-copy p {
+    font-size: clamp(17px, 5vw, 21px);
   }
 }
 

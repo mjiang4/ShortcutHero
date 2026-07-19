@@ -25,14 +25,14 @@ export function CompatibilityView({
           ? "link sent"
           : shareResult === "unavailable"
             ? "copy this page's URL"
-            : "send to desktop";
+            : "send link to a Mac";
 
     return (
-      <TitlePanel title="desktop required" subtitle="bring a keyboard">
+      <TitlePanel title="play on a Mac" subtitle="bring a keyboard">
         <div className="compatibility-copy">
           <p>
-            Shortcut Hero needs a physical keyboard. Open this game on a Mac
-            with Chrome, Safari, or Firefox.
+            Learn Linear shortcuts in a fast 3D game. Open Shortcut Hero on a
+            Mac with Chrome, Safari, or Firefox to play.
           </p>
           <button
             type="button"
@@ -45,7 +45,6 @@ export function CompatibilityView({
             {shareLabel}
           </button>
         </div>
-        <BackButton onClick={onBack} />
       </TitlePanel>
     );
   }

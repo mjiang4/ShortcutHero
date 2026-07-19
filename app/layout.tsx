@@ -2,6 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { AnalyticsBootstrap } from "./analytics";
+import {
+  originFromHeaders,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+  SOCIAL_IMAGE_ALT,
+  SOCIAL_IMAGE_PATH,
+} from "./site-config";
 import "./globals.css";
 import "./components/settings/settings-screen.css";
 
@@ -17,44 +25,44 @@ const geistMono = Geist_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ??
-    requestHeaders.get("host") ??
-    "localhost:3000";
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") ? "http" : "https");
-  const origin = `${protocol}://${host}`;
-  const title = "Shortcut Hero — Master Linear shortcuts";
-  const description =
-    "A fast 3D recall game for learning Linear keyboard shortcuts.";
+  const origin = originFromHeaders(requestHeaders);
 
   return {
-    title,
-    description,
+    metadataBase: new URL(origin),
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    applicationName: SITE_NAME,
+    category: "game",
+    alternates: { canonical: "/" },
     icons: {
       icon: "/favicon.svg",
       shortcut: "/favicon.svg",
     },
+    robots: {
+      index: true,
+      follow: true,
+    },
     openGraph: {
-      title,
-      description,
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
       type: "website",
-      url: origin,
+      siteName: SITE_NAME,
+      locale: "en_US",
+      url: "/",
       images: [
         {
-          url: `${origin}/og.png`,
-          width: 1717,
-          height: 917,
-          alt: "Shortcut Hero action highway and glowing keyboard",
+          url: SOCIAL_IMAGE_PATH,
+          width: 1200,
+          height: 630,
+          alt: SOCIAL_IMAGE_ALT,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
-      images: [`${origin}/og.png`],
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+      images: [{ url: SOCIAL_IMAGE_PATH, alt: SOCIAL_IMAGE_ALT }],
     },
   };
 }

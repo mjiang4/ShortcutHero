@@ -247,7 +247,7 @@ findings are isolated to Drizzle's local migration CLI. CSP and browser headers,
 bounded request parsing, D1-backed write limits, direct privacy/terms pages,
 confirmed deletion, and sanitized manual error capture are in place.
 
-### 12. Prepare the Twitter launch surface — next
+### 12. Prepare the Twitter launch surface — complete
 
 - Regenerate the Open Graph/Twitter image to match the current game.
 - Update stale metadata and image alt text.
@@ -260,7 +260,14 @@ Acceptance:
 - Twitter/X, Slack, iMessage, and LinkedIn render a current, legible preview.
 - The launch URL is canonical and uses the production domain.
 
-### 13. Deploy and launch
+Implementation: metadata now uses one configurable canonical origin, with
+robots and sitemap routes, a validated favicon, and a 1200×630 card captured
+from the current keyboard-free game. First-time mobile traffic goes directly to
+a Mac handoff instead of entering desktop onboarding. Launch copy and a
+45-second demo script live in `LAUNCH.md`. The production domain remains the
+Phase 13 decision gate and must be supplied through `NEXT_PUBLIC_SITE_URL`.
+
+### 13. Deploy and launch — next
 
 - Run the complete quality gate.
 - Deploy a private/preview build and smoke-test the real runtime.

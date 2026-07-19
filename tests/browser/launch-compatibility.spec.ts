@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { FAST_TEST_RUN, openAsReturningPlayer } from "./helpers";
+import { FAST_TEST_RUN } from "./helpers";
 
 test.use({
   userAgent:
@@ -10,18 +10,22 @@ test.use({
   hasTouch: true,
 });
 
-test("a mobile visitor gets a send-to-desktop flow from the title", async ({
+test("a mobile visitor lands directly on the Mac handoff", async ({
   page,
 }) => {
-  await openAsReturningPlayer(page);
-  await page.getByRole("button", { name: "start", exact: true }).click();
+  await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "desktop required" }),
+    page.getByRole("heading", { name: "play on a Mac" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "send to desktop" }),
+    page.getByRole("button", { name: "send link to a Mac" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Learn Linear shortcuts in a fast 3D game."),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "name" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "privacy" })).toBeVisible();
 });
 
 test("a direct mobile game link never initializes the 3D stage", async ({

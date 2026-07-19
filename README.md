@@ -19,7 +19,6 @@ Linear is supported today. Shortcut libraries for Excel, Notion, Jira, Superhuma
 - **Novice:** single-key shortcuts
 - **Medium:** key sequences
 - **Hard:** keyboard chords
-- **Mix:** all three input styles in one run
 - **Learn:** shows each shortcut as it approaches
 - **Recall:** hides the answer for true memory practice
 
@@ -63,6 +62,9 @@ rendered-route tests, and the headless browser suite.
 The local database command applies only unapplied migrations to project-local
 Wrangler state. Run it again whenever a new file appears in `drizzle/`.
 
+For deployment variables, launch copy, and the demo sequence, see
+[LAUNCH.md](./LAUNCH.md).
+
 ## Built with
 
 React, Three.js, React Three Fiber, Cloudflare D1, post-processing effects, and
@@ -74,5 +76,6 @@ production credentials are configured.
 - [Hackathon product spec](./PROJECT_SPEC.md)
 - [Design and visual identity](./DESIGN_IDENTITY.md)
 - [Production launch plan](./PRODUCTION_LAUNCH_PLAN.md)
+- [Twitter launch copy and demo](./LAUNCH.md)
 - [Analytics contract and dashboard setup](./ANALYTICS.md)
 - [Security and privacy controls](./SECURITY.md)

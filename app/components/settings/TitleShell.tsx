@@ -30,7 +30,9 @@ export function TitleShell({
       <footer className="title-footer">
         <span>{summary}</span>
         <span className="title-footer__actions">
-          <span>{footerInstructions(view)}</span>
+          <span className="title-footer__instructions">
+            {footerInstructions(view)}
+          </span>
           <Link href="/privacy">privacy</Link>
           <Link href="/terms">terms</Link>
         </span>
