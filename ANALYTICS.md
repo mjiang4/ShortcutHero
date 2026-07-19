@@ -91,3 +91,13 @@ trends beside the funnel.
 
 Production capture still requires the public project token and a privacy notice
 review before deployment.
+
+## Referral attribution
+
+- Referral codes are random eight-character identifiers, not visitor IDs.
+- The first valid `?ref=` code wins on a device.
+- A conversion is recorded only after that anonymous visitor completes a round.
+- The same visitor cannot convert its own code, and each referred visitor can
+  credit a code only once.
+- Referral prompts appear after an eligible result and are limited to once per
+  three completed rounds.

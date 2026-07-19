@@ -203,7 +203,7 @@ Decision: raw rounds expire after 90 days; aggregate mastery and referrals expir
 after 12 months. Anonymous progress can be deleted only with a private secret
 stored on the originating device.
 
-### 10. Build the referral loop — next
+### 10. Build the referral loop — complete
 
 - Generate random, non-sequential referral codes.
 - Accept `?ref=` links and store first-touch attribution.
@@ -223,7 +223,11 @@ Acceptance:
 - Sharing works without authentication.
 - The prompt is not shown after every round.
 
-### 11. Add security, privacy, and observability
+Implementation: first-touch attribution is stored anonymously, same-visitor
+self-referrals and repeated conversion credit are rejected server-side, and the
+results prompt is capped to once every three completed rounds.
+
+### 11. Add security, privacy, and observability — next
 
 - Resolve actionable dependency advisories.
 - Add security headers and a Content Security Policy compatible with analytics and WebGL assets.

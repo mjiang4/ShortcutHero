@@ -1,6 +1,7 @@
 import type { EffectsMode } from "../components/settings/settings";
 import type { GameResults, GameSettings } from "../game";
 import { getSessionDurationSeconds } from "../game";
+import type { SharePromptTrigger } from "../referrals/contract";
 
 export type AnalyticsGameContext = {
   readonly track_id: string;
@@ -39,7 +40,7 @@ export type AnalyticsEventMap = {
   results_viewed: AnalyticsGameContext & AnalyticsResultSummary;
   share_prompt_shown: {
     readonly surface: ShareSurface;
-    readonly trigger: "personal_best" | "third_round" | "high_accuracy";
+    readonly trigger: SharePromptTrigger;
   };
   share_clicked: {
     readonly surface: ShareSurface;

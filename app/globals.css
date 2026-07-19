@@ -515,6 +515,27 @@ a:focus-visible {
   border-bottom: 1px solid rgba(244, 241, 234, 0.2);
 }
 
+.results-referral {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 560px;
+  margin: 28px auto 0;
+  padding: 15px 18px;
+  border-left: 1px solid var(--sun);
+  color: rgba(244, 241, 234, 0.64);
+  background: linear-gradient(90deg, rgba(244, 162, 97, 0.1), transparent);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.results-referral strong {
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 480;
+}
+
 .result-stat {
   display: flex;
   flex-direction: column;

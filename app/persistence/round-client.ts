@@ -10,19 +10,30 @@ import {
   createRoundId,
   getOrCreateAnonymousIdentity,
 } from "../identity/anonymous-identity";
+import {
+  clearStoredReferralCode,
+  readStoredReferralCode,
+} from "../referrals/client";
 import type { RoundMasteryDelta, RoundWritePayload } from "./round-payload";
+
+export type RoundPersistenceResult = {
+  readonly saved: boolean;
+  readonly referralConverted: boolean;
+};
 
 export async function persistRoundSummary(
   results: GameResults,
   session: GameSession,
   effectsMode: EffectsMode,
   soundEnabled: boolean,
-): Promise<boolean> {
+): Promise<RoundPersistenceResult> {
   const identity = getOrCreateAnonymousIdentity();
+  const referralCode = readStoredReferralCode();
   const payload: RoundWritePayload = {
     roundId: createRoundId(),
     visitorId: identity.visitorId,
     deletionToken: identity.deletionToken,
+    ...(referralCode ? { referralCode } : {}),
     trackId: session.settings.trackId ?? "linear",
     difficulty: session.settings.mode === "showcase" ? "easy" : session.settings.mode,
     guidance: session.settings.assistance,
@@ -48,9 +59,17 @@ export async function persistRoundSummary(
       body: JSON.stringify(payload),
       keepalive: true,
     });
-    return response.ok;
+    if (!response.ok) return { saved: false, referralConverted: false };
+    const responseBody = (await response.json()) as {
+      readonly referralConverted?: unknown;
+    };
+    if (referralCode) clearStoredReferralCode();
+    return {
+      saved: true,
+      referralConverted: responseBody.referralConverted === true,
+    };
   } catch {
-    return false;
+    return { saved: false, referralConverted: false };
   }
 }
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { analytics } from "../../analytics";
 import { primeGameAudio } from "../../audio/use-game-audio";
+import { captureReferralLanding } from "../../referrals/client";
 import { getToolTrack } from "../../tools";
 import { CompatibilityView } from "./CompatibilityView";
 import { InfoView } from "./InfoViews";
@@ -65,6 +66,9 @@ export function SettingsScreen() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      if (captureReferralLanding()) {
+        analytics.capture("referral_landing", { referral_present: true });
+      }
       const restored = restoreSettings();
       const onboarding = restoreOnboarding();
       const detectedSystem = detectSystem(window.navigator.userAgent, {

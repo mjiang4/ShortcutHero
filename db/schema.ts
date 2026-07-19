@@ -106,9 +106,7 @@ export const referralConversions = sqliteTable(
     referredVisitorId: text("referred_visitor_id")
       .notNull()
       .references(() => visitors.id, { onDelete: "cascade" }),
-    completedRoundId: text("completed_round_id")
-      .notNull()
-      .references(() => rounds.id, { onDelete: "cascade" }),
+    completedRoundId: text("completed_round_id").notNull(),
     convertedAt: integer("converted_at").notNull(),
     expiresAt: integer("expires_at").notNull(),
   },

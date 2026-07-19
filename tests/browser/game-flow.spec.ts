@@ -80,6 +80,12 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "shortcut-hero:referral-prompts:v1",
+      JSON.stringify({ completedRounds: 2, lastPromptedRound: 0 }),
+    );
+  });
   await page.goto(FAST_TEST_RUN);
 
   const game = page.locator("main.shortcut-hero");
@@ -116,6 +122,12 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   });
   await expect(page.getByText(/\d+ correct · \d+ missed/)).toBeVisible();
   await expect(page.getByText("Final score", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Know someone who should learn keyboard shortcuts?"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "challenge a friend" }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Play again" }).click();
   await expect(page.locator(".countdown-number")).toHaveText("3");

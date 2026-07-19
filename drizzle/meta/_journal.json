@@ -8,6 +8,13 @@
       "when": 1784496777685,
       "tag": "0000_brainy_killer_shrike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784497631280,
+      "tag": "0001_talented_power_pack",
+      "breakpoints": true
     }
   ]
 }

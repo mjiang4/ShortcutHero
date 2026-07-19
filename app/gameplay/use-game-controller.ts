@@ -25,6 +25,12 @@ import {
   type GameSettings,
 } from "../game";
 import { persistRoundSummary } from "../persistence/round-client";
+import type { ShareResult } from "../platform/share-game";
+import {
+  recordCompletedRoundForSharing,
+  shareReferralChallenge,
+} from "../referrals/client";
+import type { SharePromptTrigger } from "../referrals/contract";
 import { SPEED_BPM } from "./constants";
 import { persistHighScore } from "./result-storage";
 import {
@@ -59,6 +65,9 @@ export function useGameController({
   const [pressedKeys, setPressedKeys] = useState<readonly string[]>([]);
   const [pauseMenuIndex, setPauseMenuIndex] = useState(0);
   const [resultsMenuIndex, setResultsMenuIndex] = useState(0);
+  const [sharePromptTrigger, setSharePromptTrigger] =
+    useState<SharePromptTrigger | null>(null);
+  const [shareResult, setShareResult] = useState<ShareResult | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
   const runNumberRef = useRef(0);
@@ -89,12 +98,20 @@ export function useGameController({
   const handleFinished = useCallback(
     (finished: GameResults, sourceSession: GameSession) => {
       const isPersonalBest = persistHighScore(finished, sourceSession);
-      void persistRoundSummary(
-        finished,
-        sourceSession,
-        effectsMode,
-        soundEnabled,
-      );
+      void persistRoundSummary(finished, sourceSession, effectsMode, soundEnabled)
+        .then((persistence) => {
+          if (persistence.referralConverted) {
+            analytics.capture("referred_player_completed_round", {
+              ...analyticsContext,
+              referral_present: true,
+            });
+          }
+        });
+      const promptTrigger = recordCompletedRoundForSharing({
+        personalBest: isPersonalBest,
+        accuracyPct: finished.accuracyPct,
+        attempts: finished.attempts,
+      });
       const resultSummary = buildResultAnalyticsSummary(finished);
       analytics.capture("game_completed", {
         ...analyticsContext,
@@ -112,6 +129,8 @@ export function useGameController({
         });
       }
       setResults(finished);
+      setSharePromptTrigger(promptTrigger);
+      setShareResult(null);
       setResultsMenuIndex(0);
       setViewPhase("results");
     },
@@ -224,6 +243,8 @@ export function useGameController({
   const beginRun = useCallback(() => {
     captureAbandonment("restart");
     setResults(null);
+    setSharePromptTrigger(null);
+    setShareResult(null);
     resetFeedback();
     setSession(null);
     setCountdown(3);
@@ -239,6 +260,10 @@ export function useGameController({
     resetFeedback();
     window.location.assign("/");
   }, [captureAbandonment, resetFeedback, setSession, stopAudio]);
+
+  const shareResults = useCallback(() => {
+    void shareReferralChallenge().then(setShareResult);
+  }, []);
 
   const resume = useCallback(() => {
     const current = sessionRef.current;
@@ -269,6 +294,8 @@ export function useGameController({
     resume,
     restart: beginRun,
     returnToTitle: returnToSettings,
+    resultsActionCount: sharePromptTrigger ? 3 : 2,
+    shareResults,
   });
 
   const sceneCues = useMemo(
@@ -307,6 +334,8 @@ export function useGameController({
     pressedKeys,
     pauseMenuIndex,
     resultsMenuIndex,
+    sharePromptTrigger,
+    shareResult,
     sceneReady,
     setSceneReady,
     setPauseMenuIndex,
@@ -321,6 +350,7 @@ export function useGameController({
     pause,
     resume,
     beginRun,
+    shareResults,
     returnToSettings,
     feedback,
     judgement,

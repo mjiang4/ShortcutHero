@@ -43,6 +43,23 @@ test("accepts a bounded anonymous round summary", () => {
   assert.deepEqual(parseRoundWritePayload(VALID_PAYLOAD), VALID_PAYLOAD);
 });
 
+test("accepts a normalized referral code and rejects an invalid one", () => {
+  assert.equal(
+    parseRoundWritePayload({
+      ...VALID_PAYLOAD,
+      referralCode: "abcd2345",
+    })?.referralCode,
+    "ABCD2345",
+  );
+  assert.equal(
+    parseRoundWritePayload({
+      ...VALID_PAYLOAD,
+      referralCode: "not-valid",
+    }),
+    null,
+  );
+});
+
 test("drops undeclared personal and shortcut-content fields", () => {
   const parsed = parseRoundWritePayload({
     ...VALID_PAYLOAD,

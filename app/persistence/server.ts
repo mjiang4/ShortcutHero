@@ -17,6 +17,7 @@ export function prepareRoundBatch(
   db: D1Database,
   payload: RoundWritePayload,
   now: number,
+  attributedReferralCode: string | null = null,
 ): D1PreparedStatement[] {
   const roundExpiresAt = now + RAW_ROUND_RETENTION_MS;
   const masteryExpiresAt = now + AGGREGATE_RETENTION_MS;
@@ -79,6 +80,26 @@ export function prepareRoundBatch(
           delta.cleanHits,
           delta.perfectHits,
           delta.misses,
+          now,
+          masteryExpiresAt,
+        ),
+    );
+  }
+  if (attributedReferralCode) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO referral_conversions (
+            id, referral_code, referred_visitor_id, completed_round_id,
+            converted_at, expires_at
+          ) VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(referral_code, referred_visitor_id) DO NOTHING`,
+        )
+        .bind(
+          `rc_${crypto.randomUUID()}`,
+          attributedReferralCode,
+          payload.visitorId,
+          payload.roundId,
           now,
           masteryExpiresAt,
         ),

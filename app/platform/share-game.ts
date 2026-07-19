@@ -2,10 +2,16 @@ import { analytics, type ShareSurface } from "../analytics";
 
 export type ShareResult = "shared" | "copied" | "unavailable";
 
+type ShareOptions = {
+  readonly url?: string;
+  readonly text?: string;
+};
+
 export async function shareGameLink(
   surface: ShareSurface,
+  options: ShareOptions = {},
 ): Promise<ShareResult> {
-  const url = new URL("/", window.location.origin).toString();
+  const url = options.url ?? new URL("/", window.location.origin).toString();
   const method =
     typeof navigator.share === "function" ? "native_share" : "clipboard";
   analytics.capture("share_clicked", { surface, method });
@@ -14,7 +20,7 @@ export async function shareGameLink(
     try {
       await navigator.share({
         title: "Shortcut Hero",
-        text: "Learn keyboard shortcuts through play.",
+        text: options.text ?? "Learn keyboard shortcuts through play.",
         url,
       });
       return "shared";

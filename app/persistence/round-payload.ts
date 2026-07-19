@@ -4,6 +4,7 @@ import type {
   Difficulty,
   SpeedPreset,
 } from "../game";
+import { normalizeReferralCode } from "../referrals/contract";
 
 export type RoundMasteryDelta = {
   readonly shortcutId: string;
@@ -18,6 +19,7 @@ export type RoundWritePayload = {
   readonly roundId: string;
   readonly visitorId: string;
   readonly deletionToken: string;
+  readonly referralCode?: string;
   readonly trackId: string;
   readonly difficulty: Difficulty;
   readonly guidance: AssistanceMode;
@@ -81,6 +83,11 @@ export function parseRoundWritePayload(value: unknown): RoundWritePayload | null
   }
 
   const parsedMastery = mastery as RoundMasteryDelta[];
+  const referralCode =
+    value.referralCode === undefined
+      ? null
+      : normalizeReferralCode(value.referralCode);
+  if (value.referralCode !== undefined && !referralCode) return null;
   const masteryTotals = parsedMastery.reduce(
     (totals, item) => ({
       attempts: totals.attempts + item.attempts,
@@ -103,6 +110,7 @@ export function parseRoundWritePayload(value: unknown): RoundWritePayload | null
     roundId: value.roundId,
     visitorId: value.visitorId,
     deletionToken: value.deletionToken,
+    ...(referralCode ? { referralCode } : {}),
     trackId: value.trackId,
     difficulty: value.difficulty as Difficulty,
     guidance: value.guidance as AssistanceMode,

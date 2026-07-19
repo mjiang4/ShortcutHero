@@ -1,5 +1,33 @@
 import { expect, test } from "@playwright/test";
 
+test("a referral link keeps first-touch attribution and cleans the URL", async ({
+  page,
+}) => {
+  await page.goto("/?ref=abcd2345");
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.localStorage.getItem(
+          "shortcut-hero:referral-attribution:v1",
+        ),
+      ),
+    )
+    .toBe("ABCD2345");
+
+  await page.goto("/?ref=WXYZ6789");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.localStorage.getItem(
+          "shortcut-hero:referral-attribution:v1",
+        ),
+      ),
+    )
+    .toBe("ABCD2345");
+});
+
 test("a first-time player can complete onboarding with the keyboard", async ({
   page,
 }) => {

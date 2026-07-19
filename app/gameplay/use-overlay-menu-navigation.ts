@@ -12,6 +12,8 @@ type OverlayMenuNavigationOptions = {
   readonly resume: () => void;
   readonly restart: () => void;
   readonly returnToTitle: () => void;
+  readonly resultsActionCount: 2 | 3;
+  readonly shareResults: () => void;
 };
 
 export function useOverlayMenuNavigation({
@@ -24,13 +26,15 @@ export function useOverlayMenuNavigation({
   resume,
   restart,
   returnToTitle,
+  resultsActionCount,
+  shareResults,
 }: OverlayMenuNavigationOptions): void {
   useEffect(() => {
     if (!paused && !showingResults) return;
 
     const onMenuKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const itemCount = paused ? 3 : 2;
+      const itemCount = paused ? 3 : resultsActionCount;
       const currentIndex = paused ? pauseMenuIndex : resultsMenuIndex;
       const setIndex = paused ? setPauseMenuIndex : setResultsMenuIndex;
 
@@ -68,6 +72,7 @@ export function useOverlayMenuNavigation({
         else if (currentIndex === 1) restart();
         else returnToTitle();
       } else if (currentIndex === 0) restart();
+      else if (resultsActionCount === 3 && currentIndex === 1) shareResults();
       else returnToTitle();
     };
 
@@ -80,6 +85,8 @@ export function useOverlayMenuNavigation({
     resultsMenuIndex,
     resume,
     returnToTitle,
+    resultsActionCount,
+    shareResults,
     setPauseMenuIndex,
     setResultsMenuIndex,
     showingResults,

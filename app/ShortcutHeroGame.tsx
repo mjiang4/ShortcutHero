@@ -234,6 +234,9 @@ function ShortcutHeroGameRuntime({
             onSelect={controller.setResultsMenuIndex}
             onPlayAgain={controller.beginRun}
             onReturnToTitle={controller.returnToSettings}
+            sharePromptTrigger={controller.sharePromptTrigger}
+            shareResult={controller.shareResult}
+            onShare={controller.shareResults}
           />
         ) : null}
 

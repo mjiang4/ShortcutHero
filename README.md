@@ -12,6 +12,7 @@ Linear is supported today. Shortcut libraries for Excel, Notion, Jira, Superhuma
 2. Press its shortcut at the strike line.
 3. Chain accurate hits to build your combo and score.
 4. Review what you knew—and what to practise—after each round.
+5. Challenge a friend from selected result screens.
 
 ## Game modes
 
@@ -64,9 +65,9 @@ Wrangler state. Run it again whenever a new file appears in `drizzle/`.
 
 ## Built with
 
-React, Three.js, React Three Fiber, post-processing effects, and procedural Web
-Audio. Optional typed PostHog analytics stays disabled unless production
-credentials are configured.
+React, Three.js, React Three Fiber, Cloudflare D1, post-processing effects, and
+procedural Web Audio. Optional typed PostHog analytics stays disabled unless
+production credentials are configured.
 
 ## Project docs
 
