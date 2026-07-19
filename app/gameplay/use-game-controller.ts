@@ -24,6 +24,7 @@ import {
   type GameSession,
   type GameSettings,
 } from "../game";
+import { persistRoundSummary } from "../persistence/round-client";
 import { SPEED_BPM } from "./constants";
 import { persistHighScore } from "./result-storage";
 import {
@@ -88,6 +89,12 @@ export function useGameController({
   const handleFinished = useCallback(
     (finished: GameResults, sourceSession: GameSession) => {
       const isPersonalBest = persistHighScore(finished, sourceSession);
+      void persistRoundSummary(
+        finished,
+        sourceSession,
+        effectsMode,
+        soundEnabled,
+      );
       const resultSummary = buildResultAnalyticsSummary(finished);
       analytics.capture("game_completed", {
         ...analyticsContext,
@@ -108,7 +115,7 @@ export function useGameController({
       setResultsMenuIndex(0);
       setViewPhase("results");
     },
-    [analyticsContext],
+    [analyticsContext, effectsMode, soundEnabled],
   );
 
   const feedbackAudio = useMemo(

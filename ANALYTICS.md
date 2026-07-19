@@ -32,8 +32,8 @@ the configured ingestion host.
 - Keep autocapture and automatic page events disabled.
 - If replay is approved, mask all inputs, block the 3D canvas, and record no
   network headers or bodies.
-- Use `analytics.getAnonymousId()` for future server writes so client and server
-  events use the same anonymous identity.
+- PostHog and D1 use the same app-owned anonymous visitor ID. A separate,
+  device-held deletion secret authorizes progress deletion.
 
 The runtime sanitizer drops forbidden personal and shortcut-input fields even
 if they are accidentally passed around the typed boundary.

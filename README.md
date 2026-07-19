@@ -44,6 +44,7 @@ Requires Node.js 22.13 or newer.
 ```bash
 npm install
 npx playwright install chromium
+npm run db:local:setup
 npm run dev
 ```
 
@@ -57,6 +58,9 @@ npm run check
 
 This runs linting, TypeScript validation, engine tests, the production build,
 rendered-route tests, and the headless browser suite.
+
+The local database command applies only unapplied migrations to project-local
+Wrangler state. Run it again whenever a new file appears in `drizzle/`.
 
 ## Built with
 

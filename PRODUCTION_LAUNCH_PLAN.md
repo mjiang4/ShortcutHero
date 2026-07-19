@@ -177,11 +177,11 @@ Decision gate:
 Decision: PostHog US, 12-month product-event retention, and session replay off.
 Capture remains disabled until the production project token is supplied.
 
-### 9. Add D1 persistence — next
+### 9. Add D1 persistence — complete
 
 - Enable the logical D1 binding.
 - Define and generate reviewed migrations.
-- Add server-side repositories for visitors, rounds, mastery, referral codes, and referral conversions.
+- Add server-side storage for visitors, rounds, and mastery, plus the referral schema used by the next phase.
 - Keep settings and transient UI state local.
 - Make writes idempotent and validate all server input.
 
@@ -195,15 +195,15 @@ Initial tables:
 
 Acceptance:
 
-- Durable records survive browser storage clearing.
+- Round and mastery records are stored server-side and survive reloads and browser restarts.
 - Local development uses a reproducible database setup.
 - Migrations are committed and included in deployment artifacts.
 
-Decision gate:
+Decision: raw rounds expire after 90 days; aggregate mastery and referrals expire
+after 12 months. Anonymous progress can be deleted only with a private secret
+stored on the originating device.
 
-- Confirm retention periods and whether anonymous round history should be deletable before collecting it publicly.
-
-### 10. Build the referral loop
+### 10. Build the referral loop — next
 
 - Generate random, non-sequential referral codes.
 - Accept `?ref=` links and store first-touch attribution.

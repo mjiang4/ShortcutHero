@@ -1,6 +1,7 @@
 "use client";
 
 import type { AnalyticsEventMap, AnalyticsEventName } from "./events";
+import { getOrCreateAnonymousIdentity } from "../identity/anonymous-identity";
 
 type SafeProperty = string | number | boolean;
 type SafeProperties = Record<string, SafeProperty>;
@@ -36,6 +37,7 @@ const FORBIDDEN_PROPERTY_KEYS = new Set([
 ]);
 
 let sink: AnalyticsSink | null = null;
+let anonymousId: string | null = null;
 let initialization: Promise<void> | null = null;
 const queue: PendingEvent[] = [];
 
@@ -56,7 +58,9 @@ export const analytics = {
   },
 
   getAnonymousId(): string | null {
-    return sink?.getAnonymousId() ?? null;
+    if (typeof window === "undefined") return null;
+    anonymousId ??= getOrCreateAnonymousIdentity().visitorId;
+    return sink?.getAnonymousId() ?? anonymousId;
   },
 };
 
@@ -87,6 +91,8 @@ async function initializePostHog(): Promise<void> {
         sampleRate: REPLAY_SAMPLE_RATE,
       },
     });
+    anonymousId = getOrCreateAnonymousIdentity().visitorId;
+    posthog.identify(anonymousId);
     sink = {
       capture: (name, properties) => posthog.capture(name, properties),
       getAnonymousId: () => posthog.get_distinct_id(),
