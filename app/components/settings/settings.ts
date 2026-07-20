@@ -86,7 +86,8 @@ export function createPlayHref(settings: LaunchSettings): string {
     effects: settings.effects,
   });
 
-  return `/play?${params.toString()}`;
+  params.set("play", "1");
+  return `/?${params.toString()}`;
 }
 import {
   isAvailableToolId,

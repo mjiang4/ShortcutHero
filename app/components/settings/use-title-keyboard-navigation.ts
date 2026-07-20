@@ -6,6 +6,7 @@ import { MENU_ITEMS, OPTION_COUNT } from "./title-config";
 import type { MenuAction, ScreenView } from "./title-types";
 
 type TitleKeyboardNavigationOptions = {
+  readonly enabled?: boolean;
   readonly view: ScreenView;
   readonly menuIndex: number;
   readonly optionIndex: number;
@@ -21,6 +22,7 @@ type TitleKeyboardNavigationOptions = {
 };
 
 export function useTitleKeyboardNavigation({
+  enabled = true,
   view,
   menuIndex,
   optionIndex,
@@ -35,6 +37,8 @@ export function useTitleKeyboardNavigation({
   onCancelOptions,
 }: TitleKeyboardNavigationOptions): void {
   useEffect(() => {
+    if (!enabled) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
@@ -127,6 +131,7 @@ export function useTitleKeyboardNavigation({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    enabled,
     menuIndex,
     onAdjustOption,
     onCancelOptions,

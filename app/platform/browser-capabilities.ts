@@ -31,10 +31,13 @@ export function useBrowserCapabilities(): BrowserCapabilities {
   const [capabilities, setCapabilities] = useState(INITIAL_CAPABILITIES);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    // requestAnimationFrame can be paused for a backgrounded or newly opened
+    // tab. Capability detection is startup-critical, so do not make the game
+    // wait for a paint that the browser may defer indefinitely.
+    const timer = window.setTimeout(() => {
       setCapabilities(detectBrowserCapabilities(window, navigator));
-    });
-    return () => window.cancelAnimationFrame(frame);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return capabilities;

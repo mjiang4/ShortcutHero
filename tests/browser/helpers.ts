@@ -16,4 +16,4 @@ export async function openAsReturningPlayer(page: Page): Promise<void> {
 }
 
 export const FAST_TEST_RUN =
-  "/play?tool=linear&difficulty=easy&guidance=novice&pace=turbo&session=30&sound=off&effects=system";
+  "/?tool=linear&difficulty=easy&guidance=novice&pace=turbo&session=30&sound=off&effects=system&play=1";

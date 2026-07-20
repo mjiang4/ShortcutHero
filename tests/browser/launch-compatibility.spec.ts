@@ -28,13 +28,13 @@ test("a mobile visitor lands directly on the Mac handoff", async ({
   await expect(page.getByRole("link", { name: "privacy" })).toBeVisible();
 });
 
-test("a direct mobile game link never initializes the 3D stage", async ({
+test("a direct mobile game link never initializes the action stage", async ({
   page,
 }) => {
   await page.goto(FAST_TEST_RUN);
 
   await expect(
-    page.getByRole("heading", { name: "continue on desktop" }),
+    page.getByRole("heading", { name: "play on a Mac" }),
   ).toBeVisible();
-  await expect(page.locator("canvas")).toHaveCount(0);
+  await expect(page.locator(".dom-game-stage")).toHaveCount(0);
 });

@@ -70,6 +70,283 @@ a:focus-visible {
   z-index: 0;
 }
 
+.dom-game-stage {
+  --run-progress: 0;
+  --combo-energy: 0;
+  position: absolute;
+  inset: 0;
+  min-height: 320px;
+  overflow: hidden;
+  background: #080914;
+  perspective: 900px;
+  isolation: isolate;
+}
+
+.dom-stage-sky {
+  position: absolute;
+  inset: 0 0 46%;
+  background:
+    radial-gradient(circle at 68% 28%, rgba(255, 214, 163, 0.16), transparent 22%),
+    linear-gradient(180deg, #17102c 0%, #593147 58%, #a26367 100%);
+  filter: saturate(calc(0.82 + var(--combo-energy) * 0.35));
+}
+
+.dom-stage-sky::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 6, 16, calc(var(--run-progress) * 0.7)), transparent 72%);
+  content: "";
+}
+
+.dom-stage-sun {
+  position: absolute;
+  z-index: 1;
+  top: calc(6% + var(--run-progress) * 7%);
+  left: 63%;
+  width: clamp(150px, 19vw, 330px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: calc(0.82 - var(--run-progress) * 0.52);
+  background: #ffd6a3;
+  box-shadow: 0 0 80px rgba(255, 198, 145, 0.24);
+}
+
+.dom-stage-horizon {
+  position: absolute;
+  z-index: 2;
+  top: 43%;
+  right: 0;
+  left: 0;
+  height: 12%;
+  background: linear-gradient(180deg, rgba(240, 150, 130, 0.28), transparent);
+  filter: blur(10px);
+}
+
+.dom-stage-mountains {
+  position: absolute;
+  z-index: 3;
+  top: 24%;
+  right: -4%;
+  left: -4%;
+  height: 29%;
+  overflow: hidden;
+}
+
+.dom-stage-mountains span {
+  position: absolute;
+  bottom: -18%;
+  left: var(--mountain-left);
+  width: calc(var(--mountain-height) * 1.35);
+  height: var(--mountain-height);
+  transform: translateX(-50%) rotate(45deg) skew(-8deg, -8deg);
+  background: color-mix(in srgb, #211a34 calc(88% - var(--mountain-depth) * 8%), #6f415e);
+  opacity: calc(0.94 - var(--mountain-depth) * 0.11);
+}
+
+.dom-highway {
+  position: absolute;
+  z-index: 5;
+  top: 41%;
+  bottom: -8%;
+  left: 50%;
+  width: min(76vw, 1180px);
+  transform: translateX(-50%) rotateX(57deg);
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, rgba(20, 17, 39, 0.28), rgba(5, 6, 15, 0.94));
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  box-shadow: inset 0 0 80px rgba(83, 65, 160, 0.13);
+}
+
+.dom-highway-grid {
+  position: absolute;
+  inset: 0;
+}
+
+.dom-highway-grid span {
+  position: absolute;
+  right: 7%;
+  left: 7%;
+  top: calc(var(--grid-index, 0) * 8%);
+  height: 1px;
+  background: rgba(168, 151, 255, 0.16);
+}
+
+.dom-highway-grid span:nth-child(1) { top: 8%; }
+.dom-highway-grid span:nth-child(2) { top: 16%; }
+.dom-highway-grid span:nth-child(3) { top: 24%; }
+.dom-highway-grid span:nth-child(4) { top: 32%; }
+.dom-highway-grid span:nth-child(5) { top: 40%; }
+.dom-highway-grid span:nth-child(6) { top: 48%; }
+.dom-highway-grid span:nth-child(7) { top: 56%; }
+.dom-highway-grid span:nth-child(8) { top: 64%; }
+.dom-highway-grid span:nth-child(9) { top: 72%; }
+.dom-highway-grid span:nth-child(10) { top: 80%; }
+.dom-highway-grid span:nth-child(11) { top: 88%; }
+.dom-highway-grid span:nth-child(12) { top: 96%; }
+
+.dom-highway-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--violet);
+  box-shadow: 0 0 20px rgba(124, 108, 255, 0.62);
+}
+
+.dom-highway-rail.is-left { left: 0; }
+.dom-highway-rail.is-right { right: 0; }
+
+.dom-action-ribbon {
+  position: absolute;
+  z-index: 4;
+  top: var(--cue-y);
+  left: calc(50% + var(--cue-lane));
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 24px;
+  width: min(54vw, 650px);
+  min-height: 70px;
+  padding: 12px 18px 13px;
+  border: 1px solid rgba(168, 151, 255, 0.46);
+  border-right-width: 4px;
+  border-left-width: 4px;
+  transform: translate(-50%, -50%) scale(var(--cue-scale));
+  transform-origin: 50% 50%;
+  color: var(--paper);
+  background: linear-gradient(90deg, rgba(21, 17, 39, 0.95), rgba(43, 30, 66, 0.9));
+  box-shadow: 0 0 28px rgba(124, 108, 255, 0.18);
+  opacity: clamp(0, calc(0.28 + var(--cue-progress) * 1.1), 1);
+  transition: border-color 90ms ease, background 90ms ease, opacity 120ms ease;
+}
+
+.dom-action-ribbon strong {
+  align-self: end;
+  overflow: hidden;
+  font-size: clamp(17px, 2vw, 28px);
+  font-weight: 470;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dom-action-ribbon kbd {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  align-self: center;
+  color: var(--violet-bright);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: clamp(15px, 1.8vw, 25px);
+  font-weight: 520;
+  white-space: nowrap;
+}
+
+.dom-action-context {
+  color: rgba(244, 241, 234, 0.42);
+  font-size: 8px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.dom-action-ribbon.is-active {
+  border-color: var(--sun);
+  background: linear-gradient(90deg, rgba(65, 38, 63, 0.98), rgba(43, 30, 79, 0.96));
+  box-shadow: 0 0 32px rgba(244, 162, 97, 0.28);
+}
+
+.dom-action-ribbon.is-cleared {
+  border-color: var(--success);
+  opacity: 0;
+  filter: brightness(1.7);
+}
+
+.dom-action-ribbon.is-missed {
+  border-color: var(--danger);
+  opacity: 0;
+  transform: translate(-46%, -38%) scale(var(--cue-scale)) rotate(4deg);
+}
+
+.dom-strike-gate {
+  position: absolute;
+  z-index: 7;
+  right: 0;
+  bottom: 9%;
+  left: 0;
+  height: 18%;
+  border-top: 4px solid var(--violet-bright);
+  border-right: 4px solid rgba(168, 151, 255, 0.72);
+  border-left: 4px solid rgba(168, 151, 255, 0.72);
+  background: linear-gradient(180deg, rgba(124, 108, 255, 0.04), rgba(124, 108, 255, 0.17));
+  box-shadow: 0 -8px 38px rgba(124, 108, 255, 0.26);
+}
+
+.dom-strike-gate span {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(244, 241, 234, 0.56);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.dom-stage-particles {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+}
+
+.dom-stage-particles span {
+  position: absolute;
+  top: var(--particle-y);
+  left: var(--particle-x);
+  width: 3px;
+  height: 14px;
+  background: var(--violet-bright);
+  box-shadow: 0 0 12px rgba(168, 151, 255, 0.68);
+  opacity: calc(0.1 + var(--combo-energy) * 0.65);
+  animation: stage-particle 1.9s linear var(--particle-delay) infinite;
+}
+
+.dom-feedback-burst {
+  position: absolute;
+  z-index: 8;
+  bottom: 13%;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+}
+
+.dom-feedback-burst span {
+  position: absolute;
+  width: 3px;
+  height: 84px;
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, var(--success), transparent);
+  animation: stage-burst 420ms ease-out both;
+}
+
+.dom-feedback-burst.is-miss span {
+  background: linear-gradient(180deg, var(--danger), transparent);
+}
+
+.dom-game-stage[data-paused="true"] *,
+.dom-game-stage[data-reduced-motion="true"] .dom-stage-particles span {
+  animation-play-state: paused;
+}
+
+@keyframes stage-particle {
+  from { transform: translateY(24px); }
+  to { transform: translateY(-80px); }
+}
+
+@keyframes stage-burst {
+  from { opacity: 1; scale: 0.2; }
+  to { opacity: 0; scale: 1.35; }
+}
+
 .ui-layer {
   z-index: 2;
   pointer-events: none;

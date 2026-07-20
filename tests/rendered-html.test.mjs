@@ -23,7 +23,7 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the first-run Shortcut Hero onboarding", async () => {
+test("server-renders the Shortcut Hero client-game shell", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -31,10 +31,6 @@ test("server-renders the first-run Shortcut Hero onboarding", async () => {
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
   assert.match(html, /Learn Linear shortcuts through play/i);
-  assert.match(html, /welcome to shortcut hero/i);
-  assert.match(html, /what should we call you/i);
-  assert.match(html, /your name/i);
-  assert.match(html, /continue/i);
   assert.match(html, /Learn Linear keyboard shortcuts in a fast 3D rhythm game/i);
   assert.match(
     html,
@@ -42,7 +38,7 @@ test("server-renders the first-run Shortcut Hero onboarding", async () => {
   );
   assert.match(html, /twitter:card[^>]+summary_large_image/i);
   assert.match(html, /og\.png/i);
-  assert.doesNotMatch(html, /game-canvas|Go to Inbox/i);
+  assert.doesNotMatch(html, /game-canvas|Go to Inbox|what should we call you/i);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);
 });
 
@@ -81,7 +77,7 @@ test("separates title and play routes while keeping the 3D dependencies", async 
 
   assert.match(page, /SettingsScreen/);
   assert.doesNotMatch(page, /ShortcutHeroGame|GameScene/);
-  assert.match(playPage, /ShortcutHeroGame/);
+  assert.match(playPage, /location\.replace/);
   assert.match(layout, /SITE_TITLE/);
   assert.match(keyboard, /keyboard-instrument/);
   assert.match(keyboard, /is-hinted/);
@@ -90,9 +86,12 @@ test("separates title and play routes while keeping the 3D dependencies", async 
   await assert.rejects(
     access(new URL("../app/_sites-preview", import.meta.url)),
   );
+  await assert.rejects(
+    access(new URL("../app/play/loading.tsx", import.meta.url)),
+  );
 });
 
-test("server-renders the configured play route loading shell", async () => {
+test("server-renders the configured play route startup shell", async () => {
   const response = await render(
     "/play?tool=linear&difficulty=easy&guidance=novice&pace=standard&session=30&sound=off&effects=reduced",
   );
@@ -100,8 +99,7 @@ test("server-renders the configured play route loading shell", async () => {
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
   assert.match(html, /preparing the highway/i);
-  assert.match(html, /ShortcutHeroGame/i);
-  assert.match(html, /durationSeconds\\?":30/i);
+  assert.match(html, /__VINEXT_RSC_DONE__/i);
   assert.doesNotMatch(html, /game-canvas/i);
   assert.doesNotMatch(html, /enter the flow|high scores/i);
 });

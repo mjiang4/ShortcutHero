@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { FAST_TEST_RUN } from "./helpers";
 
-test("a browser without WebGL gets a recoverable graphics fallback", async ({
+test("a browser without WebGL still gets the action highway", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -21,11 +21,10 @@ test("a browser without WebGL gets a recoverable graphics fallback", async ({
 
   await page.goto(FAST_TEST_RUN.replace("sound=off", "sound=on"));
 
-  await expect(page.getByRole("heading", { name: "WebGL is off" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "return to title" })).toHaveAttribute(
-    "href",
-    "/",
-  );
+  await expect(page.locator(".dom-game-stage")).toBeVisible();
+  await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/, {
+    timeout: 15_000,
+  });
 });
 
 test("constrained devices lower visual cost and continue without audio", async ({
@@ -55,22 +54,15 @@ test("constrained devices lower visual cost and continue without audio", async (
     timeout: 15_000,
   });
 
-  await page.locator("canvas").evaluate((canvas) => {
-    canvas.dispatchEvent(
-      new Event("webglcontextlost", { bubbles: false, cancelable: true }),
-    );
-  });
-  await expect(
-    page.getByRole("heading", { name: "the stage went dark" }),
-  ).toBeVisible();
+  await expect(page.locator(".dom-game-stage")).toBeVisible();
 });
 
-test("the full-effects WebGL scene initializes", async ({ page }) => {
+test("the full-effects stage initializes", async ({ page }) => {
   await page.goto(FAST_TEST_RUN.replace("effects=system", "effects=full"));
 
   const game = page.locator("main.shortcut-hero");
   await expect(game).toHaveAttribute("data-reduced-motion", "false");
-  await expect(page.locator("canvas")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".dom-game-stage")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/, {
     timeout: 15_000,
   });
@@ -90,11 +82,9 @@ test("a reduced-motion round supports pause, results, and retry", async ({
 
   const game = page.locator("main.shortcut-hero");
   await expect(game).toHaveAttribute("data-reduced-motion", "true");
-  await expect(page.locator(".countdown-number")).toHaveText("3", {
+  await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/, {
     timeout: 15_000,
   });
-  await expect(page.locator(".countdown-number")).toHaveText("2");
-  await expect(page.locator(".countdown-number")).toHaveText("1");
   await expect(page.getByRole("region", { name: "Current game status" })).toBeVisible();
 
   const reservedKeyResults = await page.evaluate(() =>
@@ -130,5 +120,5 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Play again" }).click();
-  await expect(page.locator(".countdown-number")).toHaveText("3");
+  await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/);
 });

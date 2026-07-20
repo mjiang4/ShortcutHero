@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { GameScene, KeyboardInstrument } from "./components/game";
+import { DomGameStage, KeyboardInstrument } from "./components/game";
 import {
   PauseOverlay,
   ResultsScreen,
@@ -53,7 +53,6 @@ function ShortcutHeroGameRuntime({
 }: ShortcutHeroGameProps) {
   const capabilities = useBrowserCapabilities();
   const systemInfo = useSystemInfo();
-  const [graphicsContextLost, setGraphicsContextLost] = useState(false);
   const [compatibilityAcknowledged, setCompatibilityAcknowledged] =
     useState(false);
   const [shareResult, setShareResult] = useState<ShareResult | null>(null);
@@ -105,22 +104,6 @@ function ShortcutHeroGameRuntime({
     );
   }
 
-  if (capabilities.graphics === "unavailable" || graphicsContextLost) {
-    return (
-      <SystemScreen
-        eyebrow="3D graphics unavailable"
-        title={graphicsContextLost ? "the stage went dark" : "WebGL is off"}
-        message={
-          graphicsContextLost
-            ? "The browser lost its graphics connection during this run. Reload to rebuild the stage."
-            : "Shortcut Hero needs WebGL to draw the action highway. Turn on hardware acceleration or try a current desktop browser."
-        }
-        primaryLabel="reload game"
-        onPrimary={() => window.location.reload()}
-      />
-    );
-  }
-
   const renderQuality =
     controller.reducedMotion || capabilities.renderQuality === "reduced"
       ? "reduced"
@@ -134,7 +117,7 @@ function ShortcutHeroGameRuntime({
       data-render-quality={renderQuality}
     >
       <div className="game-canvas" aria-hidden="true">
-        <GameScene
+        <DomGameStage
           cues={controller.sceneCues}
           showShortcuts={settings.assistance === "novice"}
           combo={session?.combo ?? 0}
@@ -142,10 +125,7 @@ function ShortcutHeroGameRuntime({
           feedback={controller.feedback}
           paused={session?.phase === "paused"}
           reducedMotion={controller.reducedMotion}
-          bloom={!controller.reducedMotion && renderQuality === "full"}
-          renderQuality={renderQuality}
           onReady={() => controller.setSceneReady(true)}
-          onContextLost={() => setGraphicsContextLost(true)}
         />
       </div>
 

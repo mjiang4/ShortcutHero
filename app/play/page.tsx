@@ -1,40 +1,22 @@
-import { ShortcutHeroGame } from "../ShortcutHeroGame";
-import { parseLaunchSettings } from "../components/settings/settings";
+"use client";
 
-type SearchParams = Record<string, string | string[] | undefined>;
+import { useEffect } from "react";
 
-function toUrlSearchParams(input: SearchParams): URLSearchParams {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(input)) {
-    if (Array.isArray(value)) {
-      for (const item of value) params.append(key, item);
-    } else if (value !== undefined) {
-      params.set(key, value);
-    }
-  }
-  return params;
-}
+import { GameLoadingScreen } from "../components/system";
 
-export default async function PlayPage({
-  searchParams,
-}: {
-  readonly searchParams: Promise<SearchParams>;
-}) {
-  const launchSettings = parseLaunchSettings(
-    toUrlSearchParams(await searchParams),
-  );
+export default function PlayPage() {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.set("play", "1");
+        window.location.replace(`/?${params.toString()}`);
+      } catch {
+        window.location.assign("/");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-  return (
-    <ShortcutHeroGame
-      settings={{
-        trackId: launchSettings.tool,
-        mode: launchSettings.difficulty,
-        assistance: launchSettings.guidance,
-        speed: launchSettings.pace,
-        durationSeconds: launchSettings.session,
-      }}
-      effectsMode={launchSettings.effects}
-      soundEnabled={launchSettings.sound === "on"}
-    />
-  );
+  return <GameLoadingScreen />;
 }

@@ -1,3 +1,4 @@
+export { DomGameStage } from "./DomGameStage";
 export { GameScene } from "./GameScene";
 export { KeyboardInstrument } from "./KeyboardInstrument";
 export type {

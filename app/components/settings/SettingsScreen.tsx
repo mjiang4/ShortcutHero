@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ShortcutHeroGame } from "../../ShortcutHeroGame";
 import { analytics } from "../../analytics";
 import { primeGameAudio } from "../../audio/use-game-audio";
 import { captureReferralLanding } from "../../referrals/client";
@@ -14,8 +14,8 @@ import { OnboardingViews } from "./OnboardingViews";
 import { OptionsView } from "./OptionsView";
 import { DEFAULT_SYSTEM_INFO, detectSystem } from "./platform";
 import {
-  createPlayHref,
   DEFAULT_LAUNCH_SETTINGS,
+  parseLaunchSettings,
   type LaunchSettings,
 } from "./settings";
 import {
@@ -49,7 +49,6 @@ function isOnboardingView(view: ScreenView): view is OnboardingView {
 }
 
 export function SettingsScreen() {
-  const router = useRouter();
   const [view, setView] = useState<ScreenView>("onboarding-name");
   const [menuIndex, setMenuIndex] = useState(0);
   const [optionIndex, setOptionIndex] = useState(0);
@@ -63,14 +62,18 @@ export function SettingsScreen() {
   );
   const [scores, setScores] = useState<readonly ScoreEntry[]>([]);
   const [hasRestoredSettings, setHasRestoredSettings] = useState(false);
+  const [activeGame, setActiveGame] = useState<LaunchSettings | null>(null);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    const timer = window.setTimeout(() => {
       if (captureReferralLanding()) {
         analytics.capture("referral_landing", { referral_present: true });
       }
       const restored = restoreSettings();
       const onboarding = restoreOnboarding();
+      const launchParams = new URLSearchParams(window.location.search);
+      const requestedPlay = launchParams.get("play") === "1";
+      const requestedSettings = parseLaunchSettings(launchParams);
       const detectedSystem = detectSystem(window.navigator.userAgent, {
         maxTouchPoints: window.navigator.maxTouchPoints,
         coarsePointer: window.matchMedia("(pointer: coarse)").matches,
@@ -83,6 +86,10 @@ export function SettingsScreen() {
       setUserName((current) => current || onboarding.name);
       if (detectedSystem.launchSupport === "mobile") {
         setView("compatibility");
+      } else if (requestedPlay) {
+        setSettings(requestedSettings);
+        setDraftSettings(requestedSettings);
+        setActiveGame(requestedSettings);
       } else if (onboarding.complete) {
         setView("menu");
       } else {
@@ -93,8 +100,8 @@ export function SettingsScreen() {
         });
       }
       setHasRestoredSettings(true);
-    });
-    return () => window.cancelAnimationFrame(frame);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -103,8 +110,8 @@ export function SettingsScreen() {
 
   const startGame = useCallback(() => {
     void primeGameAudio(settings.pace, settings.sound === "off");
-    router.push(createPlayHref(settings));
-  }, [router, settings]);
+    setActiveGame(settings);
+  }, [settings]);
 
   const continueFromName = useCallback(() => {
     if (userName.trim()) setView("onboarding-system");
@@ -197,6 +204,7 @@ export function SettingsScreen() {
   }, [settings]);
 
   useTitleKeyboardNavigation({
+    enabled: activeGame === null,
     view,
     menuIndex,
     optionIndex,
@@ -219,6 +227,22 @@ export function SettingsScreen() {
       } · ${LABELS.pace[settings.pace]} · ${settings.session}s`,
     [activeTrack.name, settings],
   );
+
+  if (activeGame) {
+    return (
+      <ShortcutHeroGame
+        settings={{
+          trackId: activeGame.tool,
+          mode: activeGame.difficulty,
+          assistance: activeGame.guidance,
+          speed: activeGame.pace,
+          durationSeconds: activeGame.session,
+        }}
+        effectsMode={activeGame.effects}
+        soundEnabled={activeGame.sound === "on"}
+      />
+    );
+  }
 
   return (
     <TitleShell track={activeTrack} view={view} summary={summary}>

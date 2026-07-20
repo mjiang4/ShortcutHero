@@ -46,7 +46,9 @@ export function useSystemInfo(): SystemInfo | null {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    // This check must complete even when the tab is initially backgrounded.
+    // Browsers are allowed to pause animation frames in that state.
+    const timer = window.setTimeout(() => {
       setSystemInfo(
         detectSystem(window.navigator.userAgent, {
           maxTouchPoints: window.navigator.maxTouchPoints,
@@ -54,8 +56,8 @@ export function useSystemInfo(): SystemInfo | null {
           viewportWidth: window.innerWidth,
         }),
       );
-    });
-    return () => window.cancelAnimationFrame(frame);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return systemInfo;

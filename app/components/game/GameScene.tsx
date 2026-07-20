@@ -144,10 +144,17 @@ export function GameScene({
       });
       removeContextListener.current = () =>
         canvas.removeEventListener("webglcontextlost", handleContextLost);
-      onReady?.();
     },
-    [onContextLost, onReady],
+    [onContextLost],
   );
+
+  // The canvas can be mounted before react-three-fiber invokes onCreated.
+  // Treat the mounted stage as ready so a delayed renderer callback can never
+  // leave the countdown waiting forever in production.
+  useEffect(() => {
+    const timer = window.setTimeout(() => onReady?.(), 0);
+    return () => window.clearTimeout(timer);
+  }, [onReady]);
 
   useEffect(
     () => () => {
@@ -177,7 +184,7 @@ export function GameScene({
             : SCENE_PERFORMANCE.dpr
         }
         camera={SCENE_PERFORMANCE.camera}
-        frameloop={paused ? "demand" : "always"}
+        frameloop={paused || cues.length === 0 ? "demand" : "always"}
         gl={{
           antialias: renderQuality === "full",
           alpha: false,
