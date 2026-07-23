@@ -33,6 +33,8 @@ export interface SceneCue {
   context?: string;
   /** Optional horizontal offset for future prompts. Keep the active cue near 0. */
   laneOffset?: number;
+  /** 0..1 opacity for shortcut glyph when progressively fading labels. */
+  shortcutOpacity?: number;
 }
 
 export type SceneFeedbackType = "hit" | "recovered" | "miss" | "combo";
@@ -54,6 +56,8 @@ export interface GameSceneProps {
   cues: readonly SceneCue[];
   /** Shows cue shortcut labels. Set false for Pro mode. */
   showShortcuts?: boolean;
+  /** Soften shortcut glyphs (0..1) for progressive recall training. */
+  shortcutOpacity?: number;
   combo?: number;
   /** 0..1 progression through the current run; drives the environmental act. */
   runProgress?: number;

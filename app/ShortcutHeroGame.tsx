@@ -27,6 +27,7 @@ import {
   getHighScoreKey,
   getSessionDurationSeconds,
   getTempoFactor,
+  getShortcutReveal,
   getVisiblePromptTimings,
   handleSessionKey,
   pauseSession,
@@ -562,8 +563,10 @@ export function ShortcutHeroGame({
       accuracyPct: results.accuracyPct,
       longestCombo: results.longestCombo,
       trackName: track.name,
+      accent: toolTheme.accent,
+      interludeBonus,
     }).then(setShareResult);
-  }, [results, track.name]);
+  }, [interludeBonus, results, toolTheme.accent, track.name]);
 
   const downloadCard = useCallback(() => {
     if (!results) return;
@@ -573,8 +576,13 @@ export function ShortcutHeroGame({
       longestCombo: results.longestCombo,
       trackName: track.name,
       accent: toolTheme.accent,
+      interludeBonus,
     });
-  }, [results, toolTheme.accent, track.name]);
+  }, [interludeBonus, results, toolTheme.accent, track.name]);
+
+  const skipDemo = useCallback(() => {
+    window.location.assign("/");
+  }, []);
 
   const completeInterlude = useCallback(
     (mini: {
@@ -703,6 +711,17 @@ export function ShortcutHeroGame({
     () => (session ? getVisiblePromptTimings(session, frameNow, 5) : []),
     [frameNow, session],
   );
+  const shortcutRevealEarly = getShortcutReveal(
+    settings,
+    session?.startedAtMs ?? null,
+    frameNow,
+  );
+  const shortcutOpacityEarly =
+    shortcutRevealEarly === "full"
+      ? 1
+      : shortcutRevealEarly === "ghost"
+        ? 0.28
+        : 0;
   const sceneCues = useMemo<readonly SceneCue[]>(() => {
     const live = visiblePromptTimings
       .filter((timing) => timing.progress > -0.1)
@@ -716,6 +735,7 @@ export function ShortcutHeroGame({
           timing.state === "active" && timing.canHit ? "active" : "upcoming",
         context: timing.shortcut.context,
         laneOffset: 0,
+        shortcutOpacity: shortcutOpacityEarly,
       }));
     const resolved = departingCues
       .filter((cue) => frameNow - cue.resolvedAtMs < DEPARTURE_DURATION_MS)
@@ -730,10 +750,17 @@ export function ShortcutHeroGame({
           progress: Math.min(1.4, cue.startProgress + (elapsed / travel) * 0.9),
           state: cue.state,
           context: cue.prompt.shortcut.context,
+          shortcutOpacity: shortcutOpacityEarly,
         };
       });
     return [...resolved, ...live];
-  }, [departingCues, frameNow, settings.speed, visiblePromptTimings]);
+  }, [
+    departingCues,
+    frameNow,
+    settings.speed,
+    shortcutOpacityEarly,
+    visiblePromptTimings,
+  ]);
 
   const completed = session?.attempts.length ?? 0;
   const sessionDurationMs = getSessionDurationSeconds(settings) * 1_000;
@@ -746,19 +773,24 @@ export function ShortcutHeroGame({
     Math.ceil((sessionDurationMs - elapsedMs) / 1_000),
   );
   void completed;
-  const keyboardHints = hintKeysFor(session);
-  const keyboardStatus = keyboardSignal?.status ?? (
-    session?.active
-      ? settings.assistance === "novice"
-        ? `shortcut: ${session.active.shortcut.input.display}`
-        : "recall the shortcut"
-      : "waiting for next action"
-  );
-
   const tempoFactor = getTempoFactor(
     settings,
     session?.startedAtMs ?? null,
     frameNow,
+  );
+  const shortcutReveal = shortcutRevealEarly;
+  const showShortcutLabels = shortcutReveal !== "hidden";
+  const instrumentGuidance =
+    settings.assistance === "pro" || shortcutReveal === "hidden"
+      ? "recall"
+      : "learn";
+  const keyboardHints = showShortcutLabels ? hintKeysFor(session) : [];
+  const keyboardStatus = keyboardSignal?.status ?? (
+    session?.active
+      ? showShortcutLabels
+        ? `shortcut: ${session.active.shortcut.input.display}`
+        : "recall the shortcut"
+      : "waiting for next action"
   );
   const elapsedLabel = `${Math.floor(elapsedMs / 1000 / 60)}:${String(
     Math.floor(elapsedMs / 1000) % 60,
@@ -766,7 +798,7 @@ export function ShortcutHeroGame({
   const upcomingItems = visiblePromptTimings.slice(0, 4).map((timing) => ({
     id: timing.promptId,
     action: timing.shortcut.action,
-    shortcut: timing.shortcut.input.display,
+    shortcut: showShortcutLabels ? timing.shortcut.input.display : undefined,
     active: timing.state === "active",
   }));
 
@@ -786,7 +818,7 @@ export function ShortcutHeroGame({
       <div className="game-canvas" aria-hidden="true">
         <GameScene
           cues={sceneCues}
-          showShortcuts={settings.assistance === "novice"}
+          showShortcuts={showShortcutLabels}
           combo={session?.combo ?? 0}
           runProgress={runProgress}
           feedback={feedback}
@@ -798,6 +830,15 @@ export function ShortcutHeroGame({
       </div>
 
       <div className="ui-layer">
+        {runMode === "demo" ? (
+          <button
+            type="button"
+            className="demo-skip"
+            onClick={skipDemo}
+          >
+            Skip demo
+          </button>
+        ) : null}
         {viewPhase === "countdown" ? (
           <div className="countdown-overlay" aria-live="assertive">
             {sceneReady || runMode === "speed_round" ? (
@@ -845,7 +886,7 @@ export function ShortcutHeroGame({
 
             <UpcomingRail
               items={upcomingItems}
-              showShortcuts={settings.assistance === "novice"}
+              showShortcuts={showShortcutLabels}
             />
 
             <div className="session-progress" aria-hidden="true">
@@ -857,8 +898,15 @@ export function ShortcutHeroGame({
               </div>
               <span className="progress-time">
                 {DIFFICULTY_LABELS[settings.mode]} ·{" "}
-                {settings.assistance === "novice" ? "Learn" : "Recall"} ·{" "}
-                {remainingSeconds}s
+                {shortcutReveal === "full"
+                  ? "Learn"
+                  : shortcutReveal === "ghost"
+                    ? "Fading keys"
+                    : "Recall"}{" "}
+                · {remainingSeconds}s
+                {interludeBonus > 0
+                  ? ` · +${interludeBonus.toLocaleString()} SR`
+                  : ""}
               </span>
               <button
                 type="button"
@@ -877,7 +925,7 @@ export function ShortcutHeroGame({
               feedbackKeys={keyboardSignal?.keys}
               feedbackTone={keyboardSignal?.tone}
               status={keyboardStatus}
-              guidance={settings.assistance === "novice" ? "learn" : "recall"}
+              guidance={instrumentGuidance}
             />
 
             {session.phase === "paused" ? (
@@ -922,6 +970,8 @@ export function ShortcutHeroGame({
             isPersonalBest={isPersonalBest}
             leaderboardRank={null}
             shareResult={shareResult}
+            accent={toolTheme.accent}
+            interludeBonus={interludeBonus}
             menuIndex={resultsMenuIndex}
             onShare={shareResults}
             onDownloadCard={downloadCard}
@@ -932,7 +982,11 @@ export function ShortcutHeroGame({
 
         <p className="screen-reader-only" aria-live="polite">
           {session?.active
-            ? `${session.active.shortcut.action}. ${settings.assistance === "novice" ? session.active.shortcut.input.display : "Recall the shortcut."}`
+            ? `${session.active.shortcut.action}. ${
+                showShortcutLabels
+                  ? session.active.shortcut.input.display
+                  : "Recall the shortcut."
+              }`
             : ""}
         </p>
       </div>

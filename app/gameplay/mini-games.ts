@@ -10,7 +10,7 @@ export type MiniGameResult = {
 
 export const INTERLUDE_EVERY_HITS = 8;
 export const INTERLUDE_PROMPT_COUNT = 4;
-export const SPEED_ROUND_WINDOW_MS = 2_200;
+export const SPEED_ROUND_WINDOW_MS = 4_000;
 
 export function shouldTriggerInterlude(
   cleanHitsSinceInterlude: number,

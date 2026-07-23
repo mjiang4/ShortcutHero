@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   EMPTY_INPUT_STATE,
   matchShortcutInput,
-  shouldCaptureGameKey,
   type GameKeyEvent,
   type ShortcutDefinition,
 } from "../../game";
@@ -111,9 +110,6 @@ export function SpeedRoundOverlay({
         repeat: event.repeat,
         isComposing: event.isComposing,
       };
-      if (!shouldCaptureGameKey(gameEvent, [current.input.display])) {
-        // Still try match for letter codes from deck
-      }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.repeat) return;
       event.preventDefault();
@@ -137,22 +133,41 @@ export function SpeedRoundOverlay({
   if (!current) return null;
   const remainingMs = Math.max(0, deadline - nowTick);
   const remainingPct = (remainingMs / SPEED_ROUND_WINDOW_MS) * 100;
+  const remainingSec = (remainingMs / 1000).toFixed(1);
+  const elapsedSec = ((nowTick - startedAt) / 1000).toFixed(1);
 
   return (
     <div className={`speed-round${flash ? ` is-${flash}` : ""}`} role="dialog" aria-label={title}>
       <div className="speed-round__panel">
-        <p className="speed-round__kicker">{title}</p>
+        <div className="speed-round__top">
+          <p className="speed-round__kicker">{title}</p>
+          <p className="speed-round__clock" aria-live="polite">
+            <span>{remainingSec}s</span>
+            <span>left</span>
+          </p>
+        </div>
         <p className="speed-round__progress">
-          {index + 1} / {prompts.length}
+          Prompt {index + 1} / {prompts.length}
         </p>
         <h2 className="speed-round__action">{current.action}</h2>
         <p className="speed-round__keys">{current.input.display}</p>
         <div className="speed-round__timer" aria-hidden>
           <span style={{ width: `${remainingPct}%` }} />
         </div>
-        <p className="speed-round__score">
-          {score} · ×{combo}
-        </p>
+        <div className="speed-round__stats">
+          <div>
+            <span>Score</span>
+            <strong>{score.toLocaleString()}</strong>
+          </div>
+          <div>
+            <span>Combo</span>
+            <strong>×{combo}</strong>
+          </div>
+          <div>
+            <span>Time</span>
+            <strong>{elapsedSec}s</strong>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -11,11 +11,12 @@ import {
   isAvailableToolId,
   type AvailableToolId,
 } from "../../tools";
-import { LeaderboardPanel } from "../session/LeaderboardPanel";
+import { HomeLeaderboard } from "../session/HomeLeaderboard";
 import {
   persistOnboarding,
   restoreOnboarding,
 } from "../../gameplay/result-storage";
+import { ToolIcon } from "./ToolIcon";
 import {
   createPlayHref,
   DEFAULT_LAUNCH_SETTINGS,
@@ -29,32 +30,10 @@ import {
   type TempoPreset,
 } from "./settings";
 
-type TitleView =
-  | "menu"
-  | "options"
-  | "scores"
-  | "leaderboard"
-  | "help"
-  | "credits"
-  | "demo";
-type MenuAction =
-  | Exclude<TitleView, "menu" | "demo">
-  | "start"
-  | "speed"
-  | "demo";
+type TitleView = "menu" | "options" | "scores" | "help";
 
 const SETTINGS_STORAGE_KEY = "shortcut-hero:launch-settings";
 const SCORE_PREFIX = "shortcut-hero:high-score:";
-
-const MENU_ITEMS: readonly { label: string; action: MenuAction }[] = [
-  { label: "start", action: "start" },
-  { label: "speed round", action: "speed" },
-  { label: "world board", action: "leaderboard" },
-  { label: "high scores", action: "scores" },
-  { label: "how to play", action: "help" },
-  { label: "options", action: "options" },
-  { label: "credits", action: "credits" },
-];
 
 const DIFFICULTIES: readonly GameDifficulty[] = ["easy", "medium", "hard"];
 const GUIDANCE: readonly GuidanceMode[] = ["novice", "pro"];
@@ -63,27 +42,27 @@ const SESSIONS: readonly SessionLength[] = [30, 45, 60];
 const SOUND: readonly SoundMode[] = ["on", "off"];
 const EFFECTS: readonly EffectsMode[] = ["full", "system", "reduced"];
 const TOOLS: readonly AvailableToolId[] = AVAILABLE_TOOL_IDS;
-const OPTION_COUNT = 7;
+const OPTION_COUNT = 6;
 
 const LABELS = {
   difficulty: {
-    easy: "single keys · beginner",
-    medium: "key sequences · G then I",
-    hard: "shift chords · advanced",
+    easy: "single keys",
+    medium: "sequences",
+    hard: "chords",
   },
   guidance: {
-    novice: "learn · show the keys",
-    pro: "recall · hide the keys",
+    novice: "learn → fade keys",
+    pro: "recall · hidden",
   },
   pace: {
-    relaxed: "focus · slow approach (tempo still ramps)",
-    standard: "standard · balanced approach",
-    turbo: "turbo · short approach window",
+    relaxed: "slow",
+    standard: "steady",
+    turbo: "brisk",
   },
   effects: {
-    full: "full motion + bloom",
-    system: "match system motion",
-    reduced: "reduced motion",
+    full: "full",
+    system: "system",
+    reduced: "reduced",
   },
 } as const;
 
@@ -157,30 +136,34 @@ function readHighScores(): readonly ScoreEntry[] {
 export function SettingsScreen() {
   const router = useRouter();
   const [view, setView] = useState<TitleView>("menu");
-  const [menuIndex, setMenuIndex] = useState(0);
   const [optionIndex, setOptionIndex] = useState(0);
   const [settings, setSettings] = useState<LaunchSettings>(
     DEFAULT_LAUNCH_SETTINGS,
   );
   const [scores, setScores] = useState<readonly ScoreEntry[]>([]);
+  const [bootingDemo, setBootingDemo] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      setSettings(restoreSettings());
+      const restored = restoreSettings();
+      setSettings(restored);
       setScores(readHighScores());
       const onboarding = restoreOnboarding();
       if (!onboarding.demoCompleted && !onboarding.demoSkipped) {
-        setView("demo");
+        setBootingDemo(true);
+        persistOnboarding({ demoCompleted: true, demoSkipped: false });
+        void primeGameAudio(restored.pace, restored.sound === "off");
+        router.replace(createPlayHref(restored, { mode: "demo" }));
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     try {
       window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch {
-      // Persistence is optional; the title screen remains usable without it.
+      // optional
     }
     document.documentElement.dataset.tool = settings.tool;
     const theme = getToolTheme(settings.tool);
@@ -204,66 +187,35 @@ export function SettingsScreen() {
     router.push(createPlayHref(settings, { mode: "demo" }));
   }, [router, settings]);
 
-  const skipDemo = useCallback(() => {
-    persistOnboarding({ demoCompleted: false, demoSkipped: true });
-    setView("menu");
-  }, []);
-
-  const openView = useCallback(
-    (action: MenuAction) => {
-      if (action === "start") {
-        startGame();
-        return;
-      }
-      if (action === "speed") {
-        startSpeedRound();
-        return;
-      }
-      if (action === "demo") {
-        startDemo();
-        return;
-      }
-      if (action === "scores") setScores(readHighScores());
-      if (action === "options") setOptionIndex(0);
-      setView(action);
-    },
-    [startDemo, startGame, startSpeedRound],
-  );
-
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
     setSettings((current) => {
       switch (index) {
         case 0:
           return {
             ...current,
-            tool: cycleValue(TOOLS, current.tool, direction),
+            difficulty: cycleValue(DIFFICULTIES, current.difficulty, direction),
           };
         case 1:
           return {
             ...current,
-            difficulty: cycleValue(DIFFICULTIES, current.difficulty, direction),
+            guidance: cycleValue(GUIDANCE, current.guidance, direction),
           };
         case 2:
           return {
             ...current,
-            guidance: cycleValue(GUIDANCE, current.guidance, direction),
+            pace: cycleValue(PACES, current.pace, direction),
           };
         case 3:
           return {
             ...current,
-            pace: cycleValue(PACES, current.pace, direction),
+            session: cycleValue(SESSIONS, current.session, direction),
           };
         case 4:
           return {
             ...current,
-            session: cycleValue(SESSIONS, current.session, direction),
-          };
-        case 5:
-          return {
-            ...current,
             sound: cycleValue(SOUND, current.sound, direction),
           };
-        case 6:
+        case 5:
           return {
             ...current,
             effects: cycleValue(EFFECTS, current.effects, direction),
@@ -287,10 +239,7 @@ export function SettingsScreen() {
         } else if (event.code === "ArrowUp" || event.code === "KeyW") {
           event.preventDefault();
           setOptionIndex((index) => (index - 1 + OPTION_COUNT) % OPTION_COUNT);
-        } else if (
-          event.code === "ArrowLeft" ||
-          event.code === "KeyA"
-        ) {
+        } else if (event.code === "ArrowLeft" || event.code === "KeyA") {
           event.preventDefault();
           adjustOption(optionIndex, -1);
         } else if (
@@ -316,29 +265,21 @@ export function SettingsScreen() {
         }
         return;
       }
-      if (event.code === "ArrowDown" || event.code === "KeyS") {
+      if (event.code === "Enter" || event.code === "Space") {
         event.preventDefault();
-        setMenuIndex((index) => (index + 1) % MENU_ITEMS.length);
-      } else if (event.code === "ArrowUp" || event.code === "KeyW") {
-        event.preventDefault();
-        setMenuIndex((index) => (index - 1 + MENU_ITEMS.length) % MENU_ITEMS.length);
-      } else if (event.code === "Enter" || event.code === "Space") {
-        event.preventDefault();
-        openView(MENU_ITEMS[menuIndex].action);
+        startGame();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [adjustOption, menuIndex, openView, optionIndex, view]);
+  }, [adjustOption, optionIndex, startGame, view]);
 
+  const activeTrack = getToolTrack(settings.tool);
   const summary = useMemo(
     () =>
-      `${getToolTrack(settings.tool).name} · ${LABELS.difficulty[settings.difficulty]} · ${
-        LABELS.guidance[settings.guidance]
-      } · ${LABELS.pace[settings.pace]} · ${settings.session}s`,
-    [settings],
+      `${activeTrack.name} · ${LABELS.difficulty[settings.difficulty]} · ${LABELS.pace[settings.pace]} · ${settings.session}s`,
+    [activeTrack.name, settings.difficulty, settings.pace, settings.session],
   );
-  const activeTrack = getToolTrack(settings.tool);
 
   function updateSetting<Key extends keyof LaunchSettings>(
     key: Key,
@@ -347,8 +288,16 @@ export function SettingsScreen() {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
+  if (bootingDemo) {
+    return (
+      <main className="title-screen title-screen--booting">
+        <p className="title-boot">Loading demo…</p>
+      </main>
+    );
+  }
+
   return (
-    <main className="title-screen">
+    <main className="title-screen title-screen--home">
       <div className="title-world" aria-hidden="true">
         <div className="title-world__sky" />
         <div className="title-world__sun" />
@@ -363,126 +312,174 @@ export function SettingsScreen() {
         <div className="title-world__grain" />
       </div>
 
-      <header className="title-brand">
-        <span className="title-brand__name">shortcut hero</span>
-        <span className="title-brand__edition">
-          {activeTrack.editionLabel} · {activeTrack.platform}
-        </span>
-      </header>
+      <div className="home-layout">
+        <section className="home-hero" aria-label="Play">
+          <header className="title-brand">
+            <span className="title-brand__name">shortcut hero</span>
+            <span className="title-brand__edition">{activeTrack.editionLabel}</span>
+          </header>
 
-      {view === "menu" ? (
-        <section className="title-menu" aria-label="Main menu">
-          <p className="title-menu__prelude">learn {activeTrack.name} through play</p>
-          <p className="title-menu__description">
-            Build real {activeTrack.name} shortcut muscle memory on a rhythm-game highway.
+          <p className="home-tagline">
+            Learn {activeTrack.name} shortcuts on a rhythm highway.
           </p>
-          <nav className="title-menu__items">
-            {MENU_ITEMS.map((item, index) => (
-              <button
-                type="button"
-                className={`title-menu__item${index === menuIndex ? " is-active" : ""}`}
-                key={item.action}
-                aria-current={index === menuIndex ? "true" : undefined}
-                onMouseEnter={() => setMenuIndex(index)}
-                onFocus={() => setMenuIndex(index)}
-                onClick={() => openView(item.action)}
-              >
-                <span className="title-menu__cursor" aria-hidden="true">›</span>
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </section>
-      ) : null}
 
-      {view === "demo" ? (
-        <TitlePanel title="welcome" subtitle="a 30-second guided demo">
-          <p className="title-panel__empty">
-            Cards race to the strike line. Press the shortcut in time. Tempo
-            climbs as you play. Speed-round interludes interrupt the highway for
-            flash drills.
-          </p>
-          <div className="results-actions" style={{ marginTop: "1.5rem" }}>
-            <button type="button" className="primary-button is-selected" onClick={startDemo}>
-              play demo
+          <div className="tool-switcher" role="group" aria-label="App track">
+            {TOOLS.map((tool) => {
+              const track = getToolTrack(tool);
+              const active = settings.tool === tool;
+              return (
+                <button
+                  key={tool}
+                  type="button"
+                  className={`tool-chip${active ? " is-active" : ""}`}
+                  aria-pressed={active}
+                  onClick={() => updateSetting("tool", tool)}
+                >
+                  <ToolIcon tool={tool} className="tool-chip__icon" />
+                  <span>{track.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="quick-options" aria-label="Quick settings">
+            <QuickToggle
+              label="Difficulty"
+              value={LABELS.difficulty[settings.difficulty]}
+              onPrev={() =>
+                updateSetting(
+                  "difficulty",
+                  cycleValue(DIFFICULTIES, settings.difficulty, -1),
+                )
+              }
+              onNext={() =>
+                updateSetting(
+                  "difficulty",
+                  cycleValue(DIFFICULTIES, settings.difficulty, 1),
+                )
+              }
+            />
+            <QuickToggle
+              label="Pace"
+              value={LABELS.pace[settings.pace]}
+              onPrev={() =>
+                updateSetting("pace", cycleValue(PACES, settings.pace, -1))
+              }
+              onNext={() =>
+                updateSetting("pace", cycleValue(PACES, settings.pace, 1))
+              }
+            />
+            <QuickToggle
+              label="Length"
+              value={`${settings.session}s`}
+              onPrev={() =>
+                updateSetting(
+                  "session",
+                  cycleValue(SESSIONS, settings.session, -1),
+                )
+              }
+              onNext={() =>
+                updateSetting(
+                  "session",
+                  cycleValue(SESSIONS, settings.session, 1),
+                )
+              }
+            />
+          </div>
+
+          <div className="home-cta">
+            <button type="button" className="home-cta__primary" onClick={startGame}>
+              Play
             </button>
-            <button type="button" className="secondary-button" onClick={skipDemo}>
-              skip
+            <button type="button" className="home-cta__ghost" onClick={startSpeedRound}>
+              Speed round
+            </button>
+            <button
+              type="button"
+              className="home-cta__ghost"
+              onClick={() => {
+                setScores(readHighScores());
+                setView("scores");
+              }}
+            >
+              My scores
+            </button>
+            <button
+              type="button"
+              className="home-cta__ghost"
+              onClick={() => {
+                setOptionIndex(0);
+                setView("options");
+              }}
+            >
+              More options
+            </button>
+            <button
+              type="button"
+              className="home-cta__ghost"
+              onClick={() => setView("help")}
+            >
+              How to play
             </button>
           </div>
-        </TitlePanel>
-      ) : null}
+        </section>
+
+        <HomeLeaderboard key={settings.tool} trackId={settings.tool} />
+      </div>
 
       {view === "options" ? (
-        <TitlePanel title="options" subtitle="each setting changes the feel of the run">
+        <TitlePanel title="options" subtitle="fine-tune the next run">
           <div className="option-list">
-            <OptionRow
-              label="tool"
-              value={getToolTrack(settings.tool).name}
-              active={optionIndex === 0}
-              onFocus={() => setOptionIndex(0)}
-              onPrevious={() => updateSetting("tool", cycleValue(TOOLS, settings.tool, -1))}
-              onNext={() => updateSetting("tool", cycleValue(TOOLS, settings.tool, 1))}
-            />
             <OptionRow
               label="difficulty"
               value={LABELS.difficulty[settings.difficulty]}
-              active={optionIndex === 1}
-              onFocus={() => setOptionIndex(1)}
-              onPrevious={() => updateSetting("difficulty", cycleValue(DIFFICULTIES, settings.difficulty, -1))}
-              onNext={() => updateSetting("difficulty", cycleValue(DIFFICULTIES, settings.difficulty, 1))}
+              active={optionIndex === 0}
+              onFocus={() => setOptionIndex(0)}
+              onPrevious={() => adjustOption(0, -1)}
+              onNext={() => adjustOption(0, 1)}
             />
             <OptionRow
               label="guidance"
               value={LABELS.guidance[settings.guidance]}
-              active={optionIndex === 2}
-              onFocus={() => setOptionIndex(2)}
-              onPrevious={() => updateSetting("guidance", cycleValue(GUIDANCE, settings.guidance, -1))}
-              onNext={() => updateSetting("guidance", cycleValue(GUIDANCE, settings.guidance, 1))}
+              active={optionIndex === 1}
+              onFocus={() => setOptionIndex(1)}
+              onPrevious={() => adjustOption(1, -1)}
+              onNext={() => adjustOption(1, 1)}
             />
             <OptionRow
               label="pace"
               value={LABELS.pace[settings.pace]}
-              active={optionIndex === 3}
-              onFocus={() => setOptionIndex(3)}
-              onPrevious={() => updateSetting("pace", cycleValue(PACES, settings.pace, -1))}
-              onNext={() => updateSetting("pace", cycleValue(PACES, settings.pace, 1))}
+              active={optionIndex === 2}
+              onFocus={() => setOptionIndex(2)}
+              onPrevious={() => adjustOption(2, -1)}
+              onNext={() => adjustOption(2, 1)}
             />
             <OptionRow
               label="session"
-              value={`${settings.session}s run length`}
-              active={optionIndex === 4}
-              onFocus={() => setOptionIndex(4)}
-              onPrevious={() => updateSetting("session", cycleValue(SESSIONS, settings.session, -1))}
-              onNext={() => updateSetting("session", cycleValue(SESSIONS, settings.session, 1))}
+              value={`${settings.session}s`}
+              active={optionIndex === 3}
+              onFocus={() => setOptionIndex(3)}
+              onPrevious={() => adjustOption(3, -1)}
+              onNext={() => adjustOption(3, 1)}
             />
             <OptionRow
               label="music"
-              value={settings.sound === "on" ? "original score on" : "music off"}
-              active={optionIndex === 5}
-              onFocus={() => setOptionIndex(5)}
-              onPrevious={() => updateSetting("sound", cycleValue(SOUND, settings.sound, -1))}
-              onNext={() => updateSetting("sound", cycleValue(SOUND, settings.sound, 1))}
+              value={settings.sound}
+              active={optionIndex === 4}
+              onFocus={() => setOptionIndex(4)}
+              onPrevious={() => adjustOption(4, -1)}
+              onNext={() => adjustOption(4, 1)}
             />
             <OptionRow
               label="effects"
               value={LABELS.effects[settings.effects]}
-              active={optionIndex === 6}
-              onFocus={() => setOptionIndex(6)}
-              onPrevious={() => updateSetting("effects", cycleValue(EFFECTS, settings.effects, -1))}
-              onNext={() => updateSetting("effects", cycleValue(EFFECTS, settings.effects, 1))}
+              active={optionIndex === 5}
+              onFocus={() => setOptionIndex(5)}
+              onPrevious={() => adjustOption(5, -1)}
+              onNext={() => adjustOption(5, 1)}
             />
           </div>
           <BackButton onClick={() => setView("menu")} />
-        </TitlePanel>
-      ) : null}
-
-      {view === "leaderboard" ? (
-        <TitlePanel title="world board" subtitle="international D1 leaderboard">
-          <LeaderboardPanel
-            trackId={settings.tool}
-            onClose={() => setView("menu")}
-          />
         </TitlePanel>
       ) : null}
 
@@ -492,14 +489,16 @@ export function SettingsScreen() {
             <ol className="score-list">
               {scores.map((entry, index) => (
                 <li key={`${entry.label}-${entry.score}`}>
-                  <span className="score-list__rank">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="score-list__rank">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                   <span className="score-list__label">{entry.label}</span>
                   <strong>{entry.score.toLocaleString("en-US")}</strong>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="title-panel__empty">No runs yet. The highway is waiting.</p>
+            <p className="title-panel__empty">No runs yet.</p>
           )}
           <BackButton onClick={() => setView("menu")} />
         </TitlePanel>
@@ -508,10 +507,18 @@ export function SettingsScreen() {
       {view === "help" ? (
         <TitlePanel title="how to play" subtitle="match the action to its shortcut">
           <ol className="instruction-list">
-            <li><span>01</span>Read the approaching action (and the Coming up rail).</li>
-            <li><span>02</span>Press its shortcut at the glowing strike line.</li>
-            <li><span>03</span>Chain hits — tempo climbs; speed rounds interrupt the highway.</li>
-            <li><span>04</span>Share your score from the results screen.</li>
+            <li>
+              <span>01</span>Read the approaching action.
+            </li>
+            <li>
+              <span>02</span>Press at the strike line.
+            </li>
+            <li>
+              <span>03</span>Keys fade as you improve — learn them.
+            </li>
+            <li>
+              <span>04</span>Speed rounds interrupt the highway.
+            </li>
           </ol>
           <button
             type="button"
@@ -519,33 +526,46 @@ export function SettingsScreen() {
             style={{ marginTop: "1rem" }}
             onClick={startDemo}
           >
-            replay demo
+            Replay demo
           </button>
           <BackButton onClick={() => setView("menu")} />
         </TitlePanel>
       ) : null}
 
-      {view === "credits" ? (
-        <TitlePanel title="credits" subtitle="built in one improbable sprint">
-          <div className="credit-copy">
-            <p>100% designed and built by Codex.</p>
-            <p>Inspired by Linear, rhythm games, golden-hour skies, and the pleasure of remembering without looking.</p>
-          </div>
-          <BackButton onClick={() => setView("menu")} />
-        </TitlePanel>
-      ) : null}
-
-      <footer className="title-footer">
+      <footer className="title-footer title-footer--rich">
         <span>{summary}</span>
-        <span>
-          {view === "menu"
-            ? "↑ ↓ select · enter confirm"
-            : view === "options"
-              ? "↑ ↓ option · ← → change · esc back"
-              : "enter or esc back"}
+        <span className="title-footer__credits">
+          Built for muscle memory · Inspired by Linear, Slack, Spotify & rhythm games
         </span>
       </footer>
     </main>
+  );
+}
+
+function QuickToggle({
+  label,
+  value,
+  onPrev,
+  onNext,
+}: {
+  label: string;
+  value: string;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="quick-toggle">
+      <span className="quick-toggle__label">{label}</span>
+      <div className="quick-toggle__control">
+        <button type="button" aria-label={`Previous ${label}`} onClick={onPrev}>
+          ‹
+        </button>
+        <strong>{value}</strong>
+        <button type="button" aria-label={`Next ${label}`} onClick={onNext}>
+          ›
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -563,9 +583,11 @@ function TitlePanel({
       className={`title-panel${title === "options" ? " title-panel--options" : ""}`}
       aria-labelledby="title-panel-heading"
     >
-      <p className="title-panel__subtitle">{subtitle}</p>
-      <h1 id="title-panel-heading">{title}</h1>
-      {children}
+      <div className="title-panel__inner">
+        <p className="title-panel__subtitle">{subtitle}</p>
+        <h1 id="title-panel-heading">{title}</h1>
+        {children}
+      </div>
     </section>
   );
 }
@@ -589,9 +611,23 @@ function OptionRow({
     <div className={`option-row${active ? " is-active" : ""}`}>
       <span className="option-row__label">{label}</span>
       <span className="option-row__control">
-        <button type="button" aria-label={`Previous ${label}`} onFocus={onFocus} onClick={onPrevious}>‹</button>
+        <button
+          type="button"
+          aria-label={`Previous ${label}`}
+          onFocus={onFocus}
+          onClick={onPrevious}
+        >
+          ‹
+        </button>
         <strong>{value}</strong>
-        <button type="button" aria-label={`Next ${label}`} onFocus={onFocus} onClick={onNext}>›</button>
+        <button
+          type="button"
+          aria-label={`Next ${label}`}
+          onFocus={onFocus}
+          onClick={onNext}
+        >
+          ›
+        </button>
       </span>
     </div>
   );

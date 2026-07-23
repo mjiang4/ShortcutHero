@@ -92,11 +92,13 @@ function CameraRig({
   feedback,
   paused,
   reducedMotion,
+  runProgress = 0,
 }: {
   combo: number;
   feedback: SceneFeedback | null;
   paused: boolean;
   reducedMotion: boolean;
+  runProgress?: number;
 }) {
   const { camera, size } = useThree();
   const cameraRef = useRef(camera);
@@ -114,7 +116,8 @@ function CameraRig({
     if (!paused) feedbackAge.current += delta;
     const portrait = size.width / Math.max(size.height, 1) < 1.05;
     const energy = comboEnergy(combo);
-    const push = reducedMotion ? 0 : energy * 0.42;
+    const rush = reducedMotion ? 0 : runProgress * 0.55 + energy * 0.5;
+    const push = reducedMotion ? 0 : energy * 0.42 + rush * 0.35;
     const impactLife = clamp01(1 - feedbackAge.current / 0.24);
     const hitKick =
       !reducedMotion && feedback && feedback.type !== "miss"
@@ -126,8 +129,13 @@ function CameraRig({
           (1 - feedbackAge.current / 0.32) *
           0.055
         : 0;
-    const idle = reducedMotion ? 0 : Math.sin(state.clock.elapsedTime * 0.42) * 0.025;
-    const targetX = missShake;
+    const idle = reducedMotion
+      ? 0
+      : Math.sin(state.clock.elapsedTime * 0.42) * 0.025;
+    const sway = reducedMotion
+      ? 0
+      : Math.sin(state.clock.elapsedTime * 0.55) * 0.04;
+    const targetX = missShake + sway;
     const targetY = (portrait ? 7.7 : 6.35 - push * 0.16) - hitKick * 0.055;
     const targetZ = (portrait ? 13.5 : 10.7 - push) - hitKick * 0.3;
     const sceneCamera = cameraRef.current;
@@ -150,11 +158,11 @@ function CameraRig({
       5,
       delta,
     );
-    sceneCamera.lookAt(0, 0.15, portrait ? -5.9 : -6.4);
+    sceneCamera.lookAt(0, 0.15 + rush * 0.08, portrait ? -5.9 : -6.4);
     if (sceneCamera instanceof THREE.PerspectiveCamera) {
       sceneCamera.fov = THREE.MathUtils.damp(
         sceneCamera.fov,
-        39 - hitKick * 1.15,
+        39 - hitKick * 1.15 + rush * 1.4,
         13,
         delta,
       );
@@ -163,6 +171,10 @@ function CameraRig({
   });
 
   return null;
+}
+
+function wrapScroll(value: number, span: number) {
+  return ((value % span) + span) % span;
 }
 
 function SkyWorld({
@@ -176,7 +188,10 @@ function SkyWorld({
 }) {
   const skyMaterial = useRef<THREE.ShaderMaterial>(null);
   const sun = useRef<THREE.Mesh>(null);
-  const world = useRef<THREE.Group>(null);
+  const farLayer = useRef<THREE.Group>(null);
+  const midLayer = useRef<THREE.Group>(null);
+  const nearLayer = useRef<THREE.Group>(null);
+  const haze = useRef<THREE.Mesh>(null);
   const energy = comboEnergy(combo);
   const skyUniforms = useMemo(
     () => ({
@@ -185,22 +200,43 @@ function SkyWorld({
     }),
     [],
   );
-  const mountains = useMemo(
+  const farMountains = useMemo(
     () =>
-      Array.from({ length: 13 }, (_, index) => ({
-        x: -25 + index * 4.2,
-        height: 2.6 + ((index * 17) % 7) * 0.38,
-        width: 4.6 + ((index * 13) % 5) * 0.45,
-        z: -27.5 - (index % 3) * 1.4,
+      Array.from({ length: 18 }, (_, index) => ({
+        x: -34 + index * 3.9,
+        height: 3.4 + ((index * 19) % 8) * 0.42,
+        width: 5.4 + ((index * 11) % 6) * 0.5,
+        z: -31 - (index % 4) * 0.9,
       })),
     [],
   );
-  const monoliths = useMemo(
+  const midRidges = useMemo(
     () =>
-      Array.from({ length: 16 }, (_, index) => ({
+      Array.from({ length: 14 }, (_, index) => ({
+        x: -28 + index * 4.3,
+        height: 2.1 + ((index * 13) % 6) * 0.32,
+        width: 4.2 + ((index * 7) % 5) * 0.4,
+        z: -24.5 - (index % 3) * 1.1,
+      })),
+    [],
+  );
+  const nearBlocks = useMemo(
+    () =>
+      Array.from({ length: 20 }, (_, index) => ({
         side: index % 2 === 0 ? -1 : 1,
-        z: -22 + index * 1.48,
-        height: 0.55 + ((index * 7) % 5) * 0.24,
+        z: -22 + index * 2.15,
+        height: 0.7 + ((index * 9) % 5) * 0.28,
+        depth: 0.35 + ((index * 5) % 3) * 0.12,
+      })),
+    [],
+  );
+  const stars = useMemo(
+    () =>
+      Array.from({ length: 48 }, (_, index) => ({
+        x: ((index * 37) % 70) - 35,
+        y: 4 + ((index * 17) % 14),
+        z: -34 - ((index * 11) % 8),
+        scale: 0.04 + ((index * 3) % 5) * 0.012,
       })),
     [],
   );
@@ -221,20 +257,47 @@ function SkyWorld({
       );
     }
     if (sun.current) {
-      sun.current.position.y = 2.25 - runProgress * 1.35;
+      sun.current.position.y = 2.4 - runProgress * 1.55;
       const scale = 1 + energy * 0.13;
       sun.current.scale.setScalar(scale);
       sun.current.rotation.z = reducedMotion ? 0 : state.clock.elapsedTime * 0.018;
     }
-    if (world.current && !reducedMotion) {
-      world.current.position.x = Math.sin(state.clock.elapsedTime * 0.08) * 0.08;
+    if (haze.current) {
+      const material = haze.current.material;
+      if (!Array.isArray(material) && "opacity" in material) {
+        material.opacity = 0.22 + runProgress * 0.18 + energy * 0.08;
+      }
+    }
+    if (reducedMotion) return;
+    const travel = 1.6 + energy * 2.4 + runProgress * 1.1;
+    const sway = Math.sin(state.clock.elapsedTime * 0.11) * 0.12;
+    if (farLayer.current) {
+      farLayer.current.position.x = sway * 0.35;
+      farLayer.current.position.z = wrapScroll(
+        state.clock.elapsedTime * travel * 0.22,
+        3.6,
+      );
+    }
+    if (midLayer.current) {
+      midLayer.current.position.x = sway * 0.7;
+      midLayer.current.position.z = wrapScroll(
+        state.clock.elapsedTime * travel * 0.55,
+        4.2,
+      );
+    }
+    if (nearLayer.current) {
+      nearLayer.current.position.x = sway;
+      nearLayer.current.position.z = wrapScroll(
+        state.clock.elapsedTime * travel * 1.15,
+        2.15,
+      );
     }
   });
 
   return (
-    <group ref={world}>
-      <mesh position={[0, 7.5, -35]} renderOrder={-10}>
-        <planeGeometry args={[82, 38]} />
+    <group>
+      <mesh position={[0, 7.5, -36]} renderOrder={-12}>
+        <planeGeometry args={[90, 40]} />
         <shaderMaterial
           ref={skyMaterial}
           uniforms={skyUniforms}
@@ -252,78 +315,136 @@ function SkyWorld({
             uniform float uEnergy;
             void main() {
               vec3 dawnTop = vec3(0.075, 0.045, 0.16);
-              vec3 dawnBottom = vec3(0.58, 0.18, 0.24);
-              vec3 nightTop = vec3(0.018, 0.025, 0.10);
-              vec3 nightBottom = vec3(0.20, 0.07, 0.31);
+              vec3 dawnBottom = vec3(0.62, 0.22, 0.26);
+              vec3 nightTop = vec3(0.012, 0.018, 0.08);
+              vec3 nightBottom = vec3(0.16, 0.05, 0.28);
               vec3 top = mix(dawnTop, nightTop, smoothstep(0.18, 0.92, uProgress));
               vec3 bottom = mix(dawnBottom, nightBottom, smoothstep(0.1, 0.88, uProgress));
               float horizon = smoothstep(0.0, 0.72, vUv.y);
               vec3 color = mix(bottom, top, horizon);
               float band = exp(-pow((vUv.y - 0.31) * 7.0, 2.0));
-              color += vec3(0.18, 0.07, 0.15) * band * (0.35 + uEnergy * 0.55);
+              color += vec3(0.22, 0.08, 0.14) * band * (0.4 + uEnergy * 0.55);
               float vignette = smoothstep(0.98, 0.3, distance(vUv, vec2(0.5, 0.52)));
-              color *= 0.72 + vignette * 0.32;
+              color *= 0.7 + vignette * 0.34;
               gl_FragColor = vec4(color, 1.0);
             }
           `}
         />
       </mesh>
 
-      <mesh ref={sun} position={[5.3, 2.25, -33.5]} renderOrder={-8}>
-        <circleGeometry args={[1.95, 64]} />
+      {stars.map((star, index) => (
+        <mesh
+          key={`star-${index}`}
+          position={[star.x, star.y, star.z]}
+          scale={star.scale}
+          renderOrder={-11}
+        >
+          <sphereGeometry args={[1, 6, 6]} />
+          <meshBasicMaterial
+            color="#f4f1ea"
+            transparent
+            opacity={0.25 + (index % 5) * 0.08 + runProgress * 0.25}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+
+      <mesh ref={sun} position={[5.6, 2.4, -34]} renderOrder={-8}>
+        <circleGeometry args={[2.15, 64]} />
         <meshBasicMaterial
           color={COLORS.sun}
           transparent
-          opacity={Math.max(0.08, 0.76 - runProgress * 0.6)}
+          opacity={Math.max(0.08, 0.78 - runProgress * 0.62)}
           depthWrite={false}
           fog={false}
           toneMapped={false}
         />
       </mesh>
       <pointLight
-        position={[5.3, 3.2, -20]}
+        position={[5.6, 3.4, -20]}
         color={COLORS.gold}
-        intensity={5.5 * (1 - runProgress * 0.55)}
-        distance={38}
+        intensity={5.8 * (1 - runProgress * 0.55)}
+        distance={40}
         decay={1.5}
       />
 
-      <group position={[0, -1.75, 0]}>
-        {mountains.map((mountain, index) => (
+      <mesh ref={haze} position={[0, 0.4, -18]} renderOrder={-6}>
+        <planeGeometry args={[48, 6]} />
+        <meshBasicMaterial
+          color="#1a1024"
+          transparent
+          opacity={0.28}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+
+      <group ref={farLayer} position={[0, -1.9, 0]}>
+        {farMountains.map((mountain, index) => (
           <mesh
-            key={`${mountain.x}-${mountain.z}`}
-            position={[mountain.x, mountain.height * 0.35, mountain.z]}
-            rotation={[0, 0, index % 2 === 0 ? 0.04 : -0.05]}
+            key={`far-${mountain.x}-${index}`}
+            position={[mountain.x, mountain.height * 0.32, mountain.z]}
+            rotation={[0, 0, index % 2 === 0 ? 0.03 : -0.04]}
           >
             <coneGeometry args={[mountain.width, mountain.height, 3]} />
             <meshBasicMaterial
-              color={index % 3 === 0 ? "#332441" : "#211a34"}
+              color={index % 3 === 0 ? "#2a2138" : "#1a1528"}
               transparent
-              opacity={0.88}
+              opacity={0.72}
               depthWrite={false}
             />
           </mesh>
         ))}
       </group>
 
-      <group>
-        {monoliths.map((item, index) => (
-          <group key={`${item.z}-${index}`} position={[item.side * 5.2, 0.15, item.z]}>
-            <mesh position={[0, item.height / 2, 0]} rotation={[0, item.side * 0.18, 0]}>
-              <boxGeometry args={[0.13, item.height, 0.18]} />
+      <group ref={midLayer} position={[0, -1.55, 0]}>
+        {midRidges.map((ridge, index) => (
+          <mesh
+            key={`mid-${ridge.x}-${index}`}
+            position={[ridge.x, ridge.height * 0.28, ridge.z]}
+          >
+            <coneGeometry args={[ridge.width, ridge.height, 4]} />
+            <meshBasicMaterial
+              color={index % 2 === 0 ? "#352845" : "#241b36"}
+              transparent
+              opacity={0.9}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      <group ref={nearLayer}>
+        {nearBlocks.map((item, index) => (
+          <group
+            key={`near-${item.z}-${index}`}
+            position={[item.side * (5.35 + (index % 3) * 0.18), 0.1, item.z]}
+          >
+            <mesh position={[0, item.height / 2, 0]} rotation={[0, item.side * 0.14, 0]}>
+              <boxGeometry args={[0.22, item.height, item.depth]} />
               <meshStandardMaterial
-                color="#18162b"
+                color="#141225"
                 emissive={index % 3 === 0 ? COLORS.gold : COLORS.accent}
-                emissiveIntensity={0.12 + energy * 0.5}
-                roughness={0.7}
+                emissiveIntensity={0.16 + energy * 0.55}
+                roughness={0.68}
               />
             </mesh>
-            <mesh position={[0, item.height + 0.08, 0]}>
-              <boxGeometry args={[0.4, 0.025, 0.025]} />
+            <mesh position={[0, item.height + 0.1, 0]}>
+              <boxGeometry args={[0.55, 0.03, 0.03]} />
               <meshBasicMaterial
                 color={index % 3 === 0 ? COLORS.sun : COLORS.accentBright}
                 transparent
-                opacity={0.18 + energy * 0.45}
+                opacity={0.22 + energy * 0.5}
+                toneMapped={false}
+              />
+            </mesh>
+            <mesh position={[item.side * -0.35, 0.08, 0.15]}>
+              <boxGeometry args={[0.12, 0.12, 0.12]} />
+              <meshBasicMaterial
+                color={COLORS.accentBright}
+                transparent
+                opacity={0.12 + energy * 0.3}
                 toneMapped={false}
               />
             </mesh>
@@ -372,23 +493,56 @@ function Atmosphere({ combo, runProgress }: { combo: number; runProgress: number
   );
 }
 
-function Runway({ combo, paused }: { combo: number; paused: boolean }) {
+function Runway({
+  combo,
+  paused,
+  reducedMotion,
+}: {
+  combo: number;
+  paused: boolean;
+  reducedMotion: boolean;
+}) {
   const energy = comboEnergy(combo);
   const pulseMaterial = useRef<THREE.MeshBasicMaterial>(null);
+  const dashGroup = useRef<THREE.Group>(null);
+  const sideScroll = useRef<THREE.Group>(null);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!pulseMaterial.current) return;
     pulseMaterial.current.opacity = paused
       ? 0.1
       : 0.15 + energy * 0.17 + Math.sin(state.clock.elapsedTime * 2) * 0.025;
+
+    if (reducedMotion || paused) return;
+    const speed = 5.6 + energy * 4.2;
+    if (dashGroup.current) {
+      dashGroup.current.position.z += speed * delta;
+      if (dashGroup.current.position.z > 1.08) {
+        dashGroup.current.position.z -= 1.08;
+      }
+    }
+    if (sideScroll.current) {
+      sideScroll.current.position.z += speed * 0.72 * delta;
+      if (sideScroll.current.position.z > 2.2) {
+        sideScroll.current.position.z -= 2.2;
+      }
+    }
   });
 
   const ticks = useMemo(
-    () => Array.from({ length: 22 }, (_, index) => -20.5 + index * 1.08),
+    () => Array.from({ length: 28 }, (_, index) => -22 + index * 1.08),
     [],
   );
   const approachMarks = useMemo(
     () => Array.from({ length: 6 }, (_, index) => STRIKE_Z - 1.05 - index * 1.08),
+    [],
+  );
+  const sidePosts = useMemo(
+    () =>
+      Array.from({ length: 18 }, (_, index) => ({
+        z: -20 + index * 2.2,
+        side: index % 2 === 0 ? -1 : 1,
+      })),
     [],
   );
 
@@ -396,11 +550,7 @@ function Runway({ combo, paused }: { combo: number; paused: boolean }) {
     <group>
       <mesh position={[0, -0.27, -10.2]} receiveShadow>
         <boxGeometry args={[58, 0.08, 31]} />
-        <meshStandardMaterial
-          color="#070914"
-          roughness={1}
-          metalness={0}
-        />
+        <meshStandardMaterial color="#070914" roughness={1} metalness={0} />
       </mesh>
       <mesh position={[0, -0.16, -10.2]} receiveShadow>
         <boxGeometry args={[8.4, 0.18, 29.6]} />
@@ -422,16 +572,35 @@ function Runway({ combo, paused }: { combo: number; paused: boolean }) {
         </mesh>
       ))}
 
-      {ticks.map((z, index) => (
-        <mesh key={z} position={[0, -0.045, z]}>
-          <boxGeometry args={[7.95, 0.018, index % 4 === 0 ? 0.045 : 0.018]} />
-          <meshBasicMaterial
-            color={index % 4 === 0 ? "#383548" : "#22212b"}
-            transparent
-            opacity={index % 4 === 0 ? 0.26 : 0.16}
-          />
-        </mesh>
-      ))}
+      <group ref={dashGroup}>
+        {ticks.map((z, index) => (
+          <mesh key={z} position={[0, -0.04, z]}>
+            <boxGeometry args={[0.55, 0.02, 0.55]} />
+            <meshBasicMaterial
+              color={index % 2 === 0 ? COLORS.accentBright : "#3a3650"}
+              transparent
+              opacity={index % 2 === 0 ? 0.42 : 0.18}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      <group ref={sideScroll}>
+        {sidePosts.map((post) => (
+          <mesh
+            key={`${post.side}-${post.z}`}
+            position={[post.side * 5.1, 0.55, post.z]}
+          >
+            <boxGeometry args={[0.08, 1.2, 0.08]} />
+            <meshBasicMaterial
+              color={COLORS.accent}
+              transparent
+              opacity={0.18 + energy * 0.2}
+            />
+          </mesh>
+        ))}
+      </group>
 
       {approachMarks.map((z, index) => (
         <group key={z} position={[0, -0.018, z]}>
@@ -462,7 +631,10 @@ function Runway({ combo, paused }: { combo: number; paused: boolean }) {
           toneMapped={false}
         />
       </mesh>
-      <mesh position={[0, -0.055, STRIKE_Z + 0.04]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh
+        position={[0, -0.055, STRIKE_Z + 0.04]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
         <planeGeometry args={[8.25, 1.55]} />
         <meshBasicMaterial
           color={COLORS.accent}
@@ -1039,7 +1211,7 @@ function ActionRibbon({
           {cue.action}
         </Text>
 
-        {showShortcut && cue.shortcut ? (
+        {showShortcut && cue.shortcut && (cue.shortcutOpacity ?? 1) > 0.05 ? (
           <>
             <Text
               position={[-2.4, -0.21, 0.076]}
@@ -1049,6 +1221,7 @@ function ActionRibbon({
               color={isActive ? COLORS.accentBright : COLORS.muted}
               anchorX="left"
               anchorY="middle"
+              fillOpacity={cue.shortcutOpacity ?? 1}
             >
               {cue.shortcut}
             </Text>
@@ -1057,7 +1230,7 @@ function ActionRibbon({
               <meshBasicMaterial
                 color={color}
                 transparent
-                opacity={isActive ? 0.8 : 0.25}
+                opacity={(isActive ? 0.8 : 0.25) * (cue.shortcutOpacity ?? 1)}
                 toneMapped={false}
               />
             </mesh>
@@ -1069,6 +1242,7 @@ function ActionRibbon({
               color={isActive ? COLORS.text : COLORS.muted}
               anchorX="center"
               anchorY="middle"
+              fillOpacity={cue.shortcutOpacity ?? 1}
             >
               {cue.shortcut}
             </Text>
@@ -1398,9 +1572,10 @@ function SceneContent({
         feedback={feedback}
         paused={paused}
         reducedMotion={reducedMotion}
+        runProgress={runProgress}
       />
       <Atmosphere combo={combo} runProgress={runProgress} />
-      <Runway combo={combo} paused={paused} />
+      <Runway combo={combo} paused={paused} reducedMotion={reducedMotion} />
       <StrikeGate
         combo={combo}
         feedback={feedback}

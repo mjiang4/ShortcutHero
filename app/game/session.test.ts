@@ -22,26 +22,26 @@ const BASE_SETTINGS: GameSettings = {
   speed: "standard",
 };
 
-test("ramps tempo from base toward 1.55 over a run", () => {
+test("ramps tempo from base toward 1.18 over a run", () => {
   const startedAt = 1_000;
   assert.equal(getTempoFactor(BASE_SETTINGS, null, startedAt), 1);
   assert.ok(getTempoFactor(BASE_SETTINGS, startedAt, startedAt) === 1);
   const mid = getTempoFactor(BASE_SETTINGS, startedAt, startedAt + 22_500);
   const end = getTempoFactor(BASE_SETTINGS, startedAt, startedAt + 45_000);
   assert.ok(mid > 1 && mid < end);
-  assert.ok(Math.abs(end - 1.55) < 0.001);
+  assert.ok(Math.abs(end - 1.18) < 0.001);
 });
 
-test("uses fast travel independently from difficulty-specific cue cadence", () => {
+test("uses slow travel independently from difficulty-specific cue cadence", () => {
   assert.deepEqual(APPROACH_DURATION_MS, {
-    relaxed: 1_600,
-    standard: 1_000,
-    turbo: 800,
+    relaxed: 4_400,
+    standard: 3_600,
+    turbo: 2_800,
   });
-  assert.equal(getPromptCadenceMs("easy", "standard"), 1_600);
-  assert.equal(getPromptCadenceMs("medium", "standard"), 2_000);
-  assert.equal(getPromptCadenceMs("hard", "standard"), 1_600);
-  assert.equal(getPromptCadenceMs("showcase", "standard"), 1_200);
+  assert.equal(getPromptCadenceMs("easy", "standard"), 3_900);
+  assert.equal(getPromptCadenceMs("medium", "standard"), 4_200);
+  assert.equal(getPromptCadenceMs("hard", "standard"), 3_900);
+  assert.equal(getPromptCadenceMs("showcase", "standard"), 3_200);
 });
 
 test("defaults sessions to 45 seconds and honours supported durations", () => {

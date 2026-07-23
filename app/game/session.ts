@@ -27,11 +27,11 @@ import type {
   VisiblePromptTiming,
 } from "./types";
 
-/** Travel time from the horizon to the strike line. */
+/** Travel time from the horizon to the strike line — kept deliberately slow to read. */
 export const APPROACH_DURATION_MS: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 1_600,
-  standard: 1_000,
-  turbo: 800,
+  relaxed: 4_400,
+  standard: 3_600,
+  turbo: 2_800,
 };
 
 /**
@@ -39,18 +39,18 @@ export const APPROACH_DURATION_MS: Readonly<Record<SpeedPreset, number>> = {
  * getPromptCadenceMs so prompt density can vary independently by difficulty.
  */
 export const PROMPT_CADENCE_MS: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 1_500,
-  standard: 1_200,
-  turbo: 900,
+  relaxed: 3_800,
+  standard: 3_200,
+  turbo: 2_600,
 };
 
 /** Musical spacing between prompts. Prompts can overlap on the highway. */
 export const PROMPT_CADENCE_BY_MODE_MS: Readonly<
   Record<GameMode, Readonly<Record<SpeedPreset, number>>>
 > = {
-  easy: { relaxed: 2_000, standard: 1_600, turbo: 1_200 },
-  medium: { relaxed: 2_400, standard: 2_000, turbo: 1_500 },
-  hard: { relaxed: 2_000, standard: 1_600, turbo: 1_200 },
+  easy: { relaxed: 4_600, standard: 3_900, turbo: 3_200 },
+  medium: { relaxed: 5_000, standard: 4_200, turbo: 3_500 },
+  hard: { relaxed: 4_600, standard: 3_900, turbo: 3_200 },
   showcase: PROMPT_CADENCE_MS,
 };
 
@@ -62,7 +62,7 @@ export function getPromptCadenceMs(
 }
 
 /**
- * Progressive tempo: starts at 1.0 (base pace) and ramps toward 1.55 over the run.
+ * Progressive tempo: starts at 1.0 (base pace) and gently ramps toward 1.18.
  * Higher factor = shorter approach / tighter cadence (cards arrive faster).
  */
 export function getTempoFactor(
@@ -76,7 +76,25 @@ export function getTempoFactor(
   const t = durationMs <= 0 ? 0 : elapsed / durationMs;
   // Ease-in ramp so early notes stay readable.
   const eased = t * t;
-  return 1 + eased * 0.55;
+  return 1 + eased * 0.18;
+}
+
+/**
+ * Progressive recall: shortcut labels fade from fully shown → ghosted → hidden
+ * as the run progresses (unless pro mode already hides them).
+ */
+export function getShortcutReveal(
+  settings: GameSettings,
+  startedAtMs: number | null,
+  nowMs: number,
+): "full" | "ghost" | "hidden" {
+  if (settings.assistance === "pro") return "hidden";
+  if (startedAtMs === null) return "full";
+  const durationMs = getSessionDurationSeconds(settings) * 1_000;
+  const t = durationMs <= 0 ? 0 : (nowMs - startedAtMs) / durationMs;
+  if (t < 0.35) return "full";
+  if (t < 0.7) return "ghost";
+  return "hidden";
 }
 
 function approachMsFor(
