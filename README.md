@@ -35,7 +35,7 @@ The goal is a reusable learning layer for the tools people use every day:
 - Notion — coming soon
 - Jira — coming soon
 - Superhuman — coming soon
-- More shortcut libraries and custom tracks — planned
+- More shortcut libraries and custom tracks - planned
 
 ## Run locally
 
@@ -63,3 +63,4 @@ React, Three.js, React Three Fiber, post-processing effects, and procedural Web 
 
 - [Hackathon product spec](./PROJECT_SPEC.md)
 - [Design and visual identity](./DESIGN_IDENTITY.md)
+
