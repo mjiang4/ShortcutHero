@@ -9,14 +9,29 @@
   "homepage": "https://shortcuthero.app",
   "repository": "https://github.com/mjiang4/ShortcutHero",
   "license": "MIT",
-  "keywords": ["shortcuts", "keyboard", "game", "linear", "slack", "spotify", "embed"],
+  "keywords": [
+    "shortcuts",
+    "keyboard",
+    "game",
+    "linear",
+    "slack",
+    "spotify",
+    "embed",
+    "codex"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Shortcut Hero",
     "shortDescription": "Launch Shortcut Hero while agents work",
-    "longDescription": "Gives Codex a skill to open Shortcut Hero (full site or /embed) so you can practice Linear, Slack, or Spotify shortcuts during long coding waits.",
+    "longDescription": "Gives Codex a skill to open Shortcut Hero (full site or /embed) so you can practice Linear, Slack, or Spotify shortcuts during long coding waits. Skills-only: returns a URL; gameplay runs in the browser.",
     "developerName": "Shortcut Hero",
     "category": "Productivity",
+    "websiteURL": "https://shortcuthero.app",
+    "defaultPrompt": [
+      "Open Shortcut Hero in embed mode for a 30 second Linear run",
+      "Give me a Slack speed round",
+      "Open Spotify Shortcut Hero on relaxed pace"
+    ],
     "brandColor": "#7c6cff"
   }
 }

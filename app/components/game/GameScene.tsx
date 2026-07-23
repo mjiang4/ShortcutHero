@@ -173,9 +173,28 @@ function CameraRig({
   return null;
 }
 
-function wrapScroll(value: number, span: number) {
-  return ((value % span) + span) % span;
+function advanceLoopChildren(
+  group: THREE.Group | null,
+  deltaZ: number,
+  loopLength: number,
+  nearLimit: number,
+) {
+  if (!group || deltaZ === 0) return;
+  for (const child of group.children) {
+    child.position.z += deltaZ;
+    while (child.position.z > nearLimit) {
+      child.position.z -= loopLength;
+    }
+  }
 }
+
+type RoadsideTree = {
+  readonly side: -1 | 1;
+  readonly z: number;
+  readonly trunk: number;
+  readonly canopy: number;
+  readonly offset: number;
+};
 
 function SkyWorld({
   combo,
@@ -190,9 +209,15 @@ function SkyWorld({
   const sun = useRef<THREE.Mesh>(null);
   const farLayer = useRef<THREE.Group>(null);
   const midLayer = useRef<THREE.Group>(null);
-  const nearLayer = useRef<THREE.Group>(null);
+  const treeLayer = useRef<THREE.Group>(null);
   const haze = useRef<THREE.Mesh>(null);
   const energy = comboEnergy(combo);
+
+  const TREE_SPACING = 2.4;
+  const TREE_COUNT = 20;
+  const TREE_LOOP = TREE_SPACING * TREE_COUNT;
+  const TREE_NEAR = 4.5;
+
   const skyUniforms = useMemo(
     () => ({
       uProgress: { value: 0 },
@@ -200,43 +225,52 @@ function SkyWorld({
     }),
     [],
   );
+
+  // Static far ridge — never Z-wraps (wrapping uneven cones caused jumps).
   const farMountains = useMemo(
     () =>
-      Array.from({ length: 18 }, (_, index) => ({
-        x: -34 + index * 3.9,
-        height: 3.4 + ((index * 19) % 8) * 0.42,
-        width: 5.4 + ((index * 11) % 6) * 0.5,
-        z: -31 - (index % 4) * 0.9,
+      Array.from({ length: 22 }, (_, index) => ({
+        x: -42 + index * 4.0,
+        height: 3.8 + ((index * 19) % 9) * 0.38,
+        width: 6.2 + ((index * 11) % 5) * 0.55,
+        z: -32.5 - (index % 5) * 0.55,
       })),
     [],
   );
+
   const midRidges = useMemo(
     () =>
-      Array.from({ length: 14 }, (_, index) => ({
-        x: -28 + index * 4.3,
-        height: 2.1 + ((index * 13) % 6) * 0.32,
-        width: 4.2 + ((index * 7) % 5) * 0.4,
-        z: -24.5 - (index % 3) * 1.1,
+      Array.from({ length: 16 }, (_, index) => ({
+        x: -34 + index * 4.4,
+        height: 2.2 + ((index * 13) % 6) * 0.28,
+        width: 5.0 + ((index * 7) % 4) * 0.45,
+        z: -25.2 - (index % 3) * 0.7,
       })),
     [],
   );
-  const nearBlocks = useMemo(
+
+  const trees = useMemo<readonly RoadsideTree[]>(
     () =>
-      Array.from({ length: 20 }, (_, index) => ({
-        side: index % 2 === 0 ? -1 : 1,
-        z: -22 + index * 2.15,
-        height: 0.7 + ((index * 9) % 5) * 0.28,
-        depth: 0.35 + ((index * 5) % 3) * 0.12,
-      })),
-    [],
+      Array.from({ length: TREE_COUNT }, (_, index) => {
+        const side: -1 | 1 = index % 2 === 0 ? -1 : 1;
+        return {
+          side,
+          z: -22 + index * TREE_SPACING,
+          trunk: 0.55 + ((index * 5) % 4) * 0.08,
+          canopy: 1.15 + ((index * 7) % 5) * 0.12,
+          offset: 0.15 + ((index * 3) % 4) * 0.12,
+        };
+      }),
+    [TREE_COUNT, TREE_SPACING],
   );
+
   const stars = useMemo(
     () =>
-      Array.from({ length: 48 }, (_, index) => ({
+      Array.from({ length: 40 }, (_, index) => ({
         x: ((index * 37) % 70) - 35,
-        y: 4 + ((index * 17) % 14),
+        y: 5 + ((index * 17) % 12),
         z: -34 - ((index * 11) % 8),
-        scale: 0.04 + ((index * 3) % 5) * 0.012,
+        scale: 0.035 + ((index * 3) % 5) * 0.01,
       })),
     [],
   );
@@ -258,39 +292,41 @@ function SkyWorld({
     }
     if (sun.current) {
       sun.current.position.y = 2.4 - runProgress * 1.55;
-      const scale = 1 + energy * 0.13;
-      sun.current.scale.setScalar(scale);
+      sun.current.scale.setScalar(1 + energy * 0.13);
       sun.current.rotation.z = reducedMotion ? 0 : state.clock.elapsedTime * 0.018;
     }
     if (haze.current) {
       const material = haze.current.material;
       if (!Array.isArray(material) && "opacity" in material) {
-        material.opacity = 0.22 + runProgress * 0.18 + energy * 0.08;
+        material.opacity = 0.24 + runProgress * 0.16 + energy * 0.06;
       }
     }
-    if (reducedMotion) return;
-    const travel = 1.6 + energy * 2.4 + runProgress * 1.1;
-    const sway = Math.sin(state.clock.elapsedTime * 0.11) * 0.12;
+
+    const sway = reducedMotion
+      ? 0
+      : Math.sin(state.clock.elapsedTime * 0.09) * 0.1;
     if (farLayer.current) {
-      farLayer.current.position.x = sway * 0.35;
-      farLayer.current.position.z = wrapScroll(
-        state.clock.elapsedTime * travel * 0.22,
-        3.6,
+      farLayer.current.position.x = THREE.MathUtils.damp(
+        farLayer.current.position.x,
+        sway * 0.25,
+        2.2,
+        delta,
       );
     }
     if (midLayer.current) {
-      midLayer.current.position.x = sway * 0.7;
-      midLayer.current.position.z = wrapScroll(
-        state.clock.elapsedTime * travel * 0.55,
-        4.2,
+      midLayer.current.position.x = THREE.MathUtils.damp(
+        midLayer.current.position.x,
+        sway * 0.55,
+        2.2,
+        delta,
       );
     }
-    if (nearLayer.current) {
-      nearLayer.current.position.x = sway;
-      nearLayer.current.position.z = wrapScroll(
-        state.clock.elapsedTime * travel * 1.15,
-        2.15,
-      );
+
+    if (reducedMotion) return;
+    const travel = 2.8 + energy * 3.6 + runProgress * 1.4;
+    advanceLoopChildren(treeLayer.current, travel * delta, TREE_LOOP, TREE_NEAR);
+    if (treeLayer.current) {
+      treeLayer.current.position.x = sway * 0.15;
     }
   });
 
@@ -343,7 +379,7 @@ function SkyWorld({
           <meshBasicMaterial
             color="#f4f1ea"
             transparent
-            opacity={0.25 + (index % 5) * 0.08 + runProgress * 0.25}
+            opacity={0.22 + (index % 5) * 0.07 + runProgress * 0.22}
             depthWrite={false}
             toneMapped={false}
           />
@@ -369,10 +405,10 @@ function SkyWorld({
         decay={1.5}
       />
 
-      <mesh ref={haze} position={[0, 0.4, -18]} renderOrder={-6}>
-        <planeGeometry args={[48, 6]} />
+      <mesh ref={haze} position={[0, 0.55, -17]} renderOrder={-6}>
+        <planeGeometry args={[56, 7.5]} />
         <meshBasicMaterial
-          color="#1a1024"
+          color="#140e1e"
           transparent
           opacity={0.28}
           depthWrite={false}
@@ -380,18 +416,18 @@ function SkyWorld({
         />
       </mesh>
 
-      <group ref={farLayer} position={[0, -1.9, 0]}>
+      <group ref={farLayer} position={[0, -1.95, 0]}>
         {farMountains.map((mountain, index) => (
           <mesh
-            key={`far-${mountain.x}-${index}`}
-            position={[mountain.x, mountain.height * 0.32, mountain.z]}
-            rotation={[0, 0, index % 2 === 0 ? 0.03 : -0.04]}
+            key={`far-${index}`}
+            position={[mountain.x, mountain.height * 0.28, mountain.z]}
+            rotation={[0, 0, index % 2 === 0 ? 0.02 : -0.025]}
           >
-            <coneGeometry args={[mountain.width, mountain.height, 3]} />
+            <coneGeometry args={[mountain.width, mountain.height, 5]} />
             <meshBasicMaterial
-              color={index % 3 === 0 ? "#2a2138" : "#1a1528"}
+              color={index % 3 === 0 ? "#241c34" : "#161122"}
               transparent
-              opacity={0.72}
+              opacity={0.78}
               depthWrite={false}
             />
           </mesh>
@@ -401,55 +437,63 @@ function SkyWorld({
       <group ref={midLayer} position={[0, -1.55, 0]}>
         {midRidges.map((ridge, index) => (
           <mesh
-            key={`mid-${ridge.x}-${index}`}
-            position={[ridge.x, ridge.height * 0.28, ridge.z]}
+            key={`mid-${index}`}
+            position={[ridge.x, ridge.height * 0.26, ridge.z]}
           >
-            <coneGeometry args={[ridge.width, ridge.height, 4]} />
+            <coneGeometry args={[ridge.width, ridge.height, 5]} />
             <meshBasicMaterial
-              color={index % 2 === 0 ? "#352845" : "#241b36"}
+              color={index % 2 === 0 ? "#2f243f" : "#1f1730"}
               transparent
-              opacity={0.9}
+              opacity={0.88}
               depthWrite={false}
             />
           </mesh>
         ))}
       </group>
 
-      <group ref={nearLayer}>
-        {nearBlocks.map((item, index) => (
-          <group
-            key={`near-${item.z}-${index}`}
-            position={[item.side * (5.35 + (index % 3) * 0.18), 0.1, item.z]}
-          >
-            <mesh position={[0, item.height / 2, 0]} rotation={[0, item.side * 0.14, 0]}>
-              <boxGeometry args={[0.22, item.height, item.depth]} />
-              <meshStandardMaterial
-                color="#141225"
-                emissive={index % 3 === 0 ? COLORS.gold : COLORS.accent}
-                emissiveIntensity={0.16 + energy * 0.55}
-                roughness={0.68}
-              />
-            </mesh>
-            <mesh position={[0, item.height + 0.1, 0]}>
-              <boxGeometry args={[0.55, 0.03, 0.03]} />
-              <meshBasicMaterial
-                color={index % 3 === 0 ? COLORS.sun : COLORS.accentBright}
-                transparent
-                opacity={0.22 + energy * 0.5}
-                toneMapped={false}
-              />
-            </mesh>
-            <mesh position={[item.side * -0.35, 0.08, 0.15]}>
-              <boxGeometry args={[0.12, 0.12, 0.12]} />
-              <meshBasicMaterial
-                color={COLORS.accentBright}
-                transparent
-                opacity={0.12 + energy * 0.3}
-                toneMapped={false}
-              />
-            </mesh>
-          </group>
-        ))}
+      <group ref={treeLayer}>
+        {trees.map((tree, index) => {
+          const x = tree.side * (5.55 + tree.offset);
+          return (
+            <group key={`tree-${index}`} position={[x, 0, tree.z]}>
+              <mesh position={[0, tree.trunk / 2, 0]}>
+                <cylinderGeometry args={[0.06, 0.09, tree.trunk, 6]} />
+                <meshStandardMaterial
+                  color="#1a1424"
+                  roughness={0.92}
+                  metalness={0.05}
+                />
+              </mesh>
+              <mesh position={[0, tree.trunk + tree.canopy * 0.28, 0]}>
+                <coneGeometry args={[0.55, tree.canopy * 0.7, 7]} />
+                <meshStandardMaterial
+                  color={index % 3 === 0 ? "#243528" : "#1c2a22"}
+                  emissive={COLORS.accent}
+                  emissiveIntensity={0.04 + energy * 0.12}
+                  roughness={0.85}
+                />
+              </mesh>
+              <mesh position={[0, tree.trunk + tree.canopy * 0.58, 0]}>
+                <coneGeometry args={[0.38, tree.canopy * 0.55, 7]} />
+                <meshStandardMaterial
+                  color="#2a4030"
+                  emissive={COLORS.accent}
+                  emissiveIntensity={0.05 + energy * 0.15}
+                  roughness={0.8}
+                />
+              </mesh>
+              <mesh position={[0, tree.trunk + tree.canopy * 0.88, 0]}>
+                <coneGeometry args={[0.22, tree.canopy * 0.4, 7]} />
+                <meshStandardMaterial
+                  color="#35503a"
+                  emissive={index % 4 === 0 ? COLORS.gold : COLORS.accent}
+                  emissiveIntensity={0.06 + energy * 0.18}
+                  roughness={0.75}
+                />
+              </mesh>
+            </group>
+          );
+        })}
       </group>
     </group>
   );
@@ -505,7 +549,12 @@ function Runway({
   const energy = comboEnergy(combo);
   const pulseMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const dashGroup = useRef<THREE.Group>(null);
-  const sideScroll = useRef<THREE.Group>(null);
+  const sidePostsGroup = useRef<THREE.Group>(null);
+
+  const POST_SPACING = 2.2;
+  const POST_COUNT = 20;
+  const POST_LOOP = POST_SPACING * POST_COUNT;
+  const POST_NEAR = 5;
 
   useFrame((state, delta) => {
     if (!pulseMaterial.current) return;
@@ -521,12 +570,12 @@ function Runway({
         dashGroup.current.position.z -= 1.08;
       }
     }
-    if (sideScroll.current) {
-      sideScroll.current.position.z += speed * 0.72 * delta;
-      if (sideScroll.current.position.z > 2.2) {
-        sideScroll.current.position.z -= 2.2;
-      }
-    }
+    advanceLoopChildren(
+      sidePostsGroup.current,
+      speed * 0.85 * delta,
+      POST_LOOP,
+      POST_NEAR,
+    );
   });
 
   const ticks = useMemo(
@@ -539,11 +588,11 @@ function Runway({
   );
   const sidePosts = useMemo(
     () =>
-      Array.from({ length: 18 }, (_, index) => ({
-        z: -20 + index * 2.2,
-        side: index % 2 === 0 ? -1 : 1,
+      Array.from({ length: POST_COUNT }, (_, index) => ({
+        z: -22 + index * POST_SPACING,
+        side: (index % 2 === 0 ? -1 : 1) as -1 | 1,
       })),
-    [],
+    [POST_COUNT, POST_SPACING],
   );
 
   return (
@@ -586,10 +635,10 @@ function Runway({
         ))}
       </group>
 
-      <group ref={sideScroll}>
-        {sidePosts.map((post) => (
+      <group ref={sidePostsGroup}>
+        {sidePosts.map((post, index) => (
           <mesh
-            key={`${post.side}-${post.z}`}
+            key={`post-${index}`}
             position={[post.side * 5.1, 0.55, post.z]}
           >
             <boxGeometry args={[0.08, 1.2, 0.08]} />
