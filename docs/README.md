@@ -31,6 +31,7 @@ Active development for this overhaul lives on **`michael`**. Teammates review th
 | Modes, feel, clarity goals | [GAME_DESIGN.md](./GAME_DESIGN.md) |
 | Visual source of truth | [DESIGN_IDENTITY.md](./DESIGN_IDENTITY.md) |
 | Post-MVP roadmap E0–E8 | [EXTENSION_PHASED_PLAN.md](./EXTENSION_PHASED_PLAN.md) |
+| Embed route + Codex plugin | [EMBED_AND_CODEX_PLUGIN.md](./EMBED_AND_CODEX_PLUGIN.md) |
 | Architecture Decision Records | [DECISIONS.md](./DECISIONS.md) |
 
 ## Ownership

@@ -98,6 +98,8 @@ export interface ShortcutHeroGameProps {
   readonly effectsMode: EffectsMode;
   readonly soundEnabled: boolean;
   readonly runMode?: RunMode;
+  /** Compact surface for /embed — home restarts instead of leaving the frame. */
+  readonly embedded?: boolean;
 }
 
 function shortcutKeys(shortcut: ShortcutDefinition): readonly string[] {
@@ -131,6 +133,7 @@ export function ShortcutHeroGame({
   effectsMode,
   soundEnabled,
   runMode = "highway",
+  embedded = false,
 }: ShortcutHeroGameProps) {
   const trackId: AvailableToolId = isAvailableToolId(settings.trackId ?? null)
     ? (settings.trackId as AvailableToolId)
@@ -553,8 +556,21 @@ export function ShortcutHeroGame({
     setFeedback(null);
     setKeyboardSignal(null);
     setDepartingCues([]);
+    if (embedded) {
+      // Stay inside the iframe — restart the same embed URL.
+      window.location.reload();
+      return;
+    }
     window.location.assign("/");
-  }, [setSession, stopAudio]);
+  }, [embedded, setSession, stopAudio]);
+
+  const skipDemo = useCallback(() => {
+    if (embedded) {
+      window.location.reload();
+      return;
+    }
+    window.location.assign("/");
+  }, [embedded]);
 
   const shareResults = useCallback(() => {
     if (!results) return;
@@ -579,10 +595,6 @@ export function ShortcutHeroGame({
       interludeBonus,
     });
   }, [interludeBonus, results, toolTheme.accent, track.name]);
-
-  const skipDemo = useCallback(() => {
-    window.location.assign("/");
-  }, []);
 
   const completeInterlude = useCallback(
     (mini: {
@@ -804,8 +816,9 @@ export function ShortcutHeroGame({
 
   return (
     <main
-      className="shortcut-hero"
+      className={`shortcut-hero${embedded ? " shortcut-hero--embed" : ""}`}
       data-tool={trackId}
+      data-embedded={embedded ? "true" : undefined}
       style={
         {
           "--tool-accent": toolTheme.accent,
@@ -953,7 +966,7 @@ export function ShortcutHeroGame({
                       className={`secondary-button${pauseMenuIndex === 2 ? " is-selected" : ""}`}
                       onClick={returnToSettings}
                     >
-                      Title
+                      {embedded ? "Restart" : "Title"}
                     </button>
                   </div>
                 </div>
@@ -977,6 +990,7 @@ export function ShortcutHeroGame({
             onDownloadCard={downloadCard}
             onPlayAgain={beginRun}
             onTitle={returnToSettings}
+            homeLabel={embedded ? "Restart" : "Home"}
           />
         ) : null}
 

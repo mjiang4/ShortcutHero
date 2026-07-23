@@ -23,6 +23,7 @@ type ResultsScreenProps = {
   readonly onDownloadCard: () => void;
   readonly onPlayAgain: () => void;
   readonly onTitle: () => void;
+  readonly homeLabel?: string;
 };
 
 const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -43,13 +44,14 @@ export function ResultsScreen({
   onDownloadCard,
   onPlayAgain,
   onTitle,
+  homeLabel = "Home",
 }: ResultsScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const actions = [
     { label: "Share", onClick: onShare },
     { label: "Save card", onClick: onDownloadCard },
     { label: "Play again", onClick: onPlayAgain },
-    { label: "Home", onClick: onTitle },
+    { label: homeLabel, onClick: onTitle },
   ] as const;
 
   useEffect(() => {

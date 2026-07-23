@@ -1,0 +1,22 @@
+{
+  "name": "shortcut-hero",
+  "version": "0.1.0",
+  "description": "Open Shortcut Hero — a keyboard-shortcut rhythm game — in a browser or embed URL while you wait on long agent runs.",
+  "author": {
+    "name": "Shortcut Hero",
+    "url": "https://shortcuthero.app"
+  },
+  "homepage": "https://shortcuthero.app",
+  "repository": "https://github.com/mjiang4/ShortcutHero",
+  "license": "MIT",
+  "keywords": ["shortcuts", "keyboard", "game", "linear", "slack", "spotify", "embed"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Shortcut Hero",
+    "shortDescription": "Launch Shortcut Hero while agents work",
+    "longDescription": "Gives Codex a skill to open Shortcut Hero (full site or /embed) so you can practice Linear, Slack, or Spotify shortcuts during long coding waits.",
+    "developerName": "Shortcut Hero",
+    "category": "Productivity",
+    "brandColor": "#7c6cff"
+  }
+}

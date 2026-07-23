@@ -230,7 +230,7 @@ a:focus-visible {
 
 .title-menu__description {
   max-width: 430px;
-  margin: -10px 0 30px;
+  margin: -10px 0 1.1rem;
   color: rgba(244, 241, 234, 0.68);
   font-size: clamp(14px, 1.35vw, 18px);
   line-height: 1.45;
@@ -297,33 +297,15 @@ a:focus-visible {
 
 .title-panel {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: clamp(30px, 11vw, 170px);
   z-index: 6;
-  display: grid;
-  place-content: center;
-  justify-items: start;
-  padding: 1.25rem clamp(1.25rem, 6vw, 4rem);
-  background: rgba(6, 8, 16, 0.7);
-  backdrop-filter: blur(10px);
-  overflow: auto;
+  width: min(760px, calc(100vw - 60px));
+  max-height: calc(100svh - 90px);
+  overflow-y: auto;
+  transform: translateY(-48%);
+  scrollbar-width: thin;
   animation: panel-enter 320ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
-}
-
-.title-panel__inner {
-  width: min(760px, calc(100vw - 60px));
-  max-height: calc(100svh - 2.5rem);
-  overflow: auto;
-}
-
-.title-panel > h1,
-.title-panel > p,
-.title-panel > .option-list,
-.title-panel > .score-list,
-.title-panel > .instruction-list,
-.title-panel > .title-panel__back,
-.title-panel > .secondary-button,
-.title-panel > .title-panel__empty {
-  width: min(760px, calc(100vw - 60px));
 }
 
 .title-panel--options {
@@ -1410,6 +1392,7 @@ html[data-tool="spotify"] {
   background: rgba(4, 5, 12, 0.72);
   backdrop-filter: blur(12px);
   z-index: 8;
+  pointer-events: auto;
 }
 
 .results-panel,
@@ -1609,8 +1592,7 @@ html[data-tool="spotify"] {
   }
 }
 
-/* —— Home layout —— */
-.title-screen--home,
+/* —— Compact home extras (original title-menu composition) —— */
 .title-screen,
 .shortcut-hero {
   height: 100svh;
@@ -1618,50 +1600,25 @@ html[data-tool="spotify"] {
   overflow: hidden;
 }
 
-.home-layout {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(16rem, 0.85fr);
-  gap: 1.5rem;
-  align-items: stretch;
-  height: calc(100svh - 4.5rem);
-  padding: 1.25rem 1.5rem 0;
-  box-sizing: border-box;
-}
-
-.home-hero {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1.1rem;
-  min-height: 0;
-}
-
-.home-tagline {
-  margin: 0;
-  max-width: 28rem;
-  color: var(--mist);
-  font-size: 1.05rem;
-  line-height: 1.45;
-}
-
-.tool-switcher {
+.title-menu__tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.45rem;
+  margin: 0 0 1.35rem;
 }
 
 .tool-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 0.85rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(8, 10, 20, 0.45);
   color: var(--paper);
   cursor: pointer;
+  font-size: 0.82rem;
+  pointer-events: auto;
 }
 
 .tool-chip.is-active {
@@ -1671,101 +1628,44 @@ html[data-tool="spotify"] {
 }
 
 .tool-chip__icon {
-  width: 1.15rem;
-  height: 1.15rem;
-}
-
-.quick-options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-}
-
-.quick-toggle {
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.9rem;
-  background: rgba(8, 10, 20, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.quick-toggle__label {
-  display: block;
-  margin-bottom: 0.35rem;
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--mist);
-}
-
-.quick-toggle__control {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem;
-}
-
-.quick-toggle__control button {
-  width: 1.8rem;
-  height: 1.8rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: transparent;
-  cursor: pointer;
-}
-
-.home-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-
-.home-cta__primary,
-.home-cta__ghost {
-  border-radius: 999px;
-  padding: 0.75rem 1.15rem;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.home-cta__primary {
-  background: var(--tool-accent);
-  color: #080a14;
-  font-weight: 650;
-  box-shadow: 0 0 28px var(--tool-glow);
-}
-
-.home-cta__ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  width: 1rem;
+  height: 1rem;
 }
 
 .home-board {
-  min-height: 0;
+  position: absolute;
+  top: clamp(5.5rem, 12vh, 7.5rem);
+  right: clamp(28px, 5vw, 72px);
+  z-index: 2;
+  width: min(15.5rem, 34vw);
+  max-height: min(14rem, 38vh);
   overflow: auto;
-  padding: 1rem 1.1rem;
-  border-radius: 1.1rem;
-  background: rgba(8, 10, 20, 0.58);
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.9rem;
+  background: rgba(8, 10, 20, 0.55);
   border: 1px solid color-mix(in srgb, var(--tool-accent) 28%, transparent);
   backdrop-filter: blur(12px);
+  pointer-events: auto;
 }
 
 .home-board__header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.55rem;
 }
 
 .home-board__header h2 {
   margin: 0;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .home-board__header span,
 .home-board__empty {
   color: var(--mist);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
 }
 
 .home-board__list {
@@ -1773,35 +1673,37 @@ html[data-tool="spotify"] {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .home-board__list li {
   display: grid;
-  grid-template-columns: 2.4rem 1fr auto;
-  gap: 0.5rem;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.35rem;
   align-items: center;
-  padding: 0.45rem 0.55rem;
-  border-radius: 0.65rem;
+  padding: 0.3rem 0.35rem;
+  border-radius: 0.45rem;
   background: rgba(255, 255, 255, 0.04);
+  font-size: 0.78rem;
+}
+
+.home-board__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-board__rank {
   color: var(--tool-accent);
-  font-size: 0.8rem;
-}
-
-.title-footer--rich {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 0.85rem 1.5rem 1.1rem;
+  font-size: 0.72rem;
 }
 
 .title-footer__credits {
+  max-width: 22rem;
+  text-align: right;
   color: var(--quiet);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .title-boot {
@@ -1811,11 +1713,27 @@ html[data-tool="spotify"] {
   text-transform: uppercase;
 }
 
+.demo-skip {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 12;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(8, 10, 20, 0.72);
+  color: var(--paper);
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
 /* —— Results shell —— */
 .results-overlay {
   padding: clamp(0.75rem, 2vw, 1.25rem);
   align-items: stretch;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .results-shell {
@@ -1826,6 +1744,7 @@ html[data-tool="spotify"] {
   max-height: calc(100svh - 2rem);
   margin: auto;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .results-shell__main,
@@ -1862,17 +1781,44 @@ html[data-tool="spotify"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
+  pointer-events: auto;
 }
 
 .results-actions button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
   text-align: center;
   cursor: pointer;
+  pointer-events: auto;
+}
+
+.results-actions button.is-active,
+.results-actions button:hover {
+  border-color: var(--tool-accent);
+  background: color-mix(in srgb, var(--tool-accent) 22%, transparent);
 }
 
 .results-site-link,
 .results-card-hint a {
   color: var(--tool-accent-soft);
   text-decoration: none;
+  pointer-events: auto;
+}
+
+.results-site-link {
+  display: inline-block;
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.results-bonus-note {
+  margin: 0.25rem 0 0;
+  color: var(--tool-accent-soft);
+  font-size: 0.85rem;
 }
 
 .results-card-label {
@@ -1897,7 +1843,6 @@ html[data-tool="spotify"] {
   font-size: 0.8rem;
 }
 
-/* —— Speed round —— */
 .speed-round__top {
   display: flex;
   justify-content: space-between;
@@ -1953,33 +1898,12 @@ html[data-tool="spotify"] {
   font-size: 1.15rem;
 }
 
-.demo-skip {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 12;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(8, 10, 20, 0.72);
-  color: var(--paper);
-  padding: 0.55rem 0.95rem;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-}
-
 @media (max-width: 960px) {
-  .home-layout,
+  .home-board {
+    display: none;
+  }
+
   .results-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .home-layout {
-    height: auto;
-    max-height: calc(100svh - 4.5rem);
-    overflow: auto;
-  }
-
-  .quick-options {
     grid-template-columns: 1fr;
   }
 
@@ -1988,15 +1912,11 @@ html[data-tool="spotify"] {
   }
 }
 
-.results-site-link {
-  display: inline-block;
-  margin-top: 0.85rem;
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
+.shortcut-hero--embed .upcoming-rail {
+  max-width: min(14rem, 28vw);
 }
 
-.results-bonus-note {
-  margin: 0.25rem 0 0;
-  color: var(--tool-accent-soft);
-  font-size: 0.85rem;
+.shortcut-hero--embed .keyboard-instrument {
+  width: min(640px, calc(100vw - 16px));
+  bottom: 8px;
 }

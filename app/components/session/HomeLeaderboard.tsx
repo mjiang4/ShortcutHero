@@ -9,37 +9,46 @@ import {
 
 type HomeLeaderboardProps = {
   readonly trackId?: string;
+  readonly compact?: boolean;
 };
 
 type BoardState =
   | { readonly status: "loading" }
   | { readonly status: "ready"; readonly entries: readonly LeaderboardEntry[] };
 
-export function HomeLeaderboard({ trackId }: HomeLeaderboardProps) {
+export function HomeLeaderboard({
+  trackId,
+  compact = false,
+}: HomeLeaderboardProps) {
   const [board, setBoard] = useState<BoardState>({ status: "loading" });
 
   useEffect(() => {
     let cancelled = false;
-    void fetchLeaderboardClient({ track: trackId, limit: 8 }).then((rows) => {
-      if (!cancelled) {
-        setBoard({ status: "ready", entries: rows });
-      }
-    });
+    void fetchLeaderboardClient({ track: trackId, limit: compact ? 5 : 8 }).then(
+      (rows) => {
+        if (!cancelled) {
+          setBoard({ status: "ready", entries: rows });
+        }
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [trackId]);
+  }, [compact, trackId]);
 
   const loading = board.status === "loading";
   const entries = board.status === "ready" ? board.entries : [];
 
   return (
-    <section className="home-board" aria-label="World leaderboard">
+    <section
+      className={`home-board${compact ? " home-board--compact" : ""}`}
+      aria-label="World leaderboard"
+    >
       <header className="home-board__header">
         <h2>World board</h2>
-        <span>Live · D1</span>
+        <span>Live</span>
       </header>
-      {loading ? <p className="home-board__empty">Loading scores…</p> : null}
+      {loading ? <p className="home-board__empty">Loading…</p> : null}
       {!loading && entries.length === 0 ? (
         <p className="home-board__empty">No scores yet — be first.</p>
       ) : null}

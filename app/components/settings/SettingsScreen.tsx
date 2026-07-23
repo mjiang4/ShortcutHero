@@ -31,6 +31,7 @@ import {
 } from "./settings";
 
 type TitleView = "menu" | "options" | "scores" | "help";
+type MenuAction = "play" | "speed" | "options" | "scores" | "help";
 
 const SETTINGS_STORAGE_KEY = "shortcut-hero:launch-settings";
 const SCORE_PREFIX = "shortcut-hero:high-score:";
@@ -43,6 +44,14 @@ const SOUND: readonly SoundMode[] = ["on", "off"];
 const EFFECTS: readonly EffectsMode[] = ["full", "system", "reduced"];
 const TOOLS: readonly AvailableToolId[] = AVAILABLE_TOOL_IDS;
 const OPTION_COUNT = 6;
+
+const MENU_ITEMS: readonly { action: MenuAction; label: string }[] = [
+  { action: "play", label: "play" },
+  { action: "speed", label: "speed round" },
+  { action: "options", label: "options" },
+  { action: "scores", label: "my scores" },
+  { action: "help", label: "how to play" },
+];
 
 const LABELS = {
   difficulty: {
@@ -136,6 +145,7 @@ function readHighScores(): readonly ScoreEntry[] {
 export function SettingsScreen() {
   const router = useRouter();
   const [view, setView] = useState<TitleView>("menu");
+  const [menuIndex, setMenuIndex] = useState(0);
   const [optionIndex, setOptionIndex] = useState(0);
   const [settings, setSettings] = useState<LaunchSettings>(
     DEFAULT_LAUNCH_SETTINGS,
@@ -186,6 +196,31 @@ export function SettingsScreen() {
     void primeGameAudio(settings.pace, settings.sound === "off");
     router.push(createPlayHref(settings, { mode: "demo" }));
   }, [router, settings]);
+
+  const openMenuAction = useCallback(
+    (action: MenuAction) => {
+      switch (action) {
+        case "play":
+          startGame();
+          break;
+        case "speed":
+          startSpeedRound();
+          break;
+        case "options":
+          setOptionIndex(0);
+          setView("options");
+          break;
+        case "scores":
+          setScores(readHighScores());
+          setView("scores");
+          break;
+        case "help":
+          setView("help");
+          break;
+      }
+    },
+    [startGame, startSpeedRound],
+  );
 
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
     setSettings((current) => {
@@ -265,14 +300,23 @@ export function SettingsScreen() {
         }
         return;
       }
-      if (event.code === "Enter" || event.code === "Space") {
+      if (event.code === "ArrowDown" || event.code === "KeyS") {
         event.preventDefault();
-        startGame();
+        setMenuIndex((index) => (index + 1) % MENU_ITEMS.length);
+      } else if (event.code === "ArrowUp" || event.code === "KeyW") {
+        event.preventDefault();
+        setMenuIndex(
+          (index) => (index - 1 + MENU_ITEMS.length) % MENU_ITEMS.length,
+        );
+      } else if (event.code === "Enter" || event.code === "Space") {
+        event.preventDefault();
+        const item = MENU_ITEMS[menuIndex];
+        if (item) openMenuAction(item.action);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [adjustOption, optionIndex, startGame, view]);
+  }, [adjustOption, menuIndex, openMenuAction, optionIndex, view]);
 
   const activeTrack = getToolTrack(settings.tool);
   const summary = useMemo(
@@ -297,7 +341,7 @@ export function SettingsScreen() {
   }
 
   return (
-    <main className="title-screen title-screen--home">
+    <main className="title-screen">
       <div className="title-world" aria-hidden="true">
         <div className="title-world__sky" />
         <div className="title-world__sun" />
@@ -312,120 +356,70 @@ export function SettingsScreen() {
         <div className="title-world__grain" />
       </div>
 
-      <div className="home-layout">
-        <section className="home-hero" aria-label="Play">
-          <header className="title-brand">
-            <span className="title-brand__name">shortcut hero</span>
-            <span className="title-brand__edition">{activeTrack.editionLabel}</span>
-          </header>
+      <header className="title-brand">
+        <span className="title-brand__name">shortcut hero</span>
+        <span className="title-brand__edition">
+          {activeTrack.editionLabel} · {activeTrack.platform}
+        </span>
+      </header>
 
-          <p className="home-tagline">
-            Learn {activeTrack.name} shortcuts on a rhythm highway.
-          </p>
+      {view === "menu" ? (
+        <>
+          <section className="title-menu" aria-label="Main menu">
+            <p className="title-menu__prelude">
+              learn {activeTrack.name} through play
+            </p>
+            <p className="title-menu__description">
+              Build real {activeTrack.name} shortcut muscle memory on a rhythm
+              highway.
+            </p>
 
-          <div className="tool-switcher" role="group" aria-label="App track">
-            {TOOLS.map((tool) => {
-              const track = getToolTrack(tool);
-              const active = settings.tool === tool;
-              return (
+            <div className="title-menu__tools" role="group" aria-label="App track">
+              {TOOLS.map((tool) => {
+                const track = getToolTrack(tool);
+                const active = settings.tool === tool;
+                return (
+                  <button
+                    key={tool}
+                    type="button"
+                    className={`tool-chip tool-chip--compact${active ? " is-active" : ""}`}
+                    aria-pressed={active}
+                    onClick={() => updateSetting("tool", tool)}
+                  >
+                    <ToolIcon tool={tool} className="tool-chip__icon" />
+                    <span>{track.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <nav className="title-menu__items">
+              {MENU_ITEMS.map((item, index) => (
                 <button
-                  key={tool}
                   type="button"
-                  className={`tool-chip${active ? " is-active" : ""}`}
-                  aria-pressed={active}
-                  onClick={() => updateSetting("tool", tool)}
+                  className={`title-menu__item${index === menuIndex ? " is-active" : ""}`}
+                  key={item.action}
+                  aria-current={index === menuIndex ? "true" : undefined}
+                  onMouseEnter={() => setMenuIndex(index)}
+                  onFocus={() => setMenuIndex(index)}
+                  onClick={() => openMenuAction(item.action)}
                 >
-                  <ToolIcon tool={tool} className="tool-chip__icon" />
-                  <span>{track.name}</span>
+                  <span className="title-menu__cursor" aria-hidden="true">
+                    ›
+                  </span>
+                  {item.label}
                 </button>
-              );
-            })}
-          </div>
+              ))}
+            </nav>
+          </section>
 
-          <div className="quick-options" aria-label="Quick settings">
-            <QuickToggle
-              label="Difficulty"
-              value={LABELS.difficulty[settings.difficulty]}
-              onPrev={() =>
-                updateSetting(
-                  "difficulty",
-                  cycleValue(DIFFICULTIES, settings.difficulty, -1),
-                )
-              }
-              onNext={() =>
-                updateSetting(
-                  "difficulty",
-                  cycleValue(DIFFICULTIES, settings.difficulty, 1),
-                )
-              }
-            />
-            <QuickToggle
-              label="Pace"
-              value={LABELS.pace[settings.pace]}
-              onPrev={() =>
-                updateSetting("pace", cycleValue(PACES, settings.pace, -1))
-              }
-              onNext={() =>
-                updateSetting("pace", cycleValue(PACES, settings.pace, 1))
-              }
-            />
-            <QuickToggle
-              label="Length"
-              value={`${settings.session}s`}
-              onPrev={() =>
-                updateSetting(
-                  "session",
-                  cycleValue(SESSIONS, settings.session, -1),
-                )
-              }
-              onNext={() =>
-                updateSetting(
-                  "session",
-                  cycleValue(SESSIONS, settings.session, 1),
-                )
-              }
-            />
-          </div>
-
-          <div className="home-cta">
-            <button type="button" className="home-cta__primary" onClick={startGame}>
-              Play
-            </button>
-            <button type="button" className="home-cta__ghost" onClick={startSpeedRound}>
-              Speed round
-            </button>
-            <button
-              type="button"
-              className="home-cta__ghost"
-              onClick={() => {
-                setScores(readHighScores());
-                setView("scores");
-              }}
-            >
-              My scores
-            </button>
-            <button
-              type="button"
-              className="home-cta__ghost"
-              onClick={() => {
-                setOptionIndex(0);
-                setView("options");
-              }}
-            >
-              More options
-            </button>
-            <button
-              type="button"
-              className="home-cta__ghost"
-              onClick={() => setView("help")}
-            >
-              How to play
-            </button>
-          </div>
-        </section>
-
-        <HomeLeaderboard key={settings.tool} trackId={settings.tool} />
-      </div>
+          <HomeLeaderboard
+            key={settings.tool}
+            trackId={settings.tool}
+            compact
+          />
+        </>
+      ) : null}
 
       {view === "options" ? (
         <TitlePanel title="options" subtitle="fine-tune the next run">
@@ -535,37 +529,11 @@ export function SettingsScreen() {
       <footer className="title-footer title-footer--rich">
         <span>{summary}</span>
         <span className="title-footer__credits">
-          Built for muscle memory · Inspired by Linear, Slack, Spotify & rhythm games
+          Built for muscle memory · Inspired by Linear, Slack, Spotify & rhythm
+          games
         </span>
       </footer>
     </main>
-  );
-}
-
-function QuickToggle({
-  label,
-  value,
-  onPrev,
-  onNext,
-}: {
-  label: string;
-  value: string;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
-  return (
-    <div className="quick-toggle">
-      <span className="quick-toggle__label">{label}</span>
-      <div className="quick-toggle__control">
-        <button type="button" aria-label={`Previous ${label}`} onClick={onPrev}>
-          ‹
-        </button>
-        <strong>{value}</strong>
-        <button type="button" aria-label={`Next ${label}`} onClick={onNext}>
-          ›
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -583,11 +551,9 @@ function TitlePanel({
       className={`title-panel${title === "options" ? " title-panel--options" : ""}`}
       aria-labelledby="title-panel-heading"
     >
-      <div className="title-panel__inner">
-        <p className="title-panel__subtitle">{subtitle}</p>
-        <h1 id="title-panel-heading">{title}</h1>
-        {children}
-      </div>
+      <p className="title-panel__subtitle">{subtitle}</p>
+      <h1 id="title-panel-heading">{title}</h1>
+      {children}
     </section>
   );
 }

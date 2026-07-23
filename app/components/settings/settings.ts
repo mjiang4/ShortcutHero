@@ -96,3 +96,21 @@ export function createPlayHref(
   if (extras?.mode) params.set("mode", extras.mode);
   return `/play?${params.toString()}`;
 }
+
+/** Compact play surface for iframes / Codex side panels. */
+export function createEmbedHref(
+  settings: LaunchSettings,
+  extras?: { readonly mode?: "highway" | "speed_round" },
+): string {
+  const params = new URLSearchParams({
+    tool: settings.tool,
+    difficulty: settings.difficulty,
+    guidance: settings.guidance,
+    pace: settings.pace,
+    session: String(settings.session),
+    sound: settings.sound,
+    effects: settings.effects,
+  });
+  if (extras?.mode) params.set("mode", extras.mode);
+  return `/embed?${params.toString()}`;
+}

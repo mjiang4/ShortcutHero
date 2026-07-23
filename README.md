@@ -30,6 +30,7 @@ Full enterprise docs live in [`docs/`](./docs/README.md):
 - [Database](./docs/DATABASE.md)
 - [Local development](./docs/LOCAL_DEVELOPMENT.md)
 - [Extension phased plan](./docs/EXTENSION_PHASED_PLAN.md)
+- [Embed & Codex plugin](./docs/EMBED_AND_CODEX_PLUGIN.md)
 - [Contributing](./docs/CONTRIBUTING.md) (`michael` branch review workflow)
 
 ## Branch note
