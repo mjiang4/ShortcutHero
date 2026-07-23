@@ -1041,6 +1041,12 @@ function ActionRibbon({
   const missed = isMissedState(state);
   const resolved = isResolvedState(state);
   const direction = cueDirection(cue.id);
+  // Missed / force-revealed cues always flash the real shortcut so recall still teaches.
+  const glyphOpacity = missed ? 1 : (cue.shortcutOpacity ?? 1);
+  const revealShortcut =
+    Boolean(cue.shortcut) &&
+    glyphOpacity > 0.05 &&
+    (showShortcut || missed || glyphOpacity >= 0.99);
 
   useEffect(() => {
     outcomeAge.current = resolved ? 0 : 10;
@@ -1246,8 +1252,8 @@ function ActionRibbon({
         </mesh>
 
         <Text
-          position={[-2.4, showShortcut ? 0.11 : 0, 0.075]}
-          maxWidth={showShortcut ? 3.72 : 4.75}
+          position={[-2.4, revealShortcut ? 0.11 : 0, 0.075]}
+          maxWidth={revealShortcut ? 3.72 : 4.75}
           fontSize={0.31}
           lineHeight={1}
           color={COLORS.text}
@@ -1260,17 +1266,23 @@ function ActionRibbon({
           {cue.action}
         </Text>
 
-        {showShortcut && cue.shortcut && (cue.shortcutOpacity ?? 1) > 0.05 ? (
+        {revealShortcut && cue.shortcut ? (
           <>
             <Text
               position={[-2.4, -0.21, 0.076]}
               maxWidth={3.5}
               fontSize={0.16}
               letterSpacing={0.04}
-              color={isActive ? COLORS.accentBright : COLORS.muted}
+              color={
+                missed
+                  ? COLORS.accentBright
+                  : isActive
+                    ? COLORS.accentBright
+                    : COLORS.muted
+              }
               anchorX="left"
               anchorY="middle"
-              fillOpacity={cue.shortcutOpacity ?? 1}
+              fillOpacity={glyphOpacity}
             >
               {cue.shortcut}
             </Text>
@@ -1279,7 +1291,7 @@ function ActionRibbon({
               <meshBasicMaterial
                 color={color}
                 transparent
-                opacity={(isActive ? 0.8 : 0.25) * (cue.shortcutOpacity ?? 1)}
+                opacity={(isActive || missed ? 0.8 : 0.25) * glyphOpacity}
                 toneMapped={false}
               />
             </mesh>
@@ -1288,10 +1300,10 @@ function ActionRibbon({
               maxWidth={1.28}
               fontSize={0.21}
               letterSpacing={0.035}
-              color={isActive ? COLORS.text : COLORS.muted}
+              color={isActive || missed ? COLORS.text : COLORS.muted}
               anchorX="center"
               anchorY="middle"
-              fillOpacity={cue.shortcutOpacity ?? 1}
+              fillOpacity={glyphOpacity}
             >
               {cue.shortcut}
             </Text>

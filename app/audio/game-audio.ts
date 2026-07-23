@@ -42,7 +42,7 @@ const TEMPO_BPM = {
 } as const;
 
 function resolveTempo(tempo: AudioTempo): number {
-  if (typeof tempo === "number") return Math.min(220, Math.max(80, tempo));
+  if (typeof tempo === "number") return Math.min(280, Math.max(90, tempo));
   return TEMPO_BPM[tempo];
 }
 
@@ -102,11 +102,8 @@ export class ShortcutHeroAudio {
   setTempo(tempo: AudioTempo) {
     const nextBpm = resolveTempo(tempo);
     if (nextBpm === this.bpm) return;
+    // Update in place so the groove accelerates without a transport restart click.
     this.bpm = nextBpm;
-
-    if (this.scheduler && this.context?.state === "running") {
-      this.restartTransport(0.035);
-    }
   }
 
   setMuted(muted: boolean) {
@@ -387,25 +384,30 @@ export class ShortcutHeroAudio {
     if (this.ambientSources.length === 0) {
       const filter = context.createBiquadFilter();
       const bed = context.createGain();
-      const low = context.createOscillator();
+      const root = context.createOscillator();
       const fifth = context.createOscillator();
+      const octave = context.createOscillator();
 
       filter.type = "lowpass";
-      filter.frequency.value = 270;
-      filter.Q.value = 0.7;
-      bed.gain.value = 0.018;
-      low.type = "sine";
-      low.frequency.value = 55;
+      filter.frequency.value = 420;
+      filter.Q.value = 0.55;
+      bed.gain.value = 0.022;
+      root.type = "sine";
+      root.frequency.value = 55;
       fifth.type = "triangle";
       fifth.frequency.value = 82.5;
+      octave.type = "sine";
+      octave.frequency.value = 110;
 
-      low.connect(filter);
+      root.connect(filter);
       fifth.connect(filter);
+      octave.connect(filter);
       filter.connect(bed);
       bed.connect(destination);
-      low.start();
+      root.start();
       fifth.start();
-      this.ambientSources = [low, fifth];
+      octave.start();
+      this.ambientSources = [root, fifth, octave];
       this.ambientNodes = [filter, bed];
     }
 
@@ -456,51 +458,145 @@ export class ShortcutHeroAudio {
     while (this.nextStepAt < context.currentTime + SCHEDULE_AHEAD_SECONDS) {
       this.scheduleStep(this.nextStepAt, this.transportStep);
       this.nextStepAt += 30 / this.bpm;
-      this.transportStep = (this.transportStep + 1) % 8;
+      this.transportStep = (this.transportStep + 1) % 16;
     }
   }
 
   private scheduleStep(at: number, step: number) {
-    const quarter = step % 2 === 0;
-    const downbeat = step === 0;
+    const barStep = step % 16;
+    const downbeat = barStep === 0;
+    const backbeat = barStep === 4 || barStep === 12;
+    const offbeat = barStep % 2 === 1;
+    const urgency = Math.min(1, Math.max(0, (this.bpm - 140) / 120));
 
+    // Kick
+    if (barStep === 0 || barStep === 8 || (urgency > 0.45 && barStep === 6)) {
+      this.tone({
+        at,
+        duration: downbeat ? 0.16 : 0.12,
+        from: downbeat ? 148 : 128,
+        to: 42,
+        volume: downbeat ? 0.09 : 0.062,
+        type: "sine",
+        attack: 0.002,
+        destination: "music",
+        transport: true,
+      });
+      this.noise({
+        at,
+        duration: 0.03,
+        volume: 0.012,
+        frequency: 180,
+        filter: "lowpass",
+        destination: "music",
+        transport: true,
+      });
+    }
+
+    // Snare / clap on the backbeat
+    if (backbeat) {
+      this.noise({
+        at,
+        duration: 0.09,
+        volume: 0.028 + urgency * 0.01,
+        frequency: 2400,
+        filter: "bandpass",
+        destination: "music",
+        transport: true,
+      });
+      this.tone({
+        at,
+        duration: 0.08,
+        from: 220,
+        to: 110,
+        volume: 0.018,
+        type: "triangle",
+        attack: 0.001,
+        destination: "music",
+        transport: true,
+      });
+    }
+
+    // Closed hats + occasional open hat
     this.noise({
       at,
-      duration: downbeat ? 0.045 : 0.026,
-      volume: downbeat ? 0.025 : step % 2 === 0 ? 0.016 : 0.011,
-      frequency: downbeat ? 5000 : 7200,
+      duration: offbeat ? 0.028 : 0.018,
+      volume: offbeat ? 0.014 + urgency * 0.006 : 0.008,
+      frequency: offbeat ? 7800 : 6200,
       filter: "highpass",
       destination: "music",
       transport: true,
     });
+    if (barStep === 14) {
+      this.noise({
+        at,
+        duration: 0.12,
+        volume: 0.016,
+        frequency: 5200,
+        filter: "highpass",
+        destination: "music",
+        transport: true,
+      });
+    }
 
-    if (!quarter) return;
+    // Bass: Am → F → C → G walking line across a 16-step bar
+    const bassPattern = [
+      55, 55, 0, 82.5, 65.41, 65.41, 0, 82.5, 73.42, 73.42, 0, 98, 82.5, 82.5, 0,
+      110,
+    ];
+    const bass = bassPattern[barStep];
+    if (bass > 0) {
+      this.tone({
+        at: at + 0.006,
+        duration: Math.min(0.22, 48 / this.bpm),
+        from: bass,
+        to: bass * 0.995,
+        volume: barStep % 8 === 0 ? 0.04 : 0.028,
+        type: "triangle",
+        attack: 0.008,
+        destination: "music",
+        transport: true,
+      });
+    }
 
-    this.tone({
-      at,
-      duration: downbeat ? 0.15 : 0.1,
-      from: downbeat ? 128 : 104,
-      to: 48,
-      volume: downbeat ? 0.085 : 0.048,
-      type: "sine",
-      attack: 0.002,
-      destination: "music",
-      transport: true,
-    });
+    // Soft chord stabs on the downbeats of each phrase
+    if (barStep === 0 || barStep === 8) {
+      const chord =
+        barStep === 0
+          ? [220, 261.63, 329.63]
+          : [174.61, 220, 261.63];
+      chord.forEach((freq, index) => {
+        this.tone({
+          at: at + index * 0.004,
+          duration: 0.34,
+          from: freq,
+          to: freq * 0.998,
+          volume: 0.014 - index * 0.002,
+          type: index === 1 ? "triangle" : "sine",
+          attack: 0.02,
+          destination: "music",
+          transport: true,
+        });
+      });
+    }
 
-    const bassNotes = [55, 82.5, 65.41, 82.5];
-    const note = bassNotes[Math.floor(step / 2)];
-    this.tone({
-      at: at + 0.008,
-      duration: Math.min(0.19, 42 / this.bpm),
-      from: note,
-      to: note * 0.997,
-      volume: downbeat ? 0.036 : 0.023,
-      type: "triangle",
-      attack: 0.006,
-      destination: "music",
-      transport: true,
-    });
+    // Light ascending arpeggio for motion — denser as tempo rises
+    const arp = [329.63, 392, 440, 523.25, 440, 392, 349.23, 329.63];
+    const arpStep = Math.floor(barStep / 2);
+    if (barStep % 2 === 0 && (urgency > 0.2 || barStep % 4 === 0)) {
+      const note = arp[arpStep % arp.length];
+      this.tone({
+        at: at + 0.012,
+        duration: Math.min(0.14, 36 / this.bpm),
+        from: note,
+        to: note * 1.01,
+        volume: 0.012 + urgency * 0.01,
+        type: "sine",
+        attack: 0.01,
+        destination: "music",
+        transport: true,
+      });
+    }
   }
 
   private duckMusic(level: number, release: number) {

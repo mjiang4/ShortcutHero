@@ -152,6 +152,9 @@ export function ShortcutHeroGame({
   const [judgement, setJudgement] = useState<Judgement | null>(null);
   const [departingCues, setDepartingCues] = useState<readonly DepartingCue[]>([]);
   const [keyboardSignal, setKeyboardSignal] = useState<KeyboardSignal | null>(null);
+  const [revealedPromptIds, setRevealedPromptIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [pauseMenuIndex, setPauseMenuIndex] = useState(0);
   const [resultsMenuIndex, setResultsMenuIndex] = useState(0);
   const [highScore, setHighScore] = useState(0);
@@ -176,6 +179,7 @@ export function ShortcutHeroGame({
     start: startAudio,
     pause: pauseAudio,
     stop: stopAudio,
+    setTempo,
     setMuted,
     toggleMuted,
     playStart,
@@ -183,6 +187,16 @@ export function ShortcutHeroGame({
     playMiss,
     playCombo,
   } = useGameAudio();
+
+  const revealPromptShortcut = useCallback((promptId: string | null | undefined) => {
+    if (!promptId) return;
+    setRevealedPromptIds((current) => {
+      if (current.has(promptId)) return current;
+      const next = new Set(current);
+      next.add(promptId);
+      return next;
+    });
+  }, []);
 
   const reducedMotion =
     effectsMode === "reduced" ||
@@ -281,8 +295,13 @@ export function ShortcutHeroGame({
             break;
           case "wrong-input":
             emitFeedback("recovered", 0.32);
-            showKeyboardSignal([effect.code], "wrong", "wrong key · action missed");
-            showJudgement("Wrong key", "miss");
+            revealPromptShortcut(resolvedPrompt?.promptId);
+            showKeyboardSignal(
+              shortcutKeys(effect.shortcut),
+              "wrong",
+              `correct shortcut: ${effect.shortcut.input.display}`,
+            );
+            showJudgement(effect.shortcut.input.display, "miss");
             break;
           case "timing-input":
             showKeyboardSignal(
@@ -310,9 +329,14 @@ export function ShortcutHeroGame({
             showKeyboardSignal(
               shortcutKeys(effect.shortcut),
               clean ? "hit" : "miss",
-              clean ? `${effect.judgement} hit` : "recovered · counted as miss",
+              clean
+                ? `${effect.judgement} hit`
+                : `correct shortcut: ${effect.shortcut.input.display}`,
             );
-            showJudgement(clean ? effect.judgement : "Miss", clean ? effect.judgement : "miss");
+            showJudgement(
+              clean ? effect.judgement : effect.shortcut.input.display,
+              clean ? effect.judgement : "miss",
+            );
             if (clean && effect.combo > 1) flashStreak("chain");
             if (clean && runMode === "highway") {
               hitsSinceInterludeRef.current += 1;
@@ -346,12 +370,13 @@ export function ShortcutHeroGame({
             playMiss();
             emitFeedback("miss", 0.86, resolvedPrompt?.promptId);
             retainResolvedCue(resolvedPrompt, "missed", nowMs);
+            revealPromptShortcut(resolvedPrompt?.promptId);
             showKeyboardSignal(
               shortcutKeys(effect.shortcut),
               "miss",
               `correct shortcut: ${effect.shortcut.input.display}`,
             );
-            showJudgement("Miss", "miss");
+            showJudgement(effect.shortcut.input.display, "miss");
             if (effect.brokeStreak) flashStreak("break");
             break;
           case "finished":
@@ -374,6 +399,7 @@ export function ShortcutHeroGame({
       playHit,
       playMiss,
       retainResolvedCue,
+      revealPromptShortcut,
       runMode,
       setSession,
       showJudgement,
@@ -394,6 +420,13 @@ export function ShortcutHeroGame({
     setMuted(!soundEnabled);
     if (sceneReady) void startAudio(settings.speed);
   }, [sceneReady, setMuted, settings.speed, soundEnabled, startAudio]);
+
+  useEffect(() => {
+    if (!session?.startedAtMs || session.phase !== "playing") return;
+    const factor = getTempoFactor(settings, session.startedAtMs, frameNow);
+    const baseBpm = SPEED_BPM[settings.speed];
+    setTempo(Math.round(baseBpm * factor));
+  }, [frameNow, session?.phase, session?.startedAtMs, setTempo, settings]);
 
   useEffect(() => {
     const key = getHighScoreKey(settings);
@@ -537,6 +570,7 @@ export function ShortcutHeroGame({
     setJudgement(null);
     setDepartingCues([]);
     setKeyboardSignal(null);
+    setRevealedPromptIds(new Set());
     setSession(null);
     setCountdown(3);
     hitsSinceInterludeRef.current = 0;
@@ -556,6 +590,7 @@ export function ShortcutHeroGame({
     setFeedback(null);
     setKeyboardSignal(null);
     setDepartingCues([]);
+    setRevealedPromptIds(new Set());
     if (embedded) {
       // Stay inside the iframe — restart the same embed URL.
       window.location.reload();
@@ -737,23 +772,28 @@ export function ShortcutHeroGame({
   const sceneCues = useMemo<readonly SceneCue[]>(() => {
     const live = visiblePromptTimings
       .filter((timing) => timing.progress > -0.1)
-      .map<SceneCue>((timing) => ({
-        id: timing.promptId,
-        action: timing.shortcut.action,
-        shortcut: timing.shortcut.input.display,
-        keys: shortcutKeys(timing.shortcut),
-        progress: timing.progress,
-        state:
-          timing.state === "active" && timing.canHit ? "active" : "upcoming",
-        context: timing.shortcut.context,
-        laneOffset: 0,
-        shortcutOpacity: shortcutOpacityEarly,
-      }));
+      .map<SceneCue>((timing) => {
+        const forceReveal = revealedPromptIds.has(timing.promptId);
+        return {
+          id: timing.promptId,
+          action: timing.shortcut.action,
+          shortcut: timing.shortcut.input.display,
+          keys: shortcutKeys(timing.shortcut),
+          progress: timing.progress,
+          state:
+            timing.state === "active" && timing.canHit ? "active" : "upcoming",
+          context: timing.shortcut.context,
+          laneOffset: 0,
+          shortcutOpacity: forceReveal ? 1 : shortcutOpacityEarly,
+        };
+      });
     const resolved = departingCues
       .filter((cue) => frameNow - cue.resolvedAtMs < DEPARTURE_DURATION_MS)
       .map<SceneCue>((cue) => {
         const elapsed = Math.max(0, frameNow - cue.resolvedAtMs);
         const travel = APPROACH_DURATION_MS[settings.speed];
+        const forceReveal =
+          cue.state === "missed" || revealedPromptIds.has(cue.prompt.promptId);
         return {
           id: cue.prompt.promptId,
           action: cue.prompt.shortcut.action,
@@ -762,13 +802,14 @@ export function ShortcutHeroGame({
           progress: Math.min(1.4, cue.startProgress + (elapsed / travel) * 0.9),
           state: cue.state,
           context: cue.prompt.shortcut.context,
-          shortcutOpacity: shortcutOpacityEarly,
+          shortcutOpacity: forceReveal ? 1 : shortcutOpacityEarly,
         };
       });
     return [...resolved, ...live];
   }, [
     departingCues,
     frameNow,
+    revealedPromptIds,
     settings.speed,
     shortcutOpacityEarly,
     visiblePromptTimings,
@@ -792,14 +833,19 @@ export function ShortcutHeroGame({
   );
   const shortcutReveal = shortcutRevealEarly;
   const showShortcutLabels = shortcutReveal !== "hidden";
+  const activeRevealed = Boolean(
+    session?.active && revealedPromptIds.has(session.active.promptId),
+  );
   const instrumentGuidance =
-    settings.assistance === "pro" || shortcutReveal === "hidden"
+    settings.assistance === "pro" ||
+    (shortcutReveal === "hidden" && !activeRevealed)
       ? "recall"
       : "learn";
-  const keyboardHints = showShortcutLabels ? hintKeysFor(session) : [];
+  const keyboardHints =
+    showShortcutLabels || activeRevealed ? hintKeysFor(session) : [];
   const keyboardStatus = keyboardSignal?.status ?? (
     session?.active
-      ? showShortcutLabels
+      ? showShortcutLabels || activeRevealed
         ? `shortcut: ${session.active.shortcut.input.display}`
         : "recall the shortcut"
       : "waiting for next action"
