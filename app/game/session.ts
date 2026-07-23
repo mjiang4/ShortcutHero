@@ -61,6 +61,46 @@ export function getPromptCadenceMs(
   return PROMPT_CADENCE_BY_MODE_MS[mode][speed];
 }
 
+/**
+ * Progressive tempo: starts at 1.0 (base pace) and ramps toward 1.55 over the run.
+ * Higher factor = shorter approach / tighter cadence (cards arrive faster).
+ */
+export function getTempoFactor(
+  settings: GameSettings,
+  startedAtMs: number | null,
+  nowMs: number,
+): number {
+  if (startedAtMs === null) return 1;
+  const durationMs = getSessionDurationSeconds(settings) * 1_000;
+  const elapsed = Math.max(0, Math.min(durationMs, nowMs - startedAtMs));
+  const t = durationMs <= 0 ? 0 : elapsed / durationMs;
+  // Ease-in ramp so early notes stay readable.
+  const eased = t * t;
+  return 1 + eased * 0.55;
+}
+
+function approachMsFor(
+  settings: GameSettings,
+  startedAtMs: number | null,
+  nowMs: number,
+): number {
+  return Math.round(
+    APPROACH_DURATION_MS[settings.speed] /
+      getTempoFactor(settings, startedAtMs, nowMs),
+  );
+}
+
+function cadenceMsFor(
+  settings: GameSettings,
+  startedAtMs: number | null,
+  nowMs: number,
+): number {
+  return Math.round(
+    getPromptCadenceMs(settings.mode, settings.speed) /
+      getTempoFactor(settings, startedAtMs, nowMs),
+  );
+}
+
 export const TIMING_WINDOWS_MS: Readonly<
   Record<SpeedPreset, TimingWindow>
 > = {
@@ -113,6 +153,7 @@ function queueDeck(
     return { queue: [], nextDeckIndex: 0, nextPromptSerial: 0 };
   }
 
+  // Queue at base tempo; live replenish applies progressive ramp after start.
   const approachDurationMs = APPROACH_DURATION_MS[settings.speed];
   const cadenceMs = getPromptCadenceMs(settings.mode, settings.speed);
   const lateMs = timingWindowFor(settings).lateMs;
@@ -191,7 +232,7 @@ function getSessionEndsAtMs(session: GameSession): number | null {
   );
 }
 
-function replenishQueue(session: GameSession): GameSession {
+function replenishQueue(session: GameSession, nowMs: number): GameSession {
   if (session.deck.length === 0 || session.queue.length >= QUEUE_LOOKAHEAD_PROMPTS) {
     return session;
   }
@@ -199,11 +240,16 @@ function replenishQueue(session: GameSession): GameSession {
   const endAtMs = getSessionEndsAtMs(session);
   const timelineEndMs =
     endAtMs ?? getSessionDurationSeconds(session.settings) * 1_000;
-  const cadenceMs = getPromptCadenceMs(
-    session.settings.mode,
-    session.settings.speed,
+  const cadenceMs = cadenceMsFor(
+    session.settings,
+    session.startedAtMs,
+    nowMs,
   );
-  const approachMs = APPROACH_DURATION_MS[session.settings.speed];
+  const approachMs = approachMsFor(
+    session.settings,
+    session.startedAtMs,
+    nowMs,
+  );
   const lateMs = timingWindowFor(session.settings).lateMs;
   const queue = [...session.queue];
   let nextDeckIndex = session.nextDeckIndex;
@@ -312,7 +358,7 @@ function advanceToNextPrompt(
       active: activatePrompt(next),
       queue: rest,
       input: EMPTY_INPUT_STATE,
-    });
+    }, nowMs);
     return {
       session: advanced,
       effects: [],
@@ -474,6 +520,19 @@ export function handleSessionKey(
       };
     }
 
+    const brokeStreak = session.combo > 0;
+    const effects: GameEffect[] = [
+      {
+        type: "timing-input",
+        shortcut: active.shortcut,
+        timing: "too-early",
+        timingOffsetMs: timing.timingOffsetMs,
+        code: event.code,
+      },
+    ];
+    if (brokeStreak) {
+      effects.push({ type: "streak-break", previousCombo: session.combo });
+    }
     return {
       session: {
         ...session,
@@ -481,15 +540,7 @@ export function handleSessionKey(
         input: EMPTY_INPUT_STATE,
         combo: 0,
       },
-      effects: [
-        {
-          type: "timing-input",
-          shortcut: active.shortcut,
-          timing: "too-early",
-          timingOffsetMs: timing.timingOffsetMs,
-          code: event.code,
-        },
-      ],
+      effects,
       preventDefault,
     };
   }
@@ -510,6 +561,13 @@ export function handleSessionKey(
   }
 
   if (match.status === "wrong") {
+    const brokeStreak = session.combo > 0;
+    const effects: GameEffect[] = [
+      { type: "wrong-input", shortcut: active.shortcut, code: event.code },
+    ];
+    if (brokeStreak) {
+      effects.push({ type: "streak-break", previousCombo: session.combo });
+    }
     return {
       session: {
         ...session,
@@ -517,9 +575,7 @@ export function handleSessionKey(
         input: match.state,
         combo: 0,
       },
-      effects: [
-        { type: "wrong-input", shortcut: active.shortcut, code: event.code },
-      ],
+      effects,
       preventDefault,
     };
   }
@@ -578,11 +634,16 @@ function requeuePrompt(
   active: ActivePrompt,
 ): QueuedPrompt | null {
   const tail = session.queue[session.queue.length - 1] ?? active;
-  const cadenceMs = getPromptCadenceMs(
-    session.settings.mode,
-    session.settings.speed,
+  const cadenceMs = cadenceMsFor(
+    session.settings,
+    session.startedAtMs,
+    active.deadlineAtMs,
   );
-  const approachMs = APPROACH_DURATION_MS[session.settings.speed];
+  const approachMs = approachMsFor(
+    session.settings,
+    session.startedAtMs,
+    active.deadlineAtMs,
+  );
   const lateMs = timingWindowFor(session.settings).lateMs;
   const approachedAtMs = Math.max(
     tail.approachedAtMs + cadenceMs,
@@ -636,6 +697,8 @@ export function tickSession(session: GameSession, nowMs: number): SessionUpdate 
     points: 0,
     requeued: shouldRequeue,
   };
+  const brokeStreak = session.combo > 0;
+  const previousCombo = session.combo;
   const updated: GameSession = {
     ...session,
     attempts: [...session.attempts, attempt],
@@ -645,13 +708,23 @@ export function tickSession(session: GameSession, nowMs: number): SessionUpdate 
     nextPromptSerial: session.nextPromptSerial + (shouldRequeue ? 1 : 0),
   };
   const advanced = advanceToNextPrompt(updated, nowMs);
+  const effects: GameEffect[] = [
+    {
+      type: "miss",
+      shortcut: active.shortcut,
+      requeued: shouldRequeue,
+      brokeStreak,
+      previousCombo,
+    },
+  ];
+  if (brokeStreak) {
+    effects.push({ type: "streak-break", previousCombo });
+  }
+  effects.push(...advanced.effects);
 
   return {
     session: advanced.session,
-    effects: [
-      { type: "miss", shortcut: active.shortcut, requeued: shouldRequeue },
-      ...advanced.effects,
-    ],
+    effects,
   };
 }
 
@@ -666,7 +739,7 @@ export function getApproachProgress(
 export function getVisiblePromptTimings(
   session: GameSession,
   nowMs: number,
-  futureCount = 2,
+  futureCount = 4,
 ): readonly VisiblePromptTiming[] {
   const prompts: readonly QueuedPrompt[] = session.active
     ? [session.active, ...session.queue.slice(0, Math.max(0, futureCount))]

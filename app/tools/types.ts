@@ -4,7 +4,7 @@ import type {
   ShortcutDefinition,
 } from "../game/types";
 
-export type AvailableToolId = "linear";
+export type AvailableToolId = "linear" | "slack" | "spotify";
 export type PlannedToolId = "notion" | "jira" | "superhuman" | "excel";
 export type ToolId = AvailableToolId | PlannedToolId;
 

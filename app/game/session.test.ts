@@ -9,6 +9,7 @@ import {
   getPromptCadenceMs,
   getPromptTiming,
   getSessionDurationSeconds,
+  getTempoFactor,
   handleSessionKey,
   startSession,
   tickSession,
@@ -20,6 +21,16 @@ const BASE_SETTINGS: GameSettings = {
   assistance: "novice",
   speed: "standard",
 };
+
+test("ramps tempo from base toward 1.55 over a run", () => {
+  const startedAt = 1_000;
+  assert.equal(getTempoFactor(BASE_SETTINGS, null, startedAt), 1);
+  assert.ok(getTempoFactor(BASE_SETTINGS, startedAt, startedAt) === 1);
+  const mid = getTempoFactor(BASE_SETTINGS, startedAt, startedAt + 22_500);
+  const end = getTempoFactor(BASE_SETTINGS, startedAt, startedAt + 45_000);
+  assert.ok(mid > 1 && mid < end);
+  assert.ok(Math.abs(end - 1.55) < 0.001);
+});
 
 test("uses fast travel independently from difficulty-specific cue cadence", () => {
   assert.deepEqual(APPROACH_DURATION_MS, {
@@ -176,8 +187,9 @@ test("finishes on the configured session clock instead of deck exhaustion", () =
   assert.equal(atEnd.session.phase, "finished");
   assert.equal(atEnd.session.finishedAtMs, 35_000);
   assert.equal(atEnd.effects.at(-1)?.type, "finished");
-  if (atEnd.effects.at(-1)?.type === "finished") {
-    assert.equal(atEnd.effects.at(-1)?.results.durationMs, 30_000);
+  const finishedEffect = atEnd.effects.at(-1);
+  if (finishedEffect?.type === "finished") {
+    assert.equal(finishedEffect.results.durationMs, 30_000);
   }
 });
 

@@ -1,5 +1,6 @@
 import { ShortcutHeroGame } from "../ShortcutHeroGame";
 import { parseLaunchSettings } from "../components/settings/settings";
+import type { GameMode } from "../game";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -20,21 +21,29 @@ export default async function PlayPage({
 }: {
   readonly searchParams: Promise<SearchParams>;
 }) {
-  const launchSettings = parseLaunchSettings(
-    toUrlSearchParams(await searchParams),
-  );
+  const params = toUrlSearchParams(await searchParams);
+  const launchSettings = parseLaunchSettings(params);
+  const modeParam = params.get("mode");
+  const runMode =
+    modeParam === "speed_round" || modeParam === "demo"
+      ? modeParam
+      : "highway";
+  const gameMode: GameMode =
+    runMode === "demo" ? "showcase" : launchSettings.difficulty;
 
   return (
     <ShortcutHeroGame
       settings={{
         trackId: launchSettings.tool,
-        mode: launchSettings.difficulty,
+        mode: gameMode,
         assistance: launchSettings.guidance,
         speed: launchSettings.pace,
-        durationSeconds: launchSettings.session,
+        durationSeconds: runMode === "demo" ? 30 : launchSettings.session,
       }}
+      launchSettings={launchSettings}
       effectsMode={launchSettings.effects}
       soundEnabled={launchSettings.sound === "on"}
+      runMode={runMode}
     />
   );
 }

@@ -1,11 +1,17 @@
 import { LINEAR_TRACK } from "./linear";
+import { SLACK_TRACK } from "./slack";
+import { SPOTIFY_TRACK } from "./spotify";
 import type {
   AvailableToolId,
   ShortcutTrack,
   ToolCatalogEntry,
 } from "./types";
 
-export const AVAILABLE_TOOL_IDS: readonly AvailableToolId[] = ["linear"];
+export const AVAILABLE_TOOL_IDS: readonly AvailableToolId[] = [
+  "linear",
+  "slack",
+  "spotify",
+];
 
 export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
   {
@@ -13,6 +19,18 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
     name: "Linear",
     status: "available",
     description: "Issues, projects, cycles, and navigation.",
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    status: "available",
+    description: "Channels, DMs, search, and workspace navigation.",
+  },
+  {
+    id: "spotify",
+    name: "Spotify",
+    status: "available",
+    description: "Playback, library, and navigation shortcuts.",
   },
   {
     id: "notion",
@@ -42,6 +60,8 @@ export const TOOL_CATALOG: readonly ToolCatalogEntry[] = [
 
 const tracks: Readonly<Record<AvailableToolId, ShortcutTrack>> = {
   linear: LINEAR_TRACK,
+  slack: SLACK_TRACK,
+  spotify: SPOTIFY_TRACK,
 };
 
 export function getToolTrack(id: AvailableToolId): ShortcutTrack {

@@ -4,7 +4,18 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { primeGameAudio } from "../../audio/use-game-audio";
-import { getToolTrack, isAvailableToolId } from "../../tools";
+import {
+  AVAILABLE_TOOL_IDS,
+  getToolTheme,
+  getToolTrack,
+  isAvailableToolId,
+  type AvailableToolId,
+} from "../../tools";
+import { LeaderboardPanel } from "../session/LeaderboardPanel";
+import {
+  persistOnboarding,
+  restoreOnboarding,
+} from "../../gameplay/result-storage";
 import {
   createPlayHref,
   DEFAULT_LAUNCH_SETTINGS,
@@ -18,14 +29,27 @@ import {
   type TempoPreset,
 } from "./settings";
 
-type TitleView = "menu" | "options" | "scores" | "help" | "credits";
-type MenuAction = Exclude<TitleView, "menu"> | "start";
+type TitleView =
+  | "menu"
+  | "options"
+  | "scores"
+  | "leaderboard"
+  | "help"
+  | "credits"
+  | "demo";
+type MenuAction =
+  | Exclude<TitleView, "menu" | "demo">
+  | "start"
+  | "speed"
+  | "demo";
 
 const SETTINGS_STORAGE_KEY = "shortcut-hero:launch-settings";
 const SCORE_PREFIX = "shortcut-hero:high-score:";
 
 const MENU_ITEMS: readonly { label: string; action: MenuAction }[] = [
   { label: "start", action: "start" },
+  { label: "speed round", action: "speed" },
+  { label: "world board", action: "leaderboard" },
   { label: "high scores", action: "scores" },
   { label: "how to play", action: "help" },
   { label: "options", action: "options" },
@@ -38,22 +62,23 @@ const PACES: readonly TempoPreset[] = ["relaxed", "standard", "turbo"];
 const SESSIONS: readonly SessionLength[] = [30, 45, 60];
 const SOUND: readonly SoundMode[] = ["on", "off"];
 const EFFECTS: readonly EffectsMode[] = ["full", "system", "reduced"];
-const OPTION_COUNT = 6;
+const TOOLS: readonly AvailableToolId[] = AVAILABLE_TOOL_IDS;
+const OPTION_COUNT = 7;
 
 const LABELS = {
   difficulty: {
-    easy: "single keys",
-    medium: "key sequences",
-    hard: "shift chords",
+    easy: "single keys · beginner",
+    medium: "key sequences · G then I",
+    hard: "shift chords · advanced",
   },
   guidance: {
-    novice: "show shortcuts",
-    pro: "hide shortcuts",
+    novice: "learn · show the keys",
+    pro: "recall · hide the keys",
   },
   pace: {
-    relaxed: "140 bpm · focus",
-    standard: "180 bpm · fast",
-    turbo: "220 bpm · turbo",
+    relaxed: "focus · slow approach (tempo still ramps)",
+    standard: "standard · balanced approach",
+    turbo: "turbo · short approach window",
   },
   effects: {
     full: "full motion + bloom",
@@ -143,6 +168,10 @@ export function SettingsScreen() {
     const frame = window.requestAnimationFrame(() => {
       setSettings(restoreSettings());
       setScores(readHighScores());
+      const onboarding = restoreOnboarding();
+      if (!onboarding.demoCompleted && !onboarding.demoSkipped) {
+        setView("demo");
+      }
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -153,6 +182,10 @@ export function SettingsScreen() {
     } catch {
       // Persistence is optional; the title screen remains usable without it.
     }
+    document.documentElement.dataset.tool = settings.tool;
+    const theme = getToolTheme(settings.tool);
+    document.documentElement.style.setProperty("--tool-accent", theme.accent);
+    document.documentElement.style.setProperty("--tool-glow", theme.glow);
   }, [settings]);
 
   const startGame = useCallback(() => {
@@ -160,17 +193,41 @@ export function SettingsScreen() {
     router.push(createPlayHref(settings));
   }, [router, settings]);
 
+  const startSpeedRound = useCallback(() => {
+    void primeGameAudio(settings.pace, settings.sound === "off");
+    router.push(createPlayHref(settings, { mode: "speed_round" }));
+  }, [router, settings]);
+
+  const startDemo = useCallback(() => {
+    persistOnboarding({ demoCompleted: true, demoSkipped: false });
+    void primeGameAudio(settings.pace, settings.sound === "off");
+    router.push(createPlayHref(settings, { mode: "demo" }));
+  }, [router, settings]);
+
+  const skipDemo = useCallback(() => {
+    persistOnboarding({ demoCompleted: false, demoSkipped: true });
+    setView("menu");
+  }, []);
+
   const openView = useCallback(
     (action: MenuAction) => {
       if (action === "start") {
         startGame();
         return;
       }
+      if (action === "speed") {
+        startSpeedRound();
+        return;
+      }
+      if (action === "demo") {
+        startDemo();
+        return;
+      }
       if (action === "scores") setScores(readHighScores());
       if (action === "options") setOptionIndex(0);
       setView(action);
     },
-    [startGame],
+    [startDemo, startGame, startSpeedRound],
   );
 
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
@@ -179,29 +236,34 @@ export function SettingsScreen() {
         case 0:
           return {
             ...current,
-            difficulty: cycleValue(DIFFICULTIES, current.difficulty, direction),
+            tool: cycleValue(TOOLS, current.tool, direction),
           };
         case 1:
           return {
             ...current,
-            guidance: cycleValue(GUIDANCE, current.guidance, direction),
+            difficulty: cycleValue(DIFFICULTIES, current.difficulty, direction),
           };
         case 2:
           return {
             ...current,
-            pace: cycleValue(PACES, current.pace, direction),
+            guidance: cycleValue(GUIDANCE, current.guidance, direction),
           };
         case 3:
           return {
             ...current,
-            session: cycleValue(SESSIONS, current.session, direction),
+            pace: cycleValue(PACES, current.pace, direction),
           };
         case 4:
           return {
             ...current,
-            sound: cycleValue(SOUND, current.sound, direction),
+            session: cycleValue(SESSIONS, current.session, direction),
           };
         case 5:
+          return {
+            ...current,
+            sound: cycleValue(SOUND, current.sound, direction),
+          };
+        case 6:
           return {
             ...current,
             effects: cycleValue(EFFECTS, current.effects, direction),
@@ -333,59 +395,94 @@ export function SettingsScreen() {
         </section>
       ) : null}
 
+      {view === "demo" ? (
+        <TitlePanel title="welcome" subtitle="a 30-second guided demo">
+          <p className="title-panel__empty">
+            Cards race to the strike line. Press the shortcut in time. Tempo
+            climbs as you play. Speed-round interludes interrupt the highway for
+            flash drills.
+          </p>
+          <div className="results-actions" style={{ marginTop: "1.5rem" }}>
+            <button type="button" className="primary-button is-selected" onClick={startDemo}>
+              play demo
+            </button>
+            <button type="button" className="secondary-button" onClick={skipDemo}>
+              skip
+            </button>
+          </div>
+        </TitlePanel>
+      ) : null}
+
       {view === "options" ? (
-        <TitlePanel title="options" subtitle="shape the next run">
+        <TitlePanel title="options" subtitle="each setting changes the feel of the run">
           <div className="option-list">
+            <OptionRow
+              label="tool"
+              value={getToolTrack(settings.tool).name}
+              active={optionIndex === 0}
+              onFocus={() => setOptionIndex(0)}
+              onPrevious={() => updateSetting("tool", cycleValue(TOOLS, settings.tool, -1))}
+              onNext={() => updateSetting("tool", cycleValue(TOOLS, settings.tool, 1))}
+            />
             <OptionRow
               label="difficulty"
               value={LABELS.difficulty[settings.difficulty]}
-              active={optionIndex === 0}
-              onFocus={() => setOptionIndex(0)}
+              active={optionIndex === 1}
+              onFocus={() => setOptionIndex(1)}
               onPrevious={() => updateSetting("difficulty", cycleValue(DIFFICULTIES, settings.difficulty, -1))}
               onNext={() => updateSetting("difficulty", cycleValue(DIFFICULTIES, settings.difficulty, 1))}
             />
             <OptionRow
               label="guidance"
               value={LABELS.guidance[settings.guidance]}
-              active={optionIndex === 1}
-              onFocus={() => setOptionIndex(1)}
+              active={optionIndex === 2}
+              onFocus={() => setOptionIndex(2)}
               onPrevious={() => updateSetting("guidance", cycleValue(GUIDANCE, settings.guidance, -1))}
               onNext={() => updateSetting("guidance", cycleValue(GUIDANCE, settings.guidance, 1))}
             />
             <OptionRow
               label="pace"
               value={LABELS.pace[settings.pace]}
-              active={optionIndex === 2}
-              onFocus={() => setOptionIndex(2)}
+              active={optionIndex === 3}
+              onFocus={() => setOptionIndex(3)}
               onPrevious={() => updateSetting("pace", cycleValue(PACES, settings.pace, -1))}
               onNext={() => updateSetting("pace", cycleValue(PACES, settings.pace, 1))}
             />
             <OptionRow
               label="session"
-              value={`${settings.session} seconds`}
-              active={optionIndex === 3}
-              onFocus={() => setOptionIndex(3)}
+              value={`${settings.session}s run length`}
+              active={optionIndex === 4}
+              onFocus={() => setOptionIndex(4)}
               onPrevious={() => updateSetting("session", cycleValue(SESSIONS, settings.session, -1))}
               onNext={() => updateSetting("session", cycleValue(SESSIONS, settings.session, 1))}
             />
             <OptionRow
               label="music"
               value={settings.sound === "on" ? "original score on" : "music off"}
-              active={optionIndex === 4}
-              onFocus={() => setOptionIndex(4)}
+              active={optionIndex === 5}
+              onFocus={() => setOptionIndex(5)}
               onPrevious={() => updateSetting("sound", cycleValue(SOUND, settings.sound, -1))}
               onNext={() => updateSetting("sound", cycleValue(SOUND, settings.sound, 1))}
             />
             <OptionRow
               label="effects"
               value={LABELS.effects[settings.effects]}
-              active={optionIndex === 5}
-              onFocus={() => setOptionIndex(5)}
+              active={optionIndex === 6}
+              onFocus={() => setOptionIndex(6)}
               onPrevious={() => updateSetting("effects", cycleValue(EFFECTS, settings.effects, -1))}
               onNext={() => updateSetting("effects", cycleValue(EFFECTS, settings.effects, 1))}
             />
           </div>
           <BackButton onClick={() => setView("menu")} />
+        </TitlePanel>
+      ) : null}
+
+      {view === "leaderboard" ? (
+        <TitlePanel title="world board" subtitle="international D1 leaderboard">
+          <LeaderboardPanel
+            trackId={settings.tool}
+            onClose={() => setView("menu")}
+          />
         </TitlePanel>
       ) : null}
 
@@ -411,10 +508,19 @@ export function SettingsScreen() {
       {view === "help" ? (
         <TitlePanel title="how to play" subtitle="match the action to its shortcut">
           <ol className="instruction-list">
-            <li><span>01</span>Read the action.</li>
-            <li><span>02</span>Follow the keyboard and press at the strike line.</li>
-            <li><span>03</span>Chain hits for a higher score.</li>
+            <li><span>01</span>Read the approaching action (and the Coming up rail).</li>
+            <li><span>02</span>Press its shortcut at the glowing strike line.</li>
+            <li><span>03</span>Chain hits — tempo climbs; speed rounds interrupt the highway.</li>
+            <li><span>04</span>Share your score from the results screen.</li>
           </ol>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ marginTop: "1rem" }}
+            onClick={startDemo}
+          >
+            replay demo
+          </button>
           <BackButton onClick={() => setView("menu")} />
         </TitlePanel>
       ) : null}

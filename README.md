@@ -1,66 +1,37 @@
 # Shortcut Hero
 
-Learn the shortcuts that make great software feel fast.
+Learn keyboard shortcuts through a Guitar Hero–style highway game — with progressive tempo, speed-round interludes, multi-tool tracks (Linear, Slack, Spotify), and a Cloudflare D1 world leaderboard.
 
-Shortcut Hero is a 3D browser game that helps new users build keyboard-shortcut muscle memory. Actions race down a Guitar Hero-inspired highway; press the right shortcut at the strike line, chain accurate hits, and turn repetitive memorization into a game.
-
-Linear is supported today. Shortcut libraries for Excel, Notion, Jira, Superhuman, and more are coming soon.
-
-## How it works
-
-1. Read the approaching action.
-2. Press its shortcut at the strike line.
-3. Chain accurate hits to build your combo and score.
-4. Review what you knew—and what to practise—after each round.
-
-## Game modes
-
-- **Novice:** single-key shortcuts
-- **Medium:** key sequences
-- **Hard:** keyboard chords
-- **Mix:** all three input styles in one run
-- **Learn:** shows each shortcut as it approaches
-- **Recall:** hides the answer for true memory practice
-
-Adjust the pace, session length, music, and visual effects before each run. The game currently targets physical macOS keyboards and protects Command, Control, Option, and browser shortcuts from capture.
-
-## Why Shortcut Hero?
-
-Keyboard shortcuts are usually learned through documentation, tooltips, or accidental discovery. Shortcut Hero turns them into active recall: quick, repeated practice with immediate timing feedback, combos, particles, sound, and a clear round summary.
-
-The goal is a reusable learning layer for the tools people use every day:
-
-- Linear — available now
-- Excel — coming soon
-- Notion — coming soon
-- Jira — coming soon
-- Superhuman — coming soon
-- More shortcut libraries and custom tracks - planned
-
-## Run locally
-
-Requires Node.js 22.13 or newer.
+## Quick start
 
 ```bash
+nvm use 22          # Node >= 22.13 required
 npm install
+npm run db:local:setup
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000).
 
-Run the checks with:
+## Scripts
 
-```bash
-npm run lint
-npm test
-```
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Local vinext / Workers / D1 |
+| `npm run db:local:setup` | Apply D1 migrations locally |
+| `npm run check` | Lint + typecheck + tests |
+| `npm run test:unit` | Unit tests |
 
-## Built with
+## Documentation
 
-React, Three.js, React Three Fiber, post-processing effects, and procedural Web Audio. The prototype runs entirely in the browser and requires no database or external asset service.
+Full enterprise docs live in [`docs/`](./docs/README.md):
 
-## Project docs
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Database](./docs/DATABASE.md)
+- [Local development](./docs/LOCAL_DEVELOPMENT.md)
+- [Extension phased plan](./docs/EXTENSION_PHASED_PLAN.md)
+- [Contributing](./docs/CONTRIBUTING.md) (`michael` branch review workflow)
 
-- [Hackathon product spec](./PROJECT_SPEC.md)
-- [Design and visual identity](./DESIGN_IDENTITY.md)
+## Branch note
 
+Active development for this overhaul is on **`michael`**. Merge to `main` only after teammate review.

@@ -196,6 +196,12 @@ export type GameEffect =
       readonly type: "miss";
       readonly shortcut: ShortcutDefinition;
       readonly requeued: boolean;
+      readonly brokeStreak: boolean;
+      readonly previousCombo: number;
+    }
+  | {
+      readonly type: "streak-break";
+      readonly previousCombo: number;
     }
   | {
       readonly type: "finished";

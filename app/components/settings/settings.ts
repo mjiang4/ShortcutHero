@@ -1,3 +1,8 @@
+import {
+  isAvailableToolId,
+  type AvailableToolId,
+} from "../../tools";
+
 export type GameDifficulty = "easy" | "medium" | "hard";
 export type GuidanceMode = "novice" | "pro";
 export type TempoPreset = "relaxed" | "standard" | "turbo";
@@ -75,7 +80,10 @@ export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): Launc
   };
 }
 
-export function createPlayHref(settings: LaunchSettings): string {
+export function createPlayHref(
+  settings: LaunchSettings,
+  extras?: { readonly mode?: "highway" | "speed_round" | "demo" },
+): string {
   const params = new URLSearchParams({
     tool: settings.tool,
     difficulty: settings.difficulty,
@@ -85,10 +93,6 @@ export function createPlayHref(settings: LaunchSettings): string {
     sound: settings.sound,
     effects: settings.effects,
   });
-
+  if (extras?.mode) params.set("mode", extras.mode);
   return `/play?${params.toString()}`;
 }
-import {
-  isAvailableToolId,
-  type AvailableToolId,
-} from "../../tools";

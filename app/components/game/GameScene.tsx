@@ -930,11 +930,14 @@ function ActionRibbon({
     if (body.current) {
       body.current.visible = fade > 0.035;
     }
+    const readability = isActive
+      ? 1
+      : THREE.MathUtils.clamp(0.55 + progress * 0.55, 0.55, 1.05);
     if (shellMaterial.current) {
-      shellMaterial.current.opacity = (isActive ? 0.28 : 0.11) * fade;
+      shellMaterial.current.opacity = (isActive ? 0.34 : 0.22 * readability) * fade;
       shellMaterial.current.emissiveIntensity = THREE.MathUtils.damp(
         shellMaterial.current.emissiveIntensity,
-        cleared ? 2.5 * fade : missed ? 1.35 * fade : isActive ? 0.82 : 0.24,
+        cleared ? 2.5 * fade : missed ? 1.35 * fade : isActive ? 0.9 : 0.42 * readability,
         cleared ? 22 : 8,
         delta,
       );
@@ -942,7 +945,7 @@ function ActionRibbon({
     if (accentMaterial.current) {
       accentMaterial.current.opacity = THREE.MathUtils.damp(
         accentMaterial.current.opacity,
-        (cleared ? 1.5 : isActive ? 1 : 0.58) * fade,
+        (cleared ? 1.5 : isActive ? 1 : 0.78 * readability) * fade,
         cleared ? 24 : 8,
         delta,
       );
@@ -950,11 +953,17 @@ function ActionRibbon({
     trailMaterials.current.forEach((material) => {
       material.opacity = THREE.MathUtils.damp(
         material.opacity,
-        (isActive ? 0.28 : 0.1) * fade,
+        (isActive ? 0.28 : 0.16 * readability) * fade,
         8,
         delta,
       );
     });
+    if (body.current && !resolved) {
+      const midScale = isActive ? 1 : 0.82 + progress * 0.28;
+      body.current.scale.setScalar(
+        THREE.MathUtils.damp(body.current.scale.x, midScale, 10, delta),
+      );
+    }
   });
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { useGameAudio } from "./audio";
 import {
@@ -10,13 +10,23 @@ import {
   type SceneCue,
   type SceneFeedback,
 } from "./components/game";
-import type { EffectsMode } from "./components/settings/settings";
+import type {
+  EffectsMode,
+  LaunchSettings,
+} from "./components/settings/settings";
+import {
+  ResultsScreen,
+  SessionHud,
+  SpeedRoundOverlay,
+  UpcomingRail,
+} from "./components/session";
 import {
   APPROACH_DURATION_MS,
   createGameSession,
   getApproachProgress,
   getHighScoreKey,
   getSessionDurationSeconds,
+  getTempoFactor,
   getVisiblePromptTimings,
   handleSessionKey,
   pauseSession,
@@ -31,8 +41,22 @@ import {
   type ActivePrompt,
   type ShortcutDefinition,
 } from "./game";
+import { shouldTriggerInterlude } from "./gameplay/mini-games";
+import {
+  persistHighScore,
+  readHighScore,
+} from "./gameplay/result-storage";
+import { persistRoundSummary } from "./persistence/round-client";
+import {
+  downloadScoreCardImage,
+  shareScoreCard,
+  type ShareResult,
+} from "./platform/share-game";
+import { getToolTheme, getToolTrack, isAvailableToolId } from "./tools";
+import type { AvailableToolId } from "./tools";
 
-type ViewPhase = "countdown" | "game" | "results";
+type ViewPhase = "countdown" | "game" | "interlude" | "results";
+type RunMode = "highway" | "speed_round" | "demo";
 type JudgementTone = HitJudgement | "miss" | "wait" | "sequence";
 type Judgement = {
   id: number;
@@ -52,10 +76,6 @@ type KeyboardSignal = {
   status: string;
 };
 
-const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
-});
-
 const SPEED_BPM = {
   relaxed: 140,
   standard: 180,
@@ -73,8 +93,10 @@ const DEPARTURE_DURATION_MS = 560;
 
 export interface ShortcutHeroGameProps {
   readonly settings: GameSettings;
+  readonly launchSettings: LaunchSettings;
   readonly effectsMode: EffectsMode;
   readonly soundEnabled: boolean;
+  readonly runMode?: RunMode;
 }
 
 function shortcutKeys(shortcut: ShortcutDefinition): readonly string[] {
@@ -104,10 +126,19 @@ function isTextEntry(target: EventTarget | null): boolean {
 
 export function ShortcutHeroGame({
   settings,
+  launchSettings,
   effectsMode,
   soundEnabled,
+  runMode = "highway",
 }: ShortcutHeroGameProps) {
-  const [viewPhase, setViewPhase] = useState<ViewPhase>("countdown");
+  const trackId: AvailableToolId = isAvailableToolId(settings.trackId ?? null)
+    ? (settings.trackId as AvailableToolId)
+    : "linear";
+  const toolTheme = getToolTheme(trackId);
+  const track = getToolTrack(trackId);
+  const [viewPhase, setViewPhase] = useState<ViewPhase>(
+    runMode === "speed_round" ? "interlude" : "countdown",
+  );
   const [countdown, setCountdown] = useState(3);
   const [session, setSessionState] = useState<GameSession | null>(null);
   const [results, setResults] = useState<GameResults | null>(null);
@@ -119,9 +150,15 @@ export function ShortcutHeroGame({
   const [keyboardSignal, setKeyboardSignal] = useState<KeyboardSignal | null>(null);
   const [pauseMenuIndex, setPauseMenuIndex] = useState(0);
   const [resultsMenuIndex, setResultsMenuIndex] = useState(0);
-  const [, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const [isPersonalBest, setIsPersonalBest] = useState(false);
+  const [shareResult, setShareResult] = useState<ShareResult | null>(null);
+  const [streakFlash, setStreakFlash] = useState<"chain" | "break" | null>(null);
+  const hitsSinceInterludeRef = useRef(0);
+  const [interludeBonus, setInterludeBonus] = useState(0);
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
+  const streakFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionRef = useRef<GameSession | null>(null);
   const feedbackId = useRef(0);
   const judgementId = useRef(0);
@@ -203,21 +240,28 @@ export function ShortcutHeroGame({
     [],
   );
 
-  const persistResults = useCallback((finished: GameResults, game: GameSession) => {
-    setResults(finished);
-    const key = getHighScoreKey(game.settings);
-    try {
-      const previous = Number(window.localStorage.getItem(key) ?? 0);
-      if (finished.score > previous) {
-        window.localStorage.setItem(key, String(finished.score));
-        setHighScore(finished.score);
-      } else {
-        setHighScore(previous);
-      }
-    } catch {
-      // Local persistence is optional; a blocked storage API should not stop play.
-    }
+  const flashStreak = useCallback((kind: "chain" | "break") => {
+    setStreakFlash(kind);
+    if (streakFlashTimer.current) clearTimeout(streakFlashTimer.current);
+    streakFlashTimer.current = setTimeout(() => setStreakFlash(null), 700);
   }, []);
+
+  const persistResults = useCallback((finished: GameResults, game: GameSession) => {
+    const withBonus: GameResults = {
+      ...finished,
+      score: finished.score + interludeBonus,
+    };
+    setResults(withBonus);
+    const personalBest = persistHighScore(withBonus, game);
+    setIsPersonalBest(personalBest);
+    setHighScore(Math.max(readHighScore(game), withBonus.score));
+    void persistRoundSummary({
+      session: game,
+      results: withBonus,
+      launch: launchSettings,
+      runMode: runMode === "speed_round" ? "speed_round" : "highway",
+    });
+  }, [interludeBonus, launchSettings, runMode]);
 
   const processEffects = useCallback(
     (
@@ -265,6 +309,19 @@ export function ShortcutHeroGame({
               clean ? `${effect.judgement} hit` : "recovered · counted as miss",
             );
             showJudgement(clean ? effect.judgement : "Miss", clean ? effect.judgement : "miss");
+            if (clean && effect.combo > 1) flashStreak("chain");
+            if (clean && runMode === "highway") {
+              hitsSinceInterludeRef.current += 1;
+              if (shouldTriggerInterlude(hitsSinceInterludeRef.current)) {
+                hitsSinceInterludeRef.current = 0;
+                const current = sessionRef.current;
+                if (current?.phase === "playing") {
+                  setSession(pauseSession(current, nowMs));
+                  pauseAudio();
+                  setViewPhase("interlude");
+                }
+              }
+            }
             break;
           }
           case "combo-tier":
@@ -274,6 +331,12 @@ export function ShortcutHeroGame({
               effect.tier === "flow" ? 1 : 0.72,
               resolvedPrompt?.promptId,
             );
+            flashStreak("chain");
+            break;
+          case "streak-break":
+            flashStreak("break");
+            emitFeedback("miss", 0.9);
+            showJudgement(`Streak ×${effect.previousCombo} broken`, "miss");
             break;
           case "miss":
             playMiss();
@@ -285,6 +348,7 @@ export function ShortcutHeroGame({
               `correct shortcut: ${effect.shortcut.input.display}`,
             );
             showJudgement("Miss", "miss");
+            if (effect.brokeStreak) flashStreak("break");
             break;
           case "finished":
             persistResults(effect.results, sourceSession);
@@ -299,11 +363,15 @@ export function ShortcutHeroGame({
     },
     [
       emitFeedback,
+      flashStreak,
+      pauseAudio,
       persistResults,
       playCombo,
       playHit,
       playMiss,
       retainResolvedCue,
+      runMode,
+      setSession,
       showJudgement,
       showKeyboardSignal,
       stopAudio,
@@ -467,10 +535,14 @@ export function ShortcutHeroGame({
     setKeyboardSignal(null);
     setSession(null);
     setCountdown(3);
+    hitsSinceInterludeRef.current = 0;
+    setInterludeBonus(0);
+    setShareResult(null);
+    setIsPersonalBest(false);
     if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
     void startAudio(settings.speed);
-    setViewPhase("countdown");
-  }, [setSession, settings.speed, startAudio]);
+    setViewPhase(runMode === "speed_round" ? "interlude" : "countdown");
+  }, [runMode, setSession, settings.speed, startAudio]);
 
   const returnToSettings = useCallback(() => {
     if (finishAudioTimer.current) clearTimeout(finishAudioTimer.current);
@@ -482,6 +554,72 @@ export function ShortcutHeroGame({
     setDepartingCues([]);
     window.location.assign("/");
   }, [setSession, stopAudio]);
+
+  const shareResults = useCallback(() => {
+    if (!results) return;
+    void shareScoreCard({
+      score: results.score,
+      accuracyPct: results.accuracyPct,
+      longestCombo: results.longestCombo,
+      trackName: track.name,
+    }).then(setShareResult);
+  }, [results, track.name]);
+
+  const downloadCard = useCallback(() => {
+    if (!results) return;
+    void downloadScoreCardImage({
+      score: results.score,
+      accuracyPct: results.accuracyPct,
+      longestCombo: results.longestCombo,
+      trackName: track.name,
+      accent: toolTheme.accent,
+    });
+  }, [results, toolTheme.accent, track.name]);
+
+  const completeInterlude = useCallback(
+    (mini: {
+      readonly score: number;
+      readonly accuracyPct: number;
+      readonly longestCombo: number;
+      readonly attempts: number;
+      readonly correctAnswers: number;
+      readonly misses: number;
+      readonly durationMs: number;
+    }) => {
+      if (runMode === "speed_round") {
+        const fakeSession = createGameSession(settings);
+        const finished: GameResults = {
+          score: mini.score,
+          accuracyPct: mini.accuracyPct,
+          longestCombo: mini.longestCombo,
+          attempts: mini.attempts,
+          cleanHits: mini.correctAnswers,
+          recoveredHits: 0,
+          misses: mini.misses,
+          correctAnswers: mini.correctAnswers,
+          uniqueShortcutsCorrect: mini.correctAnswers,
+          durationMs: mini.durationMs,
+          correctShortcuts: [],
+          practice: [],
+        };
+        persistResults(finished, fakeSession);
+        playCombo(12);
+        setResultsMenuIndex(0);
+        setViewPhase("results");
+        return;
+      }
+      setInterludeBonus((bonus) => bonus + mini.score);
+      const current = sessionRef.current;
+      if (current?.phase === "paused") {
+        void startAudio(settings.speed);
+        const now = performance.now();
+        setFrameNow(now);
+        setSession(resumeSession(current, now));
+      }
+      setViewPhase("game");
+    },
+    [persistResults, playCombo, runMode, setSession, settings, startAudio],
+  );
 
   const resume = useCallback(() => {
     const current = sessionRef.current;
@@ -514,7 +652,7 @@ export function ShortcutHeroGame({
 
     const onMenuKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const itemCount = paused ? 3 : 2;
+      const itemCount = paused ? 3 : 4;
       const currentIndex = paused ? pauseMenuIndex : resultsMenuIndex;
       const setIndex = paused ? setPauseMenuIndex : setResultsMenuIndex;
 
@@ -540,7 +678,9 @@ export function ShortcutHeroGame({
         if (currentIndex === 0) void resume();
         else if (currentIndex === 1) beginRun();
         else returnToSettings();
-      } else if (currentIndex === 0) beginRun();
+      } else if (currentIndex === 0) shareResults();
+      else if (currentIndex === 1) downloadCard();
+      else if (currentIndex === 2) beginRun();
       else returnToSettings();
     };
 
@@ -548,12 +688,14 @@ export function ShortcutHeroGame({
     return () => window.removeEventListener("keydown", onMenuKey);
   }, [
     beginRun,
+    downloadCard,
     pauseMenuIndex,
     results,
     resultsMenuIndex,
     resume,
     returnToSettings,
     session?.phase,
+    shareResults,
     viewPhase,
   ]);
 
@@ -603,22 +745,7 @@ export function ShortcutHeroGame({
     0,
     Math.ceil((sessionDurationMs - elapsedMs) / 1_000),
   );
-  const accuracy =
-    completed === 0
-      ? 100
-      : Math.round(
-          (session!.attempts.filter((attempt) => attempt.outcome === "clean").length /
-            completed) *
-            100,
-        );
-  const actLabel =
-    runProgress < 0.18
-      ? "Ignition"
-      : runProgress < 0.56
-        ? "Acceleration"
-        : runProgress < 0.84
-          ? "Flow"
-        : "Overload";
+  void completed;
   const keyboardHints = hintKeysFor(session);
   const keyboardStatus = keyboardSignal?.status ?? (
     session?.active
@@ -628,8 +755,34 @@ export function ShortcutHeroGame({
       : "waiting for next action"
   );
 
+  const tempoFactor = getTempoFactor(
+    settings,
+    session?.startedAtMs ?? null,
+    frameNow,
+  );
+  const elapsedLabel = `${Math.floor(elapsedMs / 1000 / 60)}:${String(
+    Math.floor(elapsedMs / 1000) % 60,
+  ).padStart(2, "0")}`;
+  const upcomingItems = visiblePromptTimings.slice(0, 4).map((timing) => ({
+    id: timing.promptId,
+    action: timing.shortcut.action,
+    shortcut: timing.shortcut.input.display,
+    active: timing.state === "active",
+  }));
+
   return (
-    <main className="shortcut-hero">
+    <main
+      className="shortcut-hero"
+      data-tool={trackId}
+      style={
+        {
+          "--tool-accent": toolTheme.accent,
+          "--tool-accent-soft": toolTheme.accentSoft,
+          "--tool-highway": toolTheme.highway,
+          "--tool-glow": toolTheme.glow,
+        } as CSSProperties
+      }
+    >
       <div className="game-canvas" aria-hidden="true">
         <GameScene
           cues={sceneCues}
@@ -637,7 +790,7 @@ export function ShortcutHeroGame({
           combo={session?.combo ?? 0}
           runProgress={runProgress}
           feedback={feedback}
-          paused={session?.phase === "paused"}
+          paused={session?.phase === "paused" || viewPhase === "interlude"}
           reducedMotion={reducedMotion}
           bloom={!reducedMotion}
           onReady={() => setSceneReady(true)}
@@ -647,7 +800,7 @@ export function ShortcutHeroGame({
       <div className="ui-layer">
         {viewPhase === "countdown" ? (
           <div className="countdown-overlay" aria-live="assertive">
-            {sceneReady ? (
+            {sceneReady || runMode === "speed_round" ? (
               <span className="countdown-number" key={countdown}>
                 {countdown}
               </span>
@@ -657,48 +810,43 @@ export function ShortcutHeroGame({
           </div>
         ) : null}
 
+        {viewPhase === "interlude" ? (
+          <SpeedRoundOverlay
+            deck={
+              runMode === "demo" || settings.mode === "showcase"
+                ? track.showcase
+                : track.decks[
+                    settings.mode === "medium"
+                      ? "medium"
+                      : settings.mode === "hard"
+                        ? "hard"
+                        : "easy"
+                  ]
+            }
+            title={runMode === "speed_round" ? "Speed Round" : "Interlude · Fast Fire"}
+            promptCount={runMode === "speed_round" ? 8 : undefined}
+            onComplete={completeInterlude}
+          />
+        ) : null}
+
         {viewPhase === "game" && session ? (
           <>
-            <section className="hud" aria-label="Current game status">
-              <div className="hud-cluster">
-                <HudStat label="Score" value={SCORE_FORMATTER.format(session.score)} />
-                <HudStat label="Accuracy" value={`${accuracy}%`} />
-              </div>
-              <div className="combo-display" aria-live="polite">
-                <span className="combo-value">{session.combo}</span>
-                <span className="combo-label">
-                  {session.combo >= 9 ? "Flow state" : "Combo"}
-                </span>
-              </div>
-              <div className="hud-cluster is-right">
-                <HudStat
-                  label={actLabel}
-                  value={`${remainingSeconds}s`}
-                />
-                <button
-                  type="button"
-                  className="quiet-button"
-                  onClick={toggleMuted}
-                  aria-label={isMuted ? "Turn sound on" : "Mute sound"}
-                >
-                  {isMuted ? "sound off" : "sound on"}
-                </button>
-                <button
-                  type="button"
-                  className="quiet-button"
-                  onClick={() => {
-                    const current = sessionRef.current;
-                    if (current?.phase === "playing") {
-                      setPauseMenuIndex(0);
-                      setSession(pauseSession(current, performance.now()));
-                      pauseAudio();
-                    }
-                  }}
-                >
-                  Pause
-                </button>
-              </div>
-            </section>
+            <SessionHud
+              score={session.score + interludeBonus}
+              combo={session.combo}
+              bestStreak={session.longestCombo}
+              highScore={highScore}
+              elapsedLabel={elapsedLabel}
+              tempoFactor={tempoFactor}
+              judgementLabel={judgement?.label ?? null}
+              judgementTone={judgement?.tone ?? null}
+              streakFlash={streakFlash}
+            />
+
+            <UpcomingRail
+              items={upcomingItems}
+              showShortcuts={settings.assistance === "novice"}
+            />
 
             <div className="session-progress" aria-hidden="true">
               <div className="progress-track">
@@ -708,8 +856,18 @@ export function ShortcutHeroGame({
                 />
               </div>
               <span className="progress-time">
-                {DIFFICULTY_LABELS[settings.mode]} · {settings.assistance === "novice" ? "Learn" : "Recall"}
+                {DIFFICULTY_LABELS[settings.mode]} ·{" "}
+                {settings.assistance === "novice" ? "Learn" : "Recall"} ·{" "}
+                {remainingSeconds}s
               </span>
+              <button
+                type="button"
+                className="quiet-button"
+                onClick={toggleMuted}
+                aria-label={isMuted ? "Turn sound on" : "Mute sound"}
+              >
+                {isMuted ? "sound off" : "sound on"}
+              </button>
             </div>
 
             <KeyboardInstrument
@@ -722,16 +880,6 @@ export function ShortcutHeroGame({
               guidance={settings.assistance === "novice" ? "learn" : "recall"}
             />
 
-            {judgement ? (
-              <div
-                key={judgement.id}
-                className={`judgement-toast is-${judgement.tone}`}
-                aria-live="polite"
-              >
-                <span className="judgement-label">{judgement.label}</span>
-              </div>
-            ) : null}
-
             {session.phase === "paused" ? (
               <div className="pause-overlay">
                 <div className="pause-card">
@@ -741,9 +889,6 @@ export function ShortcutHeroGame({
                     <button
                       type="button"
                       className={`primary-button${pauseMenuIndex === 0 ? " is-selected" : ""}`}
-                      aria-current={pauseMenuIndex === 0 ? "true" : undefined}
-                      onMouseEnter={() => setPauseMenuIndex(0)}
-                      onFocus={() => setPauseMenuIndex(0)}
                       onClick={resume}
                     >
                       Resume
@@ -751,9 +896,6 @@ export function ShortcutHeroGame({
                     <button
                       type="button"
                       className={`secondary-button${pauseMenuIndex === 1 ? " is-selected" : ""}`}
-                      aria-current={pauseMenuIndex === 1 ? "true" : undefined}
-                      onMouseEnter={() => setPauseMenuIndex(1)}
-                      onFocus={() => setPauseMenuIndex(1)}
                       onClick={beginRun}
                     >
                       Restart
@@ -761,9 +903,6 @@ export function ShortcutHeroGame({
                     <button
                       type="button"
                       className={`secondary-button${pauseMenuIndex === 2 ? " is-selected" : ""}`}
-                      aria-current={pauseMenuIndex === 2 ? "true" : undefined}
-                      onMouseEnter={() => setPauseMenuIndex(2)}
-                      onFocus={() => setPauseMenuIndex(2)}
                       onClick={returnToSettings}
                     >
                       Title
@@ -776,96 +915,19 @@ export function ShortcutHeroGame({
         ) : null}
 
         {viewPhase === "results" && results ? (
-          <section className="results-screen" aria-labelledby="results-title">
-            <div className="results-card">
-              <h1 id="results-title">Run complete</h1>
-              <p className="results-subtitle">
-                {results.correctAnswers} correct · {results.misses} missed
-              </p>
-
-              <div className="results-score">
-                <span className="results-score-label">Final score</span>
-                <span className="results-score-value">
-                  {SCORE_FORMATTER.format(results.score)}
-                </span>
-              </div>
-
-              <div className="results-grid">
-                <ResultStat label="Accuracy" value={`${results.accuracyPct}%`} />
-                <ResultStat label="Best combo" value={String(results.longestCombo)} />
-                <ResultStat
-                  label="Unique shortcuts"
-                  value={String(results.uniqueShortcutsCorrect)}
-                />
-              </div>
-
-              {results.correctShortcuts.length > 0 ? (
-                <section className="results-breakdown" aria-labelledby="correct-shortcuts-title">
-                  <h2 id="correct-shortcuts-title">You got these right</h2>
-                  <ul className="correct-list">
-                    {results.correctShortcuts.map((item) => (
-                      <li className="correct-item" key={item.shortcut.id}>
-                        <span className="correct-item__identity">
-                          <strong>{item.shortcut.action}</strong>
-                          <span className="review-shortcut">{item.shortcut.input.display}</span>
-                        </span>
-                        <span className="correct-item__stats">
-                          {item.correct}/{item.attempts} correct
-                          {item.perfectHits > 0
-                            ? ` · ${item.perfectHits} perfect`
-                            : ""}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-
-              {results.practice.length > 0 ? (
-                <section className="results-breakdown" aria-labelledby="practice-shortcuts-title">
-                  <h2 id="practice-shortcuts-title">Practice these next</h2>
-                  <ul className="review-list" aria-label="Shortcuts to practise">
-                    {results.practice.map((item) => (
-                      <li className="review-item" key={item.shortcut.id}>
-                        <span className="review-item__identity">
-                          <strong>{item.shortcut.action}</strong>
-                          <span className="review-shortcut">
-                            {item.shortcut.input.display}
-                          </span>
-                        </span>
-                        <span className="review-item__stats">
-                          {item.misses} {item.misses === 1 ? "miss" : "misses"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-
-              <div className="results-actions">
-                <button
-                  type="button"
-                  className={`primary-button${resultsMenuIndex === 0 ? " is-selected" : ""}`}
-                  aria-current={resultsMenuIndex === 0 ? "true" : undefined}
-                  onMouseEnter={() => setResultsMenuIndex(0)}
-                  onFocus={() => setResultsMenuIndex(0)}
-                  onClick={beginRun}
-                >
-                  Play again
-                </button>
-                <button
-                  type="button"
-                  className={`secondary-button${resultsMenuIndex === 1 ? " is-selected" : ""}`}
-                  aria-current={resultsMenuIndex === 1 ? "true" : undefined}
-                  onMouseEnter={() => setResultsMenuIndex(1)}
-                  onFocus={() => setResultsMenuIndex(1)}
-                  onClick={returnToSettings}
-                >
-                  Title
-                </button>
-              </div>
-            </div>
-          </section>
+          <ResultsScreen
+            results={results}
+            trackName={track.name}
+            highScore={highScore}
+            isPersonalBest={isPersonalBest}
+            leaderboardRank={null}
+            shareResult={shareResult}
+            menuIndex={resultsMenuIndex}
+            onShare={shareResults}
+            onDownloadCard={downloadCard}
+            onPlayAgain={beginRun}
+            onTitle={returnToSettings}
+          />
         ) : null}
 
         <p className="screen-reader-only" aria-live="polite">
@@ -875,23 +937,5 @@ export function ShortcutHeroGame({
         </p>
       </div>
     </main>
-  );
-}
-
-function HudStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="hud-stat">
-      <span className="hud-stat-label">{label}</span>
-      <span className="hud-stat-value">{value}</span>
-    </div>
-  );
-}
-
-function ResultStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="result-stat">
-      <span className="result-stat-label">{label}</span>
-      <span className="result-stat-value">{value}</span>
-    </div>
   );
 }

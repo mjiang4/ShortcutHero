@@ -20,7 +20,11 @@ test("advertises future tool packs without exposing unavailable tracks", () => {
   const available = TOOL_CATALOG.filter((tool) => tool.status === "available");
   const planned = TOOL_CATALOG.filter((tool) => tool.status === "coming-soon");
 
-  assert.deepEqual(available.map((tool) => tool.id), ["linear"]);
+  assert.deepEqual(available.map((tool) => tool.id), [
+    "linear",
+    "slack",
+    "spotify",
+  ]);
   assert.ok(planned.some((tool) => tool.id === "notion"));
   assert.ok(planned.some((tool) => tool.id === "jira"));
   assert.ok(planned.some((tool) => tool.id === "superhuman"));
