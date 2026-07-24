@@ -20,9 +20,8 @@ import { useBrowserCapabilities } from "./platform/browser-capabilities";
 import { useSystemInfo } from "./platform/launch-compatibility";
 import { shareGameLink, type ShareResult } from "./platform/share-game";
 
-// The rendering remains available for the dedicated keyboard mode planned
-// after the main action-highway launch.
-const SHOW_KEYBOARD_MODE = false;
+// Keep the keyboard visible as a first-class learning aid during gameplay.
+const SHOW_KEYBOARD_MODE = true;
 
 export interface ShortcutHeroGameProps {
   readonly settings: GameSettings;
