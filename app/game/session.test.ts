@@ -27,10 +27,10 @@ test("uses fast travel independently from difficulty-specific cue cadence", () =
     standard: 1_250,
     turbo: 1_000,
   });
-  assert.equal(getPromptCadenceMs("easy", "standard"), 2_000);
-  assert.equal(getPromptCadenceMs("medium", "standard"), 2_500);
-  assert.equal(getPromptCadenceMs("hard", "standard"), 2_000);
-  assert.equal(getPromptCadenceMs("showcase", "standard"), 1_500);
+  assert.equal(getPromptCadenceMs("easy", "standard"), 1_000);
+  assert.equal(getPromptCadenceMs("medium", "standard"), 1_000);
+  assert.equal(getPromptCadenceMs("hard", "standard"), 1_000);
+  assert.equal(getPromptCadenceMs("showcase", "standard"), 750);
 });
 
 test("defaults sessions to 45 seconds and honours supported durations", () => {

@@ -39,18 +39,18 @@ export const APPROACH_DURATION_MS: Readonly<Record<SpeedPreset, number>> = {
  * getPromptCadenceMs so prompt density can vary independently by difficulty.
  */
 export const PROMPT_CADENCE_MS: Readonly<Record<SpeedPreset, number>> = {
-  relaxed: 1_875,
-  standard: 1_500,
-  turbo: 1_125,
+  relaxed: 1_000,
+  standard: 750,
+  turbo: 600,
 };
 
 /** Musical spacing between prompts. Prompts can overlap on the highway. */
 export const PROMPT_CADENCE_BY_MODE_MS: Readonly<
   Record<GameMode, Readonly<Record<SpeedPreset, number>>>
 > = {
-  easy: { relaxed: 2_500, standard: 2_000, turbo: 1_500 },
-  medium: { relaxed: 3_000, standard: 2_500, turbo: 1_875 },
-  hard: { relaxed: 2_500, standard: 2_000, turbo: 1_500 },
+  easy: { relaxed: 1_300, standard: 1_000, turbo: 700 },
+  medium: { relaxed: 1_500, standard: 1_000, turbo: 850 },
+  hard: { relaxed: 1_300, standard: 1_000, turbo: 700 },
   showcase: PROMPT_CADENCE_MS,
 };
 
@@ -365,7 +365,7 @@ export function getPromptProgress(
   const travelMs = Math.max(1, prompt.strikeAtMs - prompt.approachedAtMs);
   const rawProgress = (nowMs - prompt.approachedAtMs) / travelMs;
   const lateLimit = 1 + (prompt.deadlineAtMs - prompt.strikeAtMs) / travelMs;
-  return Math.min(lateLimit, Math.max(-0.15, rawProgress));
+  return Math.min(lateLimit, Math.max(-4, rawProgress));
 }
 
 export function getPromptTiming(

@@ -196,63 +196,126 @@ a:focus-visible {
 .dom-highway-rail.is-left { left: 0; }
 .dom-highway-rail.is-right { right: 0; }
 
+.dom-cue-layer {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .dom-action-ribbon {
   position: absolute;
-  z-index: 4;
   top: var(--cue-y);
   left: calc(50% + var(--cue-lane));
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
-  gap: 2px 24px;
-  width: min(54vw, 650px);
-  min-height: 70px;
-  padding: 12px 18px 13px;
-  border: 1px solid rgba(168, 151, 255, 0.46);
-  border-right-width: 4px;
-  border-left-width: 4px;
+  gap: 4px 24px;
+  width: clamp(330px, 40vw, 580px);
+  min-height: 76px;
+  padding: 13px 18px 15px;
+  border: 1px solid rgba(168, 151, 255, 0.56);
+  border-right-width: 3px;
+  border-left-width: 3px;
   transform: translate(-50%, -50%) scale(var(--cue-scale));
   transform-origin: 50% 50%;
   color: var(--paper);
-  background: linear-gradient(90deg, rgba(21, 17, 39, 0.95), rgba(43, 30, 66, 0.9));
-  box-shadow: 0 0 28px rgba(124, 108, 255, 0.18);
-  opacity: clamp(0, calc(0.28 + var(--cue-progress) * 1.1), 1);
-  transition: border-color 90ms ease, background 90ms ease, opacity 120ms ease;
+  background:
+    linear-gradient(90deg, rgba(168, 151, 255, 0.06), transparent 38%),
+    rgba(8, 9, 21, 0.95);
+  box-shadow:
+    0 16px 42px rgba(3, 4, 12, 0.58),
+    0 0 26px rgba(124, 108, 255, 0.18);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+  opacity: var(--cue-opacity);
+  transition:
+    border-color 100ms ease,
+    background 100ms ease,
+    box-shadow 100ms ease,
+    opacity 100ms ease;
+}
+
+.dom-action-ribbon::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  transform: scaleX(var(--cue-fill));
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--violet-bright), var(--sun));
+  box-shadow: 0 0 12px rgba(168, 151, 255, 0.56);
+  content: "";
 }
 
 .dom-action-ribbon strong {
   align-self: end;
   overflow: hidden;
-  font-size: clamp(17px, 2vw, 28px);
-  font-weight: 470;
-  letter-spacing: -0.035em;
+  font-size: clamp(24px, 2.7vw, 38px);
+  font-weight: 460;
+  letter-spacing: -0.05em;
   line-height: 1;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dom-action-ribbon kbd {
-  grid-row: 1 / 3;
-  grid-column: 2;
-  align-self: center;
-  color: var(--violet-bright);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: clamp(15px, 1.8vw, 25px);
-  font-weight: 520;
+  text-shadow: 0 2px 20px rgba(3, 4, 12, 0.86);
   white-space: nowrap;
 }
 
 .dom-action-context {
-  color: rgba(244, 241, 234, 0.42);
+  color: rgba(244, 241, 234, 0.46);
   font-size: 8px;
+  font-weight: 620;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dom-action-shortcut {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  display: flex;
+  min-width: 92px;
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  gap: 4px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 150ms ease, transform 150ms ease, filter 150ms ease;
+}
+
+.dom-action-shortcut > span {
+  color: rgba(244, 241, 234, 0.42);
+  font-size: 7px;
+  font-weight: 620;
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
+.dom-action-ribbon kbd {
+  color: var(--paper);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: clamp(21px, 2.3vw, 32px);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 18px rgba(168, 151, 255, 0.56);
+  white-space: nowrap;
+}
+
+.dom-action-ribbon.is-shortcut-concealed .dom-action-shortcut {
+  opacity: 0;
+  transform: translateY(-4px);
+  filter: blur(4px);
+}
+
 .dom-action-ribbon.is-active {
+  z-index: 3;
   border-color: var(--sun);
-  background: linear-gradient(90deg, rgba(65, 38, 63, 0.98), rgba(43, 30, 79, 0.96));
-  box-shadow: 0 0 32px rgba(244, 162, 97, 0.28);
+  background:
+    linear-gradient(90deg, rgba(244, 162, 97, 0.12), transparent 42%),
+    rgba(14, 12, 27, 0.98);
+  box-shadow:
+    0 18px 48px rgba(3, 4, 12, 0.68),
+    0 0 38px rgba(244, 162, 97, 0.38);
 }
 
 .dom-action-ribbon.is-cleared {
@@ -264,7 +327,7 @@ a:focus-visible {
 .dom-action-ribbon.is-missed {
   border-color: var(--danger);
   opacity: 0;
-  transform: translate(-46%, -38%) scale(var(--cue-scale)) rotate(4deg);
+  transform: translate(-46%, -42%) scale(var(--cue-scale)) rotate(3deg);
 }
 
 .dom-strike-gate {

@@ -38,7 +38,7 @@ export function buildSceneCues(
     ? getVisiblePromptTimings(session, frameNow, 5)
     : [];
   const live = visiblePromptTimings
-    .filter((timing) => timing.progress > -0.1)
+    .filter((timing) => timing.progress > -0.65)
     .map<SceneCue>((timing) => ({
       id: timing.promptId,
       action: timing.shortcut.action,

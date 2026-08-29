@@ -54,6 +54,8 @@ export interface GameSceneProps {
   cues: readonly SceneCue[];
   /** Shows cue shortcut labels. Set false for Pro mode. */
   showShortcuts?: boolean;
+  /** Reveals shown shortcuts late in the approach as a last-second rescue cue. */
+  previewShortcuts?: boolean;
   combo?: number;
   /** 0..1 progression through the current run; drives the environmental act. */
   runProgress?: number;

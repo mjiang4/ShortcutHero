@@ -61,6 +61,11 @@ function ShortcutHeroGameRuntime({
     soundEnabled,
   });
   const { session, results, metrics } = controller;
+  const activeCue = session?.active
+    ? controller.sceneCues.find((cue) => cue.id === session.active?.promptId)
+    : undefined;
+  const mediumShortcutConcealed =
+    settings.mode === "medium" && (activeCue?.progress ?? 0) < 0.68;
 
   if (capabilities.graphics === "checking" || systemInfo === null) {
     return <GameLoadingScreen />;
@@ -119,6 +124,7 @@ function ShortcutHeroGameRuntime({
         <DomGameStage
           cues={controller.sceneCues}
           showShortcuts={settings.assistance === "novice"}
+          previewShortcuts={settings.mode === "medium"}
           combo={session?.combo ?? 0}
           runProgress={metrics.runProgress}
           feedback={controller.feedback}
@@ -172,10 +178,18 @@ function ShortcutHeroGameRuntime({
               <KeyboardInstrument
                 key={controller.keyboardSignal?.id ?? "live-keyboard"}
                 pressedKeys={controller.pressedKeys}
-                hintKeys={controller.keyboardSignal ? [] : controller.keyboardHints}
+                hintKeys={
+                  controller.keyboardSignal || mediumShortcutConcealed
+                    ? []
+                    : controller.keyboardHints
+                }
                 feedbackKeys={controller.keyboardSignal?.keys}
                 feedbackTone={controller.keyboardSignal?.tone}
-                status={controller.keyboardStatus}
+                status={
+                  mediumShortcutConcealed
+                    ? "recall the shortcut"
+                    : controller.keyboardStatus
+                }
                 guidance={
                   settings.assistance === "novice" ? "learn" : "recall"
                 }
