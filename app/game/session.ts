@@ -49,7 +49,7 @@ export const PROMPT_CADENCE_BY_MODE_MS: Readonly<
   Record<GameMode, Readonly<Record<SpeedPreset, number>>>
 > = {
   easy: { relaxed: 1_300, standard: 1_000, turbo: 700 },
-  medium: { relaxed: 1_500, standard: 1_000, turbo: 850 },
+  medium: { relaxed: 1_800, standard: 1_500, turbo: 1_200 },
   hard: { relaxed: 1_300, standard: 1_000, turbo: 700 },
   showcase: PROMPT_CADENCE_MS,
 };
@@ -69,7 +69,7 @@ export const TIMING_WINDOWS_MS: Readonly<
   turbo: { earlyMs: 238, perfectMs: 88, goodMs: 156, lateMs: 225 },
 };
 
-/** Extra forgiveness for the single-key learning deck. */
+/** Extra forgiveness while learning single-key shortcuts. */
 export const EASY_TIMING_WINDOWS_MS: Readonly<
   Record<SpeedPreset, TimingWindow>
 > = {
@@ -78,7 +78,30 @@ export const EASY_TIMING_WINDOWS_MS: Readonly<
   turbo: { earlyMs: 350, perfectMs: 125, goodMs: 238, lateMs: 350 },
 };
 
-export const DEFAULT_SESSION_DURATION_SECONDS = 45;
+export const MEDIUM_TIMING_WINDOWS_MS: Readonly<Record<SpeedPreset, TimingWindow>> = {
+  relaxed: { earlyMs: 450, perfectMs: 138, goodMs: 275, lateMs: 450 },
+  standard: { earlyMs: 400, perfectMs: 113, goodMs: 250, lateMs: 400 },
+  turbo: { earlyMs: 350, perfectMs: 88, goodMs: 225, lateMs: 350 },
+};
+
+/** Recall gives the player a moment to remember, then fades in a rescue hint. */
+export function getShortcutHintOpacity(
+  settings: Pick<GameSettings, "hints" | "assistance">,
+  timeToStrikeMs: number,
+): number {
+  const hints = getHintMode(settings);
+  if (hints === "off") return 0;
+  if (hints === "near-line") {
+    return Math.min(1, Math.max(0, (700 - timeToStrikeMs) / 200));
+  }
+  return 1;
+}
+
+export function getHintMode(settings: Pick<GameSettings, "hints" | "assistance">) {
+  return settings.hints ?? (settings.assistance === "pro" ? "off" : "always");
+}
+
+export const DEFAULT_SESSION_DURATION_SECONDS = 30;
 const QUEUE_LOOKAHEAD_PROMPTS = 8;
 
 type TimingContext = SpeedPreset | Pick<GameSettings, "mode" | "speed">;
@@ -87,7 +110,9 @@ function timingWindowFor(context: TimingContext): TimingWindow {
   if (typeof context === "string") return TIMING_WINDOWS_MS[context];
   return context.mode === "easy"
     ? EASY_TIMING_WINDOWS_MS[context.speed]
-    : TIMING_WINDOWS_MS[context.speed];
+    : context.mode === "medium"
+      ? MEDIUM_TIMING_WINDOWS_MS[context.speed]
+      : TIMING_WINDOWS_MS[context.speed];
 }
 
 export function getSessionDurationSeconds(settings: GameSettings): number {
@@ -160,7 +185,7 @@ export function createGameSession(
   settings: GameSettings,
   options: CreateSessionOptions = {},
 ): GameSession {
-  const deck = options.deck ?? getShortcutDeck(settings.mode, settings.trackId);
+  const deck = options.deck ?? getShortcutDeck(settings.mode, settings.trackId, settings.platform);
   const queuedDeck = queueDeck(deck, settings);
 
   return {
@@ -695,5 +720,5 @@ export function getSessionResults(session: GameSession): GameResults {
 }
 
 export function getHighScoreKey(settings: GameSettings): string {
-  return `shortcut-hero:high-score:${settings.trackId ?? "linear"}:${settings.mode}:${settings.assistance}:${settings.speed}:${getSessionDurationSeconds(settings)}s`;
+  return `shortcut-hero:high-score:v2:${settings.trackId ?? "linear"}:${settings.platform ?? "macos"}:${settings.mode}:${getHintMode(settings)}:${settings.speed}:${getSessionDurationSeconds(settings)}s`;
 }

@@ -9,9 +9,9 @@ export const SPEED_BPM = {
 } as const;
 
 export const DIFFICULTY_LABELS = {
-  easy: "Novice · Single",
-  medium: "Medium · Sequence",
-  hard: "Hard · Chord",
+  easy: "Easy · Single keys",
+  medium: "Medium · Keys + sequences",
+  hard: "Hard · Mixed shortcuts",
   showcase: "All skills",
 } as const;
 

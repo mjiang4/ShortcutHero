@@ -6,15 +6,17 @@ export type TitleView =
   | "options"
   | "scores"
   | "help"
+  | "tutorial"
   | "credits"
   | "compatibility";
 export type OnboardingView =
   | "onboarding-name"
   | "onboarding-system"
-  | "onboarding-guide";
+  | "onboarding-guide"
+  | "onboarding-hints";
 export type ScreenView = TitleView | OnboardingView;
 export type MenuAction =
-  | Exclude<TitleView, "menu" | "compatibility">
+  | Exclude<TitleView, "menu" | "compatibility" | "tutorial">
   | "start";
 
 export type ScoreEntry = {

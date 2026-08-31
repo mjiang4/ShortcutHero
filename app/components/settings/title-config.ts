@@ -1,12 +1,12 @@
 import type {
   EffectsMode,
   GameDifficulty,
-  GuidanceMode,
   SessionLength,
   SoundMode,
   TempoPreset,
 } from "./settings";
 import type { MenuAction } from "./title-types";
+import type { HintMode } from "../../game/types";
 
 export const MENU_ITEMS: readonly { label: string; action: MenuAction }[] = [
   { label: "start", action: "start" },
@@ -21,22 +21,35 @@ export const DIFFICULTIES: readonly GameDifficulty[] = [
   "medium",
   "hard",
 ];
-export const GUIDANCE: readonly GuidanceMode[] = ["novice", "pro"];
 export const PACES: readonly TempoPreset[] = ["relaxed", "standard", "turbo"];
+export const HINT_MODES: readonly HintMode[] = ["always", "near-line", "off"];
 export const SESSIONS: readonly SessionLength[] = [30, 45, 60];
 export const SOUND: readonly SoundMode[] = ["on", "off"];
 export const EFFECTS: readonly EffectsMode[] = ["full", "system", "reduced"];
 export const OPTION_COUNT = 7;
 
+export const DIFFICULTY_DESCRIPTIONS = {
+  easy: "single-key shortcuts",
+  medium: "single keys + two-key sequences",
+  hard: "single keys, sequences + Shift chords",
+} as const;
+
+export const HINT_DESCRIPTIONS = {
+  always: "See the keys as the command approaches.",
+  "near-line": "Recall first. Keys appear near the line.",
+  off: "Remember the keys without help.",
+} as const;
+
 export const LABELS = {
   difficulty: {
-    easy: "single keys",
-    medium: "key sequences",
-    hard: "shift chords",
+    easy: "easy",
+    medium: "medium",
+    hard: "hard",
   },
-  guidance: {
-    novice: "show shortcuts",
-    pro: "hide shortcuts",
+  hints: {
+    always: "Always",
+    "near-line": "Near the line",
+    off: "Off",
   },
   pace: {
     relaxed: "112 bpm · focus",

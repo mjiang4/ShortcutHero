@@ -5,7 +5,6 @@ export {
   parseLaunchSettings,
   type EffectsMode,
   type GameDifficulty,
-  type GuidanceMode,
   type LaunchSettings,
   type SessionLength,
   type SoundMode,

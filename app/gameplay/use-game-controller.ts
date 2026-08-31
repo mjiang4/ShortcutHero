@@ -17,6 +17,8 @@ import { useGameAudio } from "../audio";
 import type { EffectsMode } from "../components/settings/settings";
 import {
   createGameSession,
+  getShortcutHintOpacity,
+  getShortcutDeck,
   pauseSession,
   resumeSession,
   startSession,
@@ -24,6 +26,7 @@ import {
   type GameSession,
   type GameSettings,
 } from "../game";
+import { recordLesson, selectLesson, type CurriculumProgress } from "../game/curriculum";
 import { persistRoundSummary } from "../persistence/round-client";
 import type { ShareResult } from "../platform/share-game";
 import {
@@ -31,8 +34,7 @@ import {
   shareReferralChallenge,
 } from "../referrals/client";
 import type { SharePromptTrigger } from "../referrals/contract";
-import { SPEED_BPM } from "./constants";
-import { persistHighScore } from "./result-storage";
+import { persistHighScore, persistCurriculumProgress, readCurriculumProgress } from "./result-storage";
 import {
   buildSceneCues,
   calculateRuntimeMetrics,
@@ -71,6 +73,7 @@ export function useGameController({
   const [sceneReady, setSceneReady] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
   const runNumberRef = useRef(0);
+  const curriculumRef = useRef<CurriculumProgress | null>(null);
   const {
     isReady: audioReady,
     isMuted,
@@ -97,6 +100,13 @@ export function useGameController({
 
   const handleFinished = useCallback(
     (finished: GameResults, sourceSession: GameSession) => {
+      const trackId = sourceSession.settings.trackId ?? "linear";
+      const platform = sourceSession.settings.platform ?? "macos";
+      curriculumRef.current = recordLesson(
+        curriculumRef.current ?? readCurriculumProgress(trackId, platform),
+        sourceSession.attempts,
+      );
+      persistCurriculumProgress(trackId, curriculumRef.current, platform);
       const isPersonalBest = persistHighScore(finished, sourceSession);
       void persistRoundSummary(finished, sourceSession, effectsMode, soundEnabled)
         .then((persistence) => {
@@ -166,7 +176,10 @@ export function useGameController({
 
   const completeCountdown = useCallback(() => {
     const now = performance.now();
-    const nextSession = startSession(createGameSession(settings), now);
+    curriculumRef.current ??= readCurriculumProgress(settings.trackId ?? "linear", settings.platform);
+    const catalog = getShortcutDeck(settings.mode, settings.trackId, settings.platform);
+    const deck = settings.mode === "showcase" ? catalog : selectLesson(catalog, curriculumRef.current);
+    const nextSession = startSession(createGameSession(settings, { deck }), now);
     setFrameNow(now);
     setSession(nextSession);
     runNumberRef.current += 1;
@@ -216,7 +229,7 @@ export function useGameController({
   });
 
   const captureAbandonment = useCallback(
-    (reason: "restart" | "title" | "page_exit") => {
+    (reason: "restart" | "home" | "page_exit") => {
       const current = sessionRef.current;
       if (
         !current ||
@@ -252,8 +265,8 @@ export function useGameController({
     setViewPhase("countdown");
   }, [captureAbandonment, resetFeedback, setSession, settings.speed, soundEnabled, startAudio]);
 
-  const returnToSettings = useCallback(() => {
-    captureAbandonment("title");
+  const returnHome = useCallback(() => {
+    captureAbandonment("home");
     stopAudio();
     setSession(null);
     setResults(null);
@@ -270,18 +283,11 @@ export function useGameController({
     if (!current || current.phase !== "paused") return;
     if (soundEnabled) void startAudio(settings.speed);
     const now = performance.now();
-    const beatMs = 60_000 / SPEED_BPM[settings.speed];
     const pausedAt = current.pausedAtMs ?? now;
-    const remainingToStrike = current.active
-      ? Math.max(0, current.active.strikeAtMs - pausedAt)
-      : beatMs;
-    const beatsToStrike = Math.max(1, Math.ceil(remainingToStrike / beatMs));
-    const alignedRemaining = beatsToStrike * beatMs + 35;
-    const alignmentDelay = Math.max(0, alignedRemaining - remainingToStrike);
     const pausedFor = Math.max(0, now - pausedAt);
     shiftDepartingCues(pausedFor);
     setFrameNow(now);
-    setSession(resumeSession(current, now + alignmentDelay));
+    setSession(resumeSession(current, now));
   }, [setSession, settings.speed, shiftDepartingCues, soundEnabled, startAudio]);
 
   useOverlayMenuNavigation({
@@ -293,7 +299,7 @@ export function useGameController({
     setResultsMenuIndex,
     resume,
     restart: beginRun,
-    returnToTitle: returnToSettings,
+    returnHome,
     resultsActionCount: sharePromptTrigger ? 3 : 2,
     shareResults,
   });
@@ -317,11 +323,14 @@ export function useGameController({
     () => calculateRuntimeMetrics(session, frameNow, settings),
     [frameNow, session, settings],
   );
-  const keyboardHints = useMemo(() => hintKeysFor(session), [session]);
-  const keyboardStatus =
+  const keyboardHints = useMemo(() => hintKeysFor(session, frameNow), [session, frameNow]);
+  const sequenceStarted = session?.active?.shortcut.input.kind === "sequence" &&
+    session.input.sequenceIndex > 0 && session.input.lastInputAtMs !== null &&
+    frameNow - session.input.lastInputAtMs <= session.active.shortcut.input.maxGapMs;
+  const keyboardStatus = sequenceStarted ? "finish the shortcut at the line" :
     keyboardSignal?.status ??
     (session?.active
-      ? settings.assistance === "novice"
+      ? getShortcutHintOpacity(settings, session.active.strikeAtMs - frameNow) > 0
         ? `shortcut: ${session.active.shortcut.input.display}`
         : "recall the shortcut"
       : "waiting for next action");
@@ -351,7 +360,7 @@ export function useGameController({
     resume,
     beginRun,
     shareResults,
-    returnToSettings,
+    returnHome,
     feedback,
     judgement,
     departingCues,

@@ -4,6 +4,9 @@ export type GameMode = Difficulty | "showcase";
 
 export type AssistanceMode = "novice" | "pro";
 
+export type HintMode = "always" | "near-line" | "off";
+export type KeyboardPlatform = "macos" | "windows";
+
 export type SpeedPreset = "relaxed" | "standard" | "turbo";
 
 export type SessionDurationSeconds = 30 | 45 | 60;
@@ -48,8 +51,11 @@ export interface GameSettings {
   readonly trackId?: string;
   readonly mode: GameMode;
   readonly assistance: AssistanceMode;
+  /** Independent of input difficulty. Older callers use assistance as fallback. */
+  readonly hints?: HintMode;
+  readonly platform?: KeyboardPlatform;
   readonly speed: SpeedPreset;
-  /** Defaults to 45 seconds when omitted for backwards compatibility. */
+  /** Defaults to 30 seconds when omitted. */
   readonly durationSeconds?: SessionDurationSeconds;
 }
 
@@ -130,7 +136,7 @@ export interface GameResults {
   readonly correctAnswers: number;
   readonly uniqueShortcutsCorrect: number;
   readonly durationMs: number;
-  /** Best-known shortcuts from this run, ranked by accuracy and clean hits. */
+  /** Shortcuts completed cleanly on every attempt this run. */
   readonly correctShortcuts: readonly CorrectShortcutSummary[];
   readonly practice: readonly PracticeShortcut[];
 }

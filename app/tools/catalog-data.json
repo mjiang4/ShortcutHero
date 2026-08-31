@@ -1,0 +1,817 @@
+{
+  "schemaVersion": 1,
+  "apps": {
+    "linear": {
+      "name": "Linear",
+      "description": "Issues, projects, cycles, and navigation.",
+      "surface": "desktop / web",
+      "coverage": "Partial, source-reviewed catalog. Not a full live shortcut feed. Windows letter bindings require separate verification.",
+      "releasedPlatforms": [
+        "macos"
+      ],
+      "shortcuts": [
+        {
+          "id": "new-issue",
+          "action": "New issue",
+          "source": {
+            "url": "https://linear.app/docs/creating-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "C"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "assign-user",
+          "action": "Assign user",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/assigning-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "A"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "assign-to-me",
+          "action": "Assign to me",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/assigning-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "I"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "add-label",
+          "action": "Add label",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/labels",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "L"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "change-priority",
+          "action": "Change priority",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/priority",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyP"
+                ]
+              ],
+              "display": "P"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "change-status",
+          "action": "Change status",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/board-layout",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyS"
+                ]
+              ],
+              "display": "S"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "filter",
+          "action": "Filter",
+          "source": {
+            "url": "https://linear.app/docs/filters",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyF"
+                ]
+              ],
+              "display": "F"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "select",
+          "action": "Select item",
+          "context": "List or board",
+          "source": {
+            "url": "https://linear.app/docs/select-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "X"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "next-item",
+          "action": "Next item",
+          "context": "List or board",
+          "source": {
+            "url": "https://linear.app/docs/select-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyJ"
+                ]
+              ],
+              "display": "J"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "previous-item",
+          "action": "Previous item",
+          "context": "List or board",
+          "source": {
+            "url": "https://linear.app/docs/select-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyK"
+                ]
+              ],
+              "display": "K"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-inbox",
+          "action": "Go to Inbox",
+          "source": {
+            "url": "https://linear.app/docs/inbox",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "G → I"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-my-issues",
+          "action": "Go to My issues",
+          "source": {
+            "url": "https://linear.app/docs/my-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyM"
+                ]
+              ],
+              "display": "G → M"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-backlog",
+          "action": "Go to Backlog",
+          "context": "Current team",
+          "source": {
+            "url": "https://linear.app/docs/default-team-pages",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyB"
+                ]
+              ],
+              "display": "G → B"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-active-cycle",
+          "action": "Go to current cycle",
+          "context": "Current team",
+          "source": {
+            "url": "https://linear.app/changelog/2019-09-30-figma-integration",
+            "checkedAt": "2026-08-30",
+            "verification": "historical"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyV"
+                ]
+              ],
+              "display": "G → V"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "open-favorite",
+          "action": "Open favorite",
+          "source": {
+            "url": "https://linear.app/docs/favorites",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyF"
+                ]
+              ],
+              "display": "O → F"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "open-project",
+          "action": "Open project",
+          "source": {
+            "url": "https://linear.app/docs/project-notifications",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyP"
+                ]
+              ],
+              "display": "O → P"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "open-cycle",
+          "action": "Open cycle",
+          "source": {
+            "url": "https://linear.app/changelog/2019-09-30-figma-integration",
+            "checkedAt": "2026-08-30",
+            "verification": "historical"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "O → C"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "open-team",
+          "action": "Open team",
+          "source": {
+            "url": "https://linear.app/docs/teams",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "O → T"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "set-estimate",
+          "action": "Set estimate",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/estimates",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyE"
+                ]
+              ],
+              "display": "⇧ E"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "add-to-project",
+          "action": "Add to project",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/projects",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyP"
+                ]
+              ],
+              "display": "⇧ P"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "add-to-cycle",
+          "action": "Add to cycle",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/changelog/2019-07-04-cycles",
+            "checkedAt": "2026-08-30",
+            "verification": "historical"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyC"
+                ]
+              ],
+              "display": "⇧ C"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "subscribe",
+          "action": "Toggle subscription",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/my-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyS"
+                ]
+              ],
+              "display": "⇧ S"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "display-options",
+          "action": "Display options",
+          "source": {
+            "url": "https://linear.app/docs/display-options",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyV"
+                ]
+              ],
+              "display": "⇧ V"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "clear-last-filter",
+          "action": "Clear last filter",
+          "source": {
+            "url": "https://linear.app/changelog/page/11",
+            "checkedAt": "2026-08-30",
+            "verification": "historical"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyF"
+                ]
+              ],
+              "display": "⇧ F"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "new-issue-fullscreen",
+          "action": "New issue, full screen",
+          "context": "Outside text editing",
+          "source": {
+            "url": "https://linear.app/docs/creating-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyV"
+                ]
+              ],
+              "display": "V"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "snooze-notification",
+          "action": "Snooze notification",
+          "context": "Inbox notification selected",
+          "source": {
+            "url": "https://linear.app/docs/inbox",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyH"
+                ]
+              ],
+              "display": "H"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "toggle-read",
+          "action": "Toggle read / unread",
+          "context": "Inbox notification selected",
+          "source": {
+            "url": "https://linear.app/docs/inbox",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyU"
+                ]
+              ],
+              "display": "U"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "toggle-swimlane",
+          "action": "Toggle swimlane",
+          "context": "Board swimlane",
+          "source": {
+            "url": "https://linear.app/docs/board-layout",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "T"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-active-issues",
+          "action": "Go to active issues",
+          "context": "Current team",
+          "source": {
+            "url": "https://linear.app/docs/default-team-pages",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "G → A"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-team-archive",
+          "action": "Go to team archive",
+          "context": "Current team",
+          "source": {
+            "url": "https://linear.app/docs/delete-archive-issues",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "G → X"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "go-triage",
+          "action": "Go to Triage",
+          "context": "Team with Triage enabled",
+          "source": {
+            "url": "https://linear.app/docs/triage",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "G → T"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "open-label-view",
+          "action": "Open label view",
+          "source": {
+            "url": "https://linear.app/docs/label-views",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "O → L"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "find-issue",
+          "action": "Find issue",
+          "source": {
+            "url": "https://linear.app/docs/search",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "O → I"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "set-due-date",
+          "action": "Set due date",
+          "context": "Issue selected",
+          "source": {
+            "url": "https://linear.app/docs/due-dates",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyD"
+                ]
+              ],
+              "display": "⇧ D"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "set-milestone",
+          "action": "Set milestone",
+          "context": "Issue in project with milestones",
+          "source": {
+            "url": "https://linear.app/docs/project-milestones",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyM"
+                ]
+              ],
+              "display": "⇧ M"
+            },
+            "windows": null
+          }
+        },
+        {
+          "id": "new-customer-request",
+          "action": "New customer request",
+          "context": "Customer requests enabled",
+          "source": {
+            "url": "https://linear.app/docs/customer-requests",
+            "checkedAt": "2026-08-30",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Control",
+                  "KeyR"
+                ]
+              ],
+              "display": "Ctrl R"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Control",
+                  "Alt",
+                  "KeyR"
+                ]
+              ],
+              "display": "Ctrl Alt R"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

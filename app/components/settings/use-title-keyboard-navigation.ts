@@ -14,7 +14,6 @@ type TitleKeyboardNavigationOptions = {
   readonly setMenuIndex: Dispatch<SetStateAction<number>>;
   readonly setOptionIndex: Dispatch<SetStateAction<number>>;
   readonly onContinueName: () => void;
-  readonly onCompleteOnboarding: () => void;
   readonly onOpen: (action: MenuAction) => void;
   readonly onAdjustOption: (index: number, direction: -1 | 1) => void;
   readonly onConfirmOptions: () => void;
@@ -30,7 +29,6 @@ export function useTitleKeyboardNavigation({
   setMenuIndex,
   setOptionIndex,
   onContinueName,
-  onCompleteOnboarding,
   onOpen,
   onAdjustOption,
   onConfirmOptions,
@@ -63,9 +61,13 @@ export function useTitleKeyboardNavigation({
         if (event.code === "Escape" || event.code === "Backspace") {
           event.preventDefault();
           setView("onboarding-system");
-        } else if (event.code === "Enter" || event.code === "Space") {
+        }
+        return;
+      }
+      if (view === "onboarding-hints" || view === "tutorial") {
+        if (event.code === "Escape") {
           event.preventDefault();
-          onCompleteOnboarding();
+          setView(view === "tutorial" ? "help" : "onboarding-guide");
         }
         return;
       }
@@ -103,6 +105,8 @@ export function useTitleKeyboardNavigation({
         return;
       }
       if (view !== "menu") {
+        if ((event.code === "Enter" || event.code === "Space") &&
+          event.target instanceof HTMLElement && event.target.closest("button")) return;
         if (
           event.code === "Escape" ||
           event.code === "Backspace" ||
@@ -135,7 +139,6 @@ export function useTitleKeyboardNavigation({
     menuIndex,
     onAdjustOption,
     onCancelOptions,
-    onCompleteOnboarding,
     onConfirmOptions,
     onContinueName,
     onOpen,

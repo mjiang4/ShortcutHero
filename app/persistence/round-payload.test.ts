@@ -102,7 +102,7 @@ test("rejects an invalid deletion secret", () => {
   );
 });
 
-test("counts recovered hits as correct and only failed prompts as misses", () => {
+test("persists recovered actions as misses, matching the round summary", () => {
   const shortcut: ShortcutDefinition = {
     id: "assign-user",
     action: "Assign user",
@@ -131,14 +131,16 @@ test("counts recovered hits as correct and only failed prompts as misses", () =>
     ],
   };
 
-  assert.deepEqual(buildMasteryDeltas(session), [
+  const mastery = buildMasteryDeltas(session);
+  assert.deepEqual(mastery, [
     {
       shortcutId: "assign-user",
       attempts: 3,
-      correct: 2,
+      correct: 1,
       cleanHits: 1,
       perfectHits: 1,
-      misses: 1,
+      misses: 2,
     },
   ]);
+  assert.ok(parseRoundWritePayload({ ...VALID_PAYLOAD, correctAnswers: 1, misses: 2, mastery }));
 });

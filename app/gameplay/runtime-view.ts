@@ -2,6 +2,7 @@ import type { SceneCue } from "../components/game";
 import {
   APPROACH_DURATION_MS,
   getSessionDurationSeconds,
+  getShortcutHintOpacity,
   getVisiblePromptTimings,
   type GameSession,
   type GameSettings,
@@ -19,8 +20,10 @@ export function shortcutKeys(
   return ["SHIFT", input.code];
 }
 
-export function hintKeysFor(session: GameSession | null): readonly string[] {
-  if (!session?.active || session.settings.assistance !== "novice") return [];
+export function hintKeysFor(session: GameSession | null, frameNow: number): readonly string[] {
+  if (!session?.active || getShortcutHintOpacity(
+    session.settings, session.active.strikeAtMs - frameNow,
+  ) === 0) return [];
   const { input } = session.active.shortcut;
   if (input.kind === "sequence") {
     return [input.codes[Math.min(session.input.sequenceIndex, 1)]];
@@ -43,6 +46,7 @@ export function buildSceneCues(
       id: timing.promptId,
       action: timing.shortcut.action,
       shortcut: timing.shortcut.input.display,
+      shortcutOpacity: getShortcutHintOpacity(session!.settings, timing.timeToStrikeMs),
       keys: shortcutKeys(timing.shortcut),
       progress: timing.progress,
       state:
@@ -59,6 +63,7 @@ export function buildSceneCues(
         id: cue.prompt.promptId,
         action: cue.prompt.shortcut.action,
         shortcut: cue.prompt.shortcut.input.display,
+        shortcutOpacity: 1,
         keys: shortcutKeys(cue.prompt.shortcut),
         progress: Math.min(1.4, cue.startProgress + (elapsed / travel) * 0.9),
         state: cue.state,
@@ -69,8 +74,6 @@ export function buildSceneCues(
 }
 
 export type RuntimeMetrics = {
-  readonly accuracy: number;
-  readonly actLabel: "Ignition" | "Acceleration" | "Flow" | "Overload";
   readonly remainingSeconds: number;
   readonly runProgress: number;
 };
@@ -80,7 +83,6 @@ export function calculateRuntimeMetrics(
   frameNow: number,
   settings: GameSettings,
 ): RuntimeMetrics {
-  const completed = session?.attempts.length ?? 0;
   const durationMs = getSessionDurationSeconds(settings) * 1_000;
   const elapsedMs = session?.startedAtMs
     ? Math.max(0, frameNow - session.startedAtMs)
@@ -90,23 +92,5 @@ export function calculateRuntimeMetrics(
     0,
     Math.ceil((durationMs - elapsedMs) / 1_000),
   );
-  const accuracy =
-    completed === 0
-      ? 100
-      : Math.round(
-          (session!.attempts.filter((attempt) => attempt.outcome === "clean")
-            .length /
-            completed) *
-            100,
-        );
-  const actLabel =
-    runProgress < 0.18
-      ? "Ignition"
-      : runProgress < 0.56
-        ? "Acceleration"
-        : runProgress < 0.84
-          ? "Flow"
-          : "Overload";
-
-  return { accuracy, actLabel, remainingSeconds, runProgress };
+  return { remainingSeconds, runProgress };
 }

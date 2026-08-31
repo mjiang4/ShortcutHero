@@ -12,40 +12,18 @@ export function ResultsAnalytics({ results }: { readonly results: GameResults })
         />
       </div>
 
-      {results.correctShortcuts.length > 0 ? (
-        <section
-          className="results-breakdown"
-          aria-labelledby="correct-shortcuts-title"
-        >
-          <h2 id="correct-shortcuts-title">You got these right</h2>
-          <ul className="correct-list">
-            {results.correctShortcuts.map((item) => (
-              <li className="correct-item" key={item.shortcut.id}>
-                <span className="correct-item__identity">
-                  <strong>{item.shortcut.action}</strong>
-                  <span className="review-shortcut">
-                    {item.shortcut.input.display}
-                  </span>
-                </span>
-                <span className="correct-item__stats">
-                  {item.correct}/{item.attempts} correct
-                  {item.perfectHits > 0
-                    ? ` · ${item.perfectHits} perfect`
-                    : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
       {results.practice.length > 0 ? (
-        <section
-          className="results-breakdown"
-          aria-labelledby="practice-shortcuts-title"
-        >
-          <h2 id="practice-shortcuts-title">Practice these next</h2>
-          <ul className="review-list" aria-label="Shortcuts to practise">
+        <details className="results-breakdown" open>
+          <summary className="results-breakdown__summary">
+            <span className="results-breakdown__caret" aria-hidden="true">
+              ›
+            </span>
+            <span id="practice-shortcuts-title">Needs review</span>
+            <span className="results-breakdown__count">
+              {results.practice.length}
+            </span>
+          </summary>
+          <ul className="review-list" aria-label="Shortcuts needing review">
             {results.practice.map((item) => (
               <li className="review-item" key={item.shortcut.id}>
                 <span className="review-item__identity">
@@ -60,7 +38,36 @@ export function ResultsAnalytics({ results }: { readonly results: GameResults })
               </li>
             ))}
           </ul>
-        </section>
+        </details>
+      ) : null}
+
+      {results.correctShortcuts.length > 0 ? (
+        <details className="results-breakdown" open>
+          <summary className="results-breakdown__summary">
+            <span className="results-breakdown__caret" aria-hidden="true">
+              ›
+            </span>
+            <span id="correct-shortcuts-title">Mastered</span>
+            <span className="results-breakdown__count">
+              {results.correctShortcuts.length}
+            </span>
+          </summary>
+          <ul className="correct-list">
+            {results.correctShortcuts.map((item) => (
+              <li className="correct-item" key={item.shortcut.id}>
+                <span className="correct-item__identity">
+                  <strong>{item.shortcut.action}</strong>
+                  <span className="review-shortcut">
+                    {item.shortcut.input.display}
+                  </span>
+                </span>
+                <span className="correct-item__stats">
+                  {item.correct}/{item.attempts} correct
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
     </>
   );

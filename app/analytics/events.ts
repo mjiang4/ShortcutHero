@@ -29,7 +29,7 @@ export type AnalyticsEventMap = {
   };
   game_completed: AnalyticsGameContext & AnalyticsResultSummary;
   game_abandoned: AnalyticsGameContext & {
-    readonly reason: "restart" | "title" | "page_exit";
+    readonly reason: "restart" | "home" | "page_exit";
     readonly attempts: number;
     readonly score: number;
   };

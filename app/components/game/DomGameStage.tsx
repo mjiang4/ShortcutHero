@@ -32,7 +32,6 @@ function normalizedState(state: SceneCueState | undefined): SceneCueState {
 export function DomGameStage({
   cues,
   showShortcuts = true,
-  previewShortcuts = false,
   combo = 0,
   runProgress = 0,
   feedback = null,
@@ -114,8 +113,7 @@ export function DomGameStage({
           const progress = Math.min(1.42, Math.max(-0.65, cue.progress));
           const travel = Math.min(1.2, Math.max(0, (progress + 0.65) / 1.65));
           const state = normalizedState(cue.state);
-          const isShortcutConcealed =
-            showShortcuts && previewShortcuts && progress < 0.68;
+          const shortcutOpacity = cue.shortcutOpacity ?? 1;
           const cueStyle: StageStyle = {
             "--cue-progress": progress,
             "--cue-y": `${23 + travel * 53}%`,
@@ -127,9 +125,7 @@ export function DomGameStage({
           return (
             <div
               key={cue.id}
-              className={`dom-action-ribbon is-${state}${
-                isShortcutConcealed ? " is-shortcut-concealed" : ""
-              }`}
+              className={`dom-action-ribbon is-${state}`}
               style={cueStyle}
             >
               <span className="dom-action-context">
@@ -137,7 +133,10 @@ export function DomGameStage({
               </span>
               <strong>{cue.action}</strong>
               {showShortcuts && cue.shortcut ? (
-                <span className="dom-action-shortcut">
+                <span className="dom-action-shortcut" style={{
+                  opacity: shortcutOpacity,
+                  visibility: shortcutOpacity > 0 ? "visible" : "hidden",
+                }}>
                   <span>shortcut</span>
                   <kbd>{cue.shortcut}</kbd>
                 </span>

@@ -118,7 +118,7 @@ function getCorrectShortcuts(
   }
 
   return [...byShortcut.values()]
-    .filter((item) => item.correct > 0)
+    .filter((item) => item.attempts > 0 && item.correct === item.attempts)
     .map((item) => ({
       ...item,
       accuracyPct: Math.round((item.correct / item.attempts) * 100),

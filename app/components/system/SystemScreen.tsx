@@ -10,7 +10,7 @@ export function SystemScreen({
   message,
   primaryLabel,
   onPrimary,
-  secondaryLabel = "return to title",
+  secondaryLabel = "return home",
   secondaryHref = "/",
 }: {
   readonly eyebrow: string;

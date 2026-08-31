@@ -23,7 +23,7 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the Shortcut Hero client-game shell", async () => {
+test("server-renders the Shortcut Hero home shell without the game", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -38,7 +38,8 @@ test("server-renders the Shortcut Hero client-game shell", async () => {
   );
   assert.match(html, /twitter:card[^>]+summary_large_image/i);
   assert.match(html, /og\.png/i);
-  assert.doesNotMatch(html, /game-canvas|Go to Inbox|what should we call you/i);
+  assert.match(html, /what should we call you/i);
+  assert.doesNotMatch(html, /game-canvas|Go to Inbox/i);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);
 });
 

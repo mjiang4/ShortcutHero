@@ -86,16 +86,15 @@ export function buildMasteryDeltas(
       perfectHits: 0,
       misses: 0,
     };
-    const correct = attempt.outcome !== "miss";
     const clean = attempt.outcome === "clean";
     deltas.set(attempt.shortcut.id, {
       ...current,
       attempts: current.attempts + 1,
-      correct: current.correct + (correct ? 1 : 0),
+      correct: current.correct + (clean ? 1 : 0),
       cleanHits: current.cleanHits + (clean ? 1 : 0),
       perfectHits:
         current.perfectHits + (clean && attempt.judgement === "perfect" ? 1 : 0),
-      misses: current.misses + (correct ? 0 : 1),
+      misses: current.misses + (clean ? 0 : 1),
     });
   }
   return [...deltas.values()];

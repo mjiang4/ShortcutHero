@@ -1,7 +1,7 @@
 import {
   DIFFICULTIES,
+  DIFFICULTY_DESCRIPTIONS,
   EFFECTS,
-  GUIDANCE,
   LABELS,
   PACES,
   SESSIONS,
@@ -9,7 +9,10 @@ import {
   cycleValue,
 } from "./title-config";
 import type { LaunchSettings } from "./settings";
+import { LESSON_SIZE } from "../../game/curriculum";
+import { deckForMode, getToolTrack } from "../../tools";
 import { BackButton, TitlePanel } from "./TitleShell";
+import { HintSelector } from "./HintSelector";
 
 export function OptionsView({
   settings,
@@ -29,13 +32,19 @@ export function OptionsView({
   readonly onCancel: () => void;
 }) {
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(draft);
+  const catalog = deckForMode(getToolTrack(draft.tool), draft.difficulty);
 
   return (
     <TitlePanel title="options" subtitle="shape the next run">
+      <p className="option-curriculum">
+        {Math.min(LESSON_SIZE, catalog.length)} shortcuts per lesson · {catalog.length} available
+        <small>Hints stay fixed during a round. Change them here before you start.</small>
+      </p>
       <div className="option-list">
         <OptionRow
           label="difficulty"
           value={LABELS.difficulty[draft.difficulty]}
+          description={DIFFICULTY_DESCRIPTIONS[draft.difficulty]}
           active={selectedIndex === 0}
           onFocus={() => onSelect(0)}
           onPrevious={() =>
@@ -51,24 +60,8 @@ export function OptionsView({
             })
           }
         />
-        <OptionRow
-          label="guidance"
-          value={LABELS.guidance[draft.guidance]}
-          active={selectedIndex === 1}
-          onFocus={() => onSelect(1)}
-          onPrevious={() =>
-            onChange({
-              ...draft,
-              guidance: cycleValue(GUIDANCE, draft.guidance, -1),
-            })
-          }
-          onNext={() =>
-            onChange({
-              ...draft,
-              guidance: cycleValue(GUIDANCE, draft.guidance, 1),
-            })
-          }
-        />
+        <HintSelector value={draft.hints} onChange={(hints) => onChange({ ...draft, hints })}
+          active={selectedIndex === 1} onFocus={() => onSelect(1)} />
         <OptionRow
           label="pace"
           value={LABELS.pace[draft.pace]}
@@ -161,6 +154,7 @@ export function OptionsView({
 function OptionRow({
   label,
   value,
+  description,
   active,
   onFocus,
   onPrevious,
@@ -168,6 +162,7 @@ function OptionRow({
 }: {
   readonly label: string;
   readonly value: string;
+  readonly description?: string;
   readonly active: boolean;
   readonly onFocus: () => void;
   readonly onPrevious: () => void;
@@ -185,7 +180,10 @@ function OptionRow({
         >
           ‹
         </button>
-        <strong>{value}</strong>
+        <span className="option-row__value">
+          <strong>{value}</strong>
+          {description ? <small>{description}</small> : null}
+        </span>
         <button
           type="button"
           aria-label={`Next ${label}`}

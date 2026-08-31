@@ -30,7 +30,7 @@ test("a referral link keeps first-touch attribution and cleans the URL", async (
 
 test("a first-time player can complete onboarding with the keyboard", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "your name" })).toBeVisible();
@@ -39,15 +39,51 @@ test("a first-time player can complete onboarding with the keyboard", async ({
 
   await expect(page.getByRole("heading", { name: "your system" })).toBeVisible();
   await expect(page.getByText("macOS", { exact: true })).toBeVisible();
-  await expect(page.getByText("Google Chrome", { exact: true })).toBeVisible();
+  const expectedBrowser =
+    testInfo.project.name === "webkit" ? "Safari" : "Google Chrome";
+  await expect(page.getByText(expectedBrowser, { exact: true })).toBeVisible();
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("heading", { name: "how it works" })).toBeVisible();
-  await expect(page.getByText("Read the action on the highway.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "try the keys" })).toBeVisible();
+  await expect(
+    page.getByText("Press C when the card reaches the line."),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.locator(".onboarding-demo__card").getAttribute("data-hittable"),
+    )
+    .toBe("true");
+  await page.keyboard.press("c");
+  await expect(page.getByText("Nice hit!", { exact: true })).toBeVisible();
+  await expect(page.getByText("Press G first. Press I at the line.")).toBeVisible();
+  await expect.poll(() => page.locator(".onboarding-demo__card").getAttribute("data-hittable")).toBe("true");
+  await page.keyboard.press("g");
+  await expect(page.getByText("G pressed. Now press I at the line.")).toBeVisible();
+  await page.keyboard.press("i");
+  await expect(page.getByText("Hold Shift. Press E at the line.")).toBeVisible();
+  await expect.poll(() => page.locator(".onboarding-demo__card").getAttribute("data-hittable")).toBe("true");
+  await page.keyboard.press("Shift+E");
+  await expect(page.getByRole("heading", { name: "choose your hints" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /^Always/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /^Always/ })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: /^Near the line/ })).toBeChecked();
   await page.keyboard.press("Enter");
+  await expect(page.locator("main.shortcut-hero")).toBeVisible();
+  await expect(page).toHaveURL(/hints=near-line/);
 
+  await page.goto("/");
   await expect(page.getByRole("navigation")).toBeVisible();
   await expect(page.getByText("learn Linear through play")).toBeVisible();
+  await expect(page.locator("footer")).toContainText("hints Near the line");
+  await page.reload();
+  await expect(page.getByRole("navigation")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "your name" })).toHaveCount(0);
+  await page.getByRole("button", { name: "how to play", exact: true }).click();
+  await page.getByRole("button", { name: "try the demo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "try the keys" })).toBeVisible();
+  await page.getByRole("button", { name: "skip demo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "how to play" })).toBeVisible();
 });
 
 test("legal pages expose direct policies and launch security headers", async ({

@@ -9,7 +9,7 @@ import {
   getToolTrack,
   isAvailableToolId,
 } from "../tools";
-import type { GameMode, ShortcutDefinition } from "./types";
+import type { GameMode, KeyboardPlatform, ShortcutDefinition } from "./types";
 
 // Compatibility exports keep the engine tests and external consumers stable.
 // Tool-specific source material lives in app/tools, not in the game runtime.
@@ -23,7 +23,8 @@ export const getShortcutById = getLinearShortcutById;
 export function getShortcutDeck(
   mode: GameMode,
   trackId = "linear",
+  platform: KeyboardPlatform = "macos",
 ): readonly ShortcutDefinition[] {
   const resolvedTrackId = isAvailableToolId(trackId) ? trackId : "linear";
-  return deckForMode(getToolTrack(resolvedTrackId), mode);
+  return deckForMode(getToolTrack(resolvedTrackId, platform), mode);
 }

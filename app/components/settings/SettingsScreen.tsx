@@ -11,10 +11,12 @@ import { CompatibilityView } from "./CompatibilityView";
 import { InfoView } from "./InfoViews";
 import { MainMenu } from "./MainMenu";
 import { OnboardingViews } from "./OnboardingViews";
+import { OnboardingDemo } from "./OnboardingDemo";
 import { OptionsView } from "./OptionsView";
 import { DEFAULT_SYSTEM_INFO, detectSystem } from "./platform";
 import {
   DEFAULT_LAUNCH_SETTINGS,
+  createPlayHref,
   parseLaunchSettings,
   type LaunchSettings,
 } from "./settings";
@@ -28,14 +30,14 @@ import {
 import {
   DIFFICULTIES,
   EFFECTS,
-  GUIDANCE,
+  HINT_MODES,
   LABELS,
   PACES,
   SESSIONS,
   SOUND,
   cycleValue,
 } from "./title-config";
-import { TitleShell } from "./TitleShell";
+import { TitlePanel, TitleShell } from "./TitleShell";
 import type {
   MenuAction,
   OnboardingView,
@@ -79,17 +81,20 @@ export function SettingsScreen() {
         coarsePointer: window.matchMedia("(pointer: coarse)").matches,
         viewportWidth: window.innerWidth,
       });
-      setSettings(restored);
-      setDraftSettings(restored);
+      const launchSettings = requestedPlay ? requestedSettings : restored;
+      const initialSettings: LaunchSettings = {
+        ...launchSettings,
+        hints: onboarding.complete ? launchSettings.hints : "always",
+      };
+      setSettings(initialSettings);
+      setDraftSettings(initialSettings);
       setScores(readHighScores());
       setSystemInfo(detectedSystem);
       setUserName((current) => current || onboarding.name);
       if (detectedSystem.launchSupport === "mobile") {
         setView("compatibility");
-      } else if (requestedPlay) {
-        setSettings(requestedSettings);
-        setDraftSettings(requestedSettings);
-        setActiveGame(requestedSettings);
+      } else if (requestedPlay && onboarding.complete) {
+        setActiveGame(initialSettings);
       } else if (onboarding.complete) {
         setView("menu");
       } else {
@@ -110,6 +115,7 @@ export function SettingsScreen() {
 
   const startGame = useCallback(() => {
     void primeGameAudio(settings.pace, settings.sound === "off");
+    window.history.replaceState(window.history.state, "", createPlayHref(settings));
     setActiveGame(settings);
   }, [settings]);
 
@@ -124,8 +130,8 @@ export function SettingsScreen() {
       browser: systemInfo.browser,
       launch_support: systemInfo.launchSupport,
     });
-    setView("menu");
-  }, [systemInfo, userName]);
+    startGame();
+  }, [startGame, systemInfo, userName]);
 
   const openView = useCallback(
     (action: MenuAction) => {
@@ -165,7 +171,7 @@ export function SettingsScreen() {
         case 1:
           return {
             ...current,
-            guidance: cycleValue(GUIDANCE, current.guidance, direction),
+            hints: cycleValue(HINT_MODES, current.hints, direction),
           };
         case 2:
           return {
@@ -212,7 +218,6 @@ export function SettingsScreen() {
     setMenuIndex,
     setOptionIndex,
     onContinueName: continueFromName,
-    onCompleteOnboarding: completeOnboarding,
     onOpen: openView,
     onAdjustOption: adjustOption,
     onConfirmOptions: confirmOptions,
@@ -222,10 +227,8 @@ export function SettingsScreen() {
   const activeTrack = getToolTrack(settings.tool);
   const summary = useMemo(
     () =>
-      `${activeTrack.name} · ${LABELS.difficulty[settings.difficulty]} · ${
-        LABELS.guidance[settings.guidance]
-      } · ${LABELS.pace[settings.pace]} · ${settings.session}s`,
-    [activeTrack.name, settings],
+      `${LABELS.difficulty[settings.difficulty]} · hints ${LABELS.hints[settings.hints]} · ${settings.session}s`,
+    [settings],
   );
 
   if (activeGame) {
@@ -234,7 +237,9 @@ export function SettingsScreen() {
         settings={{
           trackId: activeGame.tool,
           mode: activeGame.difficulty,
-          assistance: activeGame.guidance,
+          assistance: activeGame.hints === "off" ? "pro" : "novice",
+          hints: activeGame.hints,
+          platform: "macos",
           speed: activeGame.pace,
           durationSeconds: activeGame.session,
         }}
@@ -255,8 +260,17 @@ export function SettingsScreen() {
           restored={hasRestoredSettings}
           onContinueName={continueFromName}
           onContinueSystem={() => setView("onboarding-guide")}
+          onDemoComplete={() => setView("onboarding-hints")}
+          hints={settings.hints}
+          onHintsChange={(hints) => setSettings((current) => ({ ...current, hints }))}
           onComplete={completeOnboarding}
         />
+      ) : null}
+
+      {view === "tutorial" ? (
+        <TitlePanel title="try the keys" subtitle="three quick steps" onboarding>
+          <OnboardingDemo onComplete={() => setView("help")} />
+        </TitlePanel>
       ) : null}
 
       {view === "menu" ? (
@@ -293,6 +307,7 @@ export function SettingsScreen() {
           view={view}
           scores={scores}
           onBack={() => setView("menu")}
+          onReplayDemo={() => setView("tutorial")}
         />
       ) : null}
     </TitleShell>

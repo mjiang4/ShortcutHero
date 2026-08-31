@@ -14,7 +14,7 @@ import {
   GameRuntimeBoundary,
   SystemScreen,
 } from "./components/system";
-import type { GameSettings } from "./game";
+import { getHintMode, type GameSettings } from "./game";
 import { useGameController } from "./gameplay";
 import { useBrowserCapabilities } from "./platform/browser-capabilities";
 import { useSystemInfo } from "./platform/launch-compatibility";
@@ -64,8 +64,7 @@ function ShortcutHeroGameRuntime({
   const activeCue = session?.active
     ? controller.sceneCues.find((cue) => cue.id === session.active?.promptId)
     : undefined;
-  const mediumShortcutConcealed =
-    settings.mode === "medium" && (activeCue?.progress ?? 0) < 0.68;
+  const shortcutConcealed = (activeCue?.shortcutOpacity ?? 0) === 0;
 
   if (capabilities.graphics === "checking" || systemInfo === null) {
     return <GameLoadingScreen />;
@@ -123,8 +122,7 @@ function ShortcutHeroGameRuntime({
       <div className="game-canvas" aria-hidden="true">
         <DomGameStage
           cues={controller.sceneCues}
-          showShortcuts={settings.assistance === "novice"}
-          previewShortcuts={settings.mode === "medium"}
+          showShortcuts
           combo={session?.combo ?? 0}
           runProgress={metrics.runProgress}
           feedback={controller.feedback}
@@ -165,8 +163,6 @@ function ShortcutHeroGameRuntime({
             <SessionHud
               session={session}
               settings={settings}
-              accuracy={metrics.accuracy}
-              actLabel={metrics.actLabel}
               remainingSeconds={metrics.remainingSeconds}
               runProgress={metrics.runProgress}
               isMuted={controller.isMuted}
@@ -179,19 +175,17 @@ function ShortcutHeroGameRuntime({
                 key={controller.keyboardSignal?.id ?? "live-keyboard"}
                 pressedKeys={controller.pressedKeys}
                 hintKeys={
-                  controller.keyboardSignal || mediumShortcutConcealed
+                  controller.keyboardSignal || shortcutConcealed
                     ? []
                     : controller.keyboardHints
                 }
                 feedbackKeys={controller.keyboardSignal?.keys}
                 feedbackTone={controller.keyboardSignal?.tone}
                 status={
-                  mediumShortcutConcealed
-                    ? "recall the shortcut"
-                    : controller.keyboardStatus
+                  controller.keyboardStatus
                 }
                 guidance={
-                  settings.assistance === "novice" ? "learn" : "recall"
+                  getHintMode(settings)
                 }
               />
             ) : null}
@@ -214,7 +208,7 @@ function ShortcutHeroGameRuntime({
                 onSelect={controller.setPauseMenuIndex}
                 onResume={controller.resume}
                 onRestart={controller.beginRun}
-                onReturnToTitle={controller.returnToSettings}
+                onReturnHome={controller.returnHome}
               />
             ) : null}
           </>
@@ -226,7 +220,7 @@ function ShortcutHeroGameRuntime({
             selectedIndex={controller.resultsMenuIndex}
             onSelect={controller.setResultsMenuIndex}
             onPlayAgain={controller.beginRun}
-            onReturnToTitle={controller.returnToSettings}
+            onReturnHome={controller.returnHome}
             sharePromptTrigger={controller.sharePromptTrigger}
             shareResult={controller.shareResult}
             onShare={controller.shareResults}
@@ -236,7 +230,7 @@ function ShortcutHeroGameRuntime({
         <p className="screen-reader-only" aria-live="polite">
           {session?.active
             ? `${session.active.shortcut.action}. ${
-                settings.assistance === "novice"
+                !shortcutConcealed
                   ? session.active.shortcut.input.display
                   : "Recall the shortcut."
               }`

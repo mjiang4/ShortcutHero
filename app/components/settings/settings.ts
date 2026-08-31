@@ -1,5 +1,5 @@
 export type GameDifficulty = "easy" | "medium" | "hard";
-export type GuidanceMode = "novice" | "pro";
+import type { HintMode } from "../../game/types";
 export type TempoPreset = "relaxed" | "standard" | "turbo";
 export type SessionLength = 30 | 45 | 60;
 export type SoundMode = "on" | "off";
@@ -8,7 +8,7 @@ export type EffectsMode = "full" | "system" | "reduced";
 export interface LaunchSettings {
   readonly tool: AvailableToolId;
   readonly difficulty: GameDifficulty;
-  readonly guidance: GuidanceMode;
+  readonly hints: HintMode;
   readonly pace: TempoPreset;
   readonly session: SessionLength;
   readonly sound: SoundMode;
@@ -18,15 +18,15 @@ export interface LaunchSettings {
 export const DEFAULT_LAUNCH_SETTINGS: LaunchSettings = {
   tool: "linear",
   difficulty: "easy",
-  guidance: "novice",
+  hints: "always",
   pace: "standard",
-  session: 45,
+  session: 30,
   sound: "on",
   effects: "system",
 };
 
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
-const GUIDANCE_MODES = ["novice", "pro"] as const;
+const HINT_MODES = ["always", "near-line", "off"] as const;
 const TEMPO_PRESETS = ["relaxed", "standard", "turbo"] as const;
 const SESSION_LENGTHS = [30, 45, 60] as const;
 const SOUND_MODES = ["on", "off"] as const;
@@ -46,7 +46,7 @@ function includes<T extends string | number>(
 export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): LaunchSettings {
   const tool = params.get("tool");
   const difficulty = params.get("difficulty");
-  const guidance = params.get("guidance");
+  const hints = params.get("hints");
   const pace = params.get("pace");
   const session = params.get("session");
   const sound = params.get("sound");
@@ -57,9 +57,9 @@ export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): Launc
     difficulty: includes(DIFFICULTIES, difficulty)
       ? difficulty
       : DEFAULT_LAUNCH_SETTINGS.difficulty,
-    guidance: includes(GUIDANCE_MODES, guidance)
-      ? guidance
-      : DEFAULT_LAUNCH_SETTINGS.guidance,
+    hints: includes(HINT_MODES, hints)
+      ? hints
+      : params.get("guidance") === "pro" ? "off" : "always",
     pace: includes(TEMPO_PRESETS, pace)
       ? pace
       : DEFAULT_LAUNCH_SETTINGS.pace,
@@ -79,7 +79,7 @@ export function createPlayHref(settings: LaunchSettings): string {
   const params = new URLSearchParams({
     tool: settings.tool,
     difficulty: settings.difficulty,
-    guidance: settings.guidance,
+    hints: settings.hints,
     pace: settings.pace,
     session: String(settings.session),
     sound: settings.sound,
@@ -89,6 +89,7 @@ export function createPlayHref(settings: LaunchSettings): string {
   params.set("play", "1");
   return `/?${params.toString()}`;
 }
+
 import {
   isAvailableToolId,
   type AvailableToolId,

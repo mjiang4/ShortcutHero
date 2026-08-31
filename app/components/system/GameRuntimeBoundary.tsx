@@ -35,7 +35,7 @@ export class GameRuntimeBoundary extends Component<
         <SystemScreen
           eyebrow="run interrupted"
           title="the highway stalled"
-          message="Your browser hit a rendering problem. Reload the game, or return to the title screen without losing your saved settings."
+          message="Your browser hit a rendering problem. Reload the game, or return home without losing your saved settings."
           primaryLabel="reload game"
           onPrimary={() => window.location.reload()}
         />

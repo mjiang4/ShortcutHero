@@ -11,7 +11,7 @@ type OverlayMenuNavigationOptions = {
   readonly setResultsMenuIndex: Dispatch<SetStateAction<number>>;
   readonly resume: () => void;
   readonly restart: () => void;
-  readonly returnToTitle: () => void;
+  readonly returnHome: () => void;
   readonly resultsActionCount: 2 | 3;
   readonly shareResults: () => void;
 };
@@ -25,7 +25,7 @@ export function useOverlayMenuNavigation({
   setResultsMenuIndex,
   resume,
   restart,
-  returnToTitle,
+  returnHome,
   resultsActionCount,
   shareResults,
 }: OverlayMenuNavigationOptions): void {
@@ -34,6 +34,8 @@ export function useOverlayMenuNavigation({
 
     const onMenuKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // Result groups retain native Enter/Space disclosure behavior.
+      if (event.target instanceof Element && event.target.closest("summary")) return;
       const itemCount = paused ? 3 : resultsActionCount;
       const currentIndex = paused ? pauseMenuIndex : resultsMenuIndex;
       const setIndex = paused ? setPauseMenuIndex : setResultsMenuIndex;
@@ -58,10 +60,14 @@ export function useOverlayMenuNavigation({
         setIndex((current) => (current - 1 + itemCount) % itemCount);
         return;
       }
-      if (event.code === "Escape") {
+      if (
+        event.code === "Escape" ||
+        event.key === "Escape" ||
+        event.key === "Esc"
+      ) {
         event.preventDefault();
         if (paused) resume();
-        else returnToTitle();
+        else returnHome();
         return;
       }
       if (event.code !== "Enter" && event.code !== "Space") return;
@@ -70,10 +76,10 @@ export function useOverlayMenuNavigation({
       if (paused) {
         if (currentIndex === 0) resume();
         else if (currentIndex === 1) restart();
-        else returnToTitle();
+        else returnHome();
       } else if (currentIndex === 0) restart();
       else if (resultsActionCount === 3 && currentIndex === 1) shareResults();
-      else returnToTitle();
+      else returnHome();
     };
 
     window.addEventListener("keydown", onMenuKey);
@@ -84,7 +90,7 @@ export function useOverlayMenuNavigation({
     restart,
     resultsMenuIndex,
     resume,
-    returnToTitle,
+    returnHome,
     resultsActionCount,
     shareResults,
     setPauseMenuIndex,

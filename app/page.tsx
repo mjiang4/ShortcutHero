@@ -1,12 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const SettingsScreen = dynamic(
-  () =>
-    import("./components/settings").then((module) => module.SettingsScreen),
-  { ssr: false },
-);
+import { SettingsScreen } from "./components/settings";
 
 export default function Home() {
   return <SettingsScreen />;

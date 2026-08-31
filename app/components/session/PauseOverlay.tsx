@@ -3,7 +3,7 @@ type PauseOverlayProps = {
   readonly onSelect: (index: number) => void;
   readonly onResume: () => void;
   readonly onRestart: () => void;
-  readonly onReturnToTitle: () => void;
+  readonly onReturnHome: () => void;
 };
 
 export function PauseOverlay({
@@ -11,13 +11,13 @@ export function PauseOverlay({
   onSelect,
   onResume,
   onRestart,
-  onReturnToTitle,
+  onReturnHome,
 }: PauseOverlayProps) {
   return (
     <div className="pause-overlay">
       <div className="pause-card">
         <h2>Paused</h2>
-        <p>Resume, restart, or return to the title screen.</p>
+        <p>Resume, restart, or return home.</p>
         <div className="pause-actions">
           <MenuButton
             primary
@@ -37,9 +37,9 @@ export function PauseOverlay({
           <MenuButton
             selected={selectedIndex === 2}
             onSelect={() => onSelect(2)}
-            onClick={onReturnToTitle}
+            onClick={onReturnHome}
           >
-            Title
+            Home
           </MenuButton>
         </div>
       </div>

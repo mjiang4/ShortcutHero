@@ -1,6 +1,9 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import { supportMessage } from "./platform";
+import { OnboardingDemo } from "./OnboardingDemo";
+import { HintSelector } from "./HintSelector";
+import type { HintMode } from "../../game/types";
 import { TitlePanel } from "./TitleShell";
 import type { OnboardingView, SystemInfo } from "./title-types";
 
@@ -12,6 +15,9 @@ export function OnboardingViews({
   restored,
   onContinueName,
   onContinueSystem,
+  onDemoComplete,
+  hints,
+  onHintsChange,
   onComplete,
 }: {
   readonly view: OnboardingView;
@@ -21,6 +27,9 @@ export function OnboardingViews({
   readonly restored: boolean;
   readonly onContinueName: () => void;
   readonly onContinueSystem: () => void;
+  readonly onDemoComplete: () => void;
+  readonly hints: HintMode;
+  readonly onHintsChange: (hints: HintMode) => void;
   readonly onComplete: () => void;
 }) {
   if (view === "onboarding-name") {
@@ -84,26 +93,21 @@ export function OnboardingViews({
     );
   }
 
+  if (view === "onboarding-hints") {
+    return (
+      <TitlePanel title="choose your hints" subtitle="ready to play" onboarding>
+        <form onSubmit={(event) => { event.preventDefault(); onComplete(); }}>
+          <HintSelector value={hints} onChange={onHintsChange} autoFocus />
+          <p className="title-panel__note">Hints stay fixed for the round. Change them later in Options.</p>
+          <button type="submit" className="primary-button onboarding-action">Start playing</button>
+        </form>
+      </TitlePanel>
+    );
+  }
+
   return (
-    <TitlePanel title="how it works" subtitle="one simple loop" onboarding>
-      <ol className="onboarding-guide">
-        <li>
-          <span>01</span>Read the action on the highway.
-        </li>
-        <li>
-          <span>02</span>Press its shortcut at the strike line.
-        </li>
-        <li>
-          <span>03</span>Hit on time to build a combo.
-        </li>
-      </ol>
-      <button
-        type="button"
-        className="primary-button onboarding-action"
-        onClick={onComplete}
-      >
-        open main menu
-      </button>
+    <TitlePanel title="try the keys" subtitle="three quick steps" onboarding>
+      <OnboardingDemo onComplete={onDemoComplete} />
     </TitlePanel>
   );
 }

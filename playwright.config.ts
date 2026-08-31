@@ -33,6 +33,12 @@ export default defineConfig({
         userAgent: MAC_CHROME_USER_AGENT,
       },
     },
+    {
+      name: "webkit",
+      use: {
+        ...devices["Desktop Safari"],
+      },
+    },
   ],
   webServer: {
     command: `npm run dev -- --port ${PORT}`,

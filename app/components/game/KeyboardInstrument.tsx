@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { HintMode } from "../../game/types";
 
 export type KeyboardFeedbackTone = "hit" | "miss" | "wrong";
 
@@ -8,7 +9,7 @@ export interface KeyboardInstrumentProps {
   readonly feedbackKeys?: readonly string[];
   readonly feedbackTone?: KeyboardFeedbackTone | null;
   readonly status: string;
-  readonly guidance: "learn" | "recall";
+  readonly guidance: HintMode;
 }
 
 type KeySpec = {
@@ -70,7 +71,7 @@ export function KeyboardInstrument({
       <header className="keyboard-instrument__header">
         <span>keyboard</span>
         <strong>{status}</strong>
-        <span>{guidance}</span>
+        <span>{guidance === "off" ? "hints off" : guidance === "near-line" ? "late hints" : "hints on"}</span>
       </header>
       <div className="keyboard-instrument__deck" aria-hidden="true">
         {KEY_ROWS.map((row, rowIndex) => (

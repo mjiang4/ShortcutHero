@@ -52,9 +52,16 @@ export function useGameplayInput({
       const current = sessionRef.current;
       if (!current) return;
 
-      if (event.code === "Escape") {
-        event.preventDefault();
-        if (current.phase === "playing") pause();
+      if (
+        event.code === "Escape" ||
+        event.key === "Escape" ||
+        event.key === "Esc"
+      ) {
+        if (current.phase === "playing") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          pause();
+        }
         return;
       }
       if (current.phase !== "playing") return;

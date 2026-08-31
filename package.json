@@ -16,6 +16,7 @@
     "test:browser": "playwright test",
     "test": "npm run test:unit && npm run test:render && npm run test:browser",
     "check": "npm run lint && npm run typecheck && npm test",
+    "catalog:import": "tsx scripts/import-shortcut-catalog.ts",
     "db:generate": "drizzle-kit generate",
     "db:local:setup": "WRANGLER_LOG_PATH=.wrangler/wrangler.log wrangler d1 migrations apply DB --local --persist-to=.wrangler/state --config=wrangler.local.jsonc",
     "social-card": "node scripts/capture-social-card.mjs"

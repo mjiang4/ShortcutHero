@@ -21,7 +21,8 @@ export function TitleShell({
       <header className="title-brand">
         <span className="title-brand__name">shortcut hero</span>
         <span className="title-brand__edition">
-          {track.editionLabel} · {track.platform}
+          Current app: <strong>{track.name}</strong>
+          <span className="title-brand__platform"> · {track.platform}</span>
         </span>
       </header>
 
@@ -67,6 +68,8 @@ function footerInstructions(view: ScreenView): string {
   if (view === "onboarding-name") {
     return "type your name · enter continue";
   }
+  if (view === "onboarding-guide" || view === "tutorial") return "follow the card · finish at the line";
+  if (view === "onboarding-hints") return "choose hints · start playing";
   if (view.startsWith("onboarding")) return "enter continue · esc back";
   if (view === "compatibility") return "choose an action · esc back";
   return "enter or esc back";

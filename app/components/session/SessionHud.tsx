@@ -4,8 +4,6 @@ import { DIFFICULTY_LABELS, SCORE_FORMATTER } from "../../gameplay/constants";
 type SessionHudProps = {
   readonly session: GameSession;
   readonly settings: GameSettings;
-  readonly accuracy: number;
-  readonly actLabel: string;
   readonly remainingSeconds: number;
   readonly runProgress: number;
   readonly isMuted: boolean;
@@ -16,14 +14,16 @@ type SessionHudProps = {
 export function SessionHud({
   session,
   settings,
-  accuracy,
-  actLabel,
   remainingSeconds,
   runProgress,
   isMuted,
   onToggleMuted,
   onPause,
 }: SessionHudProps) {
+  const lastAttempt = session.attempts.at(-1);
+  const cleanHit = session.combo > 0 && lastAttempt?.outcome === "clean";
+  const milestone = [3, 6, 9].includes(session.combo);
+
   return (
     <>
       <section className="hud" aria-label="Current game status">
@@ -32,16 +32,18 @@ export function SessionHud({
             label="Score"
             value={SCORE_FORMATTER.format(session.score)}
           />
-          <HudStat label="Accuracy" value={`${accuracy}%`} />
         </div>
-        <div className="combo-display" aria-live="polite">
-          <span className="combo-value">{session.combo}</span>
-          <span className="combo-label">
-            {session.combo >= 9 ? "Flow state" : "Combo"}
-          </span>
+        <div className="streak-display" aria-label={`Streak: ${session.combo}`}>
+          <span className="hud-stat-label">streak</span>
+          <strong
+            key={`${lastAttempt?.promptId ?? "start"}-${session.combo}`}
+            className={`streak-count${cleanHit ? " is-hit" : ""}${milestone ? " is-milestone" : ""}`}
+          >
+            {session.combo}
+          </strong>
         </div>
         <div className="hud-cluster is-right">
-          <HudStat label={actLabel} value={`${remainingSeconds}s`} />
+          <HudStat label="Time remaining" value={`${remainingSeconds}s`} />
           <button
             type="button"
             className="quiet-button"
@@ -64,8 +66,7 @@ export function SessionHud({
           />
         </div>
         <span className="progress-time">
-          {DIFFICULTY_LABELS[settings.mode]} ·{" "}
-          {settings.assistance === "novice" ? "Learn" : "Recall"}
+          {DIFFICULTY_LABELS[settings.mode]}
         </span>
       </div>
     </>

@@ -9,7 +9,7 @@ type ResultsScreenProps = {
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
   readonly onPlayAgain: () => void;
-  readonly onReturnToTitle: () => void;
+  readonly onReturnHome: () => void;
   readonly sharePromptTrigger: SharePromptTrigger | null;
   readonly shareResult: ShareResult | null;
   readonly onShare: () => void;
@@ -20,7 +20,7 @@ export function ResultsScreen({
   selectedIndex,
   onSelect,
   onPlayAgain,
-  onReturnToTitle,
+  onReturnHome,
   sharePromptTrigger,
   shareResult,
   onShare,
@@ -93,9 +93,9 @@ export function ResultsScreen({
             aria-current={selectedIndex === titleIndex ? "true" : undefined}
             onMouseEnter={() => onSelect(titleIndex)}
             onFocus={() => onSelect(titleIndex)}
-            onClick={onReturnToTitle}
+            onClick={onReturnHome}
           >
-            Title
+            Home
           </button>
         </div>
       </div>

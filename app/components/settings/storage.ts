@@ -3,10 +3,10 @@ import {
   DEFAULT_LAUNCH_SETTINGS,
   parseLaunchSettings,
   type GameDifficulty,
-  type GuidanceMode,
   type LaunchSettings,
   type TempoPreset,
 } from "./settings";
+import type { HintMode } from "../../game/types";
 import { LABELS } from "./title-config";
 import type { ScoreEntry } from "./title-types";
 
@@ -49,6 +49,7 @@ export function restoreSettings(): LaunchSettings {
       "tool",
       "difficulty",
       "guidance",
+      "hints",
       "pace",
       "session",
       "sound",
@@ -72,7 +73,7 @@ export function persistSettings(settings: LaunchSettings): void {
       JSON.stringify(settings),
     );
   } catch {
-    // The title screen remains usable when browser persistence is blocked.
+    // The home screen remains usable when browser persistence is blocked.
   }
 }
 
@@ -85,6 +86,17 @@ export function readHighScores(): readonly ScoreEntry[] {
       const score = Number(window.localStorage.getItem(key) ?? 0);
       if (!Number.isFinite(score) || score <= 0) continue;
       const parts = key.slice(SCORE_PREFIX.length).split(":");
+      if (parts[0] === "v2") {
+        const [, track, platform, mode, hints, pace, duration] = parts;
+        const trackId = isAvailableToolId(track) ? track : "linear";
+        entries.push({
+          score,
+          label: `${getToolTrack(trackId).name} · ${platform === "windows" ? "Windows" : "Mac"} · ${
+            LABELS.difficulty[mode as GameDifficulty] ?? mode
+          } · hints ${LABELS.hints[hints as HintMode] ?? hints} · ${LABELS.pace[pace as TempoPreset] ?? pace} · ${duration}`,
+        });
+        continue;
+      }
       const hasTrack = parts.length >= 5;
       const [
         track = "linear",
@@ -99,8 +111,8 @@ export function readHighScores(): readonly ScoreEntry[] {
         label: `${getToolTrack(trackId).name} · ${
           LABELS.difficulty[mode as GameDifficulty] ?? mode
         } · ${
-          LABELS.guidance[assistance as GuidanceMode] ?? assistance
-        } · ${LABELS.pace[pace as TempoPreset] ?? pace} · ${duration}`,
+          assistance === "pro" ? "hints off" : "hints on"
+        } · ${LABELS.pace[pace as TempoPreset] ?? pace} · ${duration} · previous version`,
       });
     }
     return entries.sort((a, b) => b.score - a.score).slice(0, 5);

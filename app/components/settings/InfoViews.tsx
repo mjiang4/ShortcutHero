@@ -5,10 +5,12 @@ export function InfoView({
   view,
   scores,
   onBack,
+  onReplayDemo,
 }: {
   readonly view: Extract<TitleView, "scores" | "help" | "credits">;
   readonly scores: readonly ScoreEntry[];
   readonly onBack: () => void;
+  readonly onReplayDemo: () => void;
 }) {
   if (view === "scores") {
     return (
@@ -52,6 +54,8 @@ export function InfoView({
             <span>03</span>Chain hits for a higher score.
           </li>
         </ol>
+        <p className="title-panel__note">G → I: press G first, then I at the line. ⇧ E: hold Shift and press E.</p>
+        <button type="button" className="primary-button" onClick={onReplayDemo}>try the demo</button>
         <BackButton onClick={onBack} />
       </TitlePanel>
     );

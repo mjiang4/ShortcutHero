@@ -29,7 +29,7 @@ export default function GlobalError({
         <SystemScreen
           eyebrow="shortcut hero"
           title="the game needs a reset"
-          message="Reload the app to restore the title screen. Your local settings and high scores will remain in this browser."
+          message="Reload the app to restore the home screen. Your local settings and high scores will remain in this browser."
           primaryLabel="reload app"
           onPrimary={reset}
         />
