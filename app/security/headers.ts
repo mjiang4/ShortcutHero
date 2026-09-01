@@ -28,6 +28,18 @@ export function buildContentSecurityPolicy(production: boolean): string {
   return directives.join("; ");
 }
 
+export function applySecurityHeaders(
+  response: Response,
+  production: boolean,
+): Response {
+  if (response.status === 101) return response;
+  const secured = new Response(response.body, response);
+  for (const { key, value } of getSecurityHeaders(production)) {
+    secured.headers.set(key, value);
+  }
+  return secured;
+}
+
 export function getSecurityHeaders(
   production: boolean,
 ): { key: string; value: string }[] {
