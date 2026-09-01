@@ -451,6 +451,10 @@ export function handleSessionKey(
 
   const active = session.active;
   const preventDefault = shouldCaptureGameKey(event, session.capturedCodes);
+  // Keep Tab/Enter/navigation native in packs that do not teach those keys.
+  if (!/^Key[A-Z]$/.test(event.code) && !preventDefault) {
+    return { session, effects: [], preventDefault: false };
+  }
   const match = matchShortcutInput(
     active.shortcut.input,
     session.input,

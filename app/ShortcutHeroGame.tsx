@@ -174,6 +174,7 @@ function ShortcutHeroGameRuntime({
               <KeyboardInstrument
                 key={controller.keyboardSignal?.id ?? "live-keyboard"}
                 pressedKeys={controller.pressedKeys}
+                availableKeys={session.capturedCodes}
                 hintKeys={
                   controller.keyboardSignal || shortcutConcealed
                     ? []
@@ -217,6 +218,8 @@ function ShortcutHeroGameRuntime({
         {controller.viewPhase === "results" && results ? (
           <ResultsScreen
             results={results}
+            playerName={controller.playerName}
+            onSaveName={controller.savePlayerName}
             selectedIndex={controller.resultsMenuIndex}
             onSelect={controller.setResultsMenuIndex}
             onPlayAgain={controller.beginRun}

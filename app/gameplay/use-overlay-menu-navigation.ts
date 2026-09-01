@@ -34,8 +34,8 @@ export function useOverlayMenuNavigation({
 
     const onMenuKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      // Result groups retain native Enter/Space disclosure behavior.
-      if (event.target instanceof Element && event.target.closest("summary")) return;
+      // Result disclosures and the optional name form own their keyboard input.
+      if (event.target instanceof Element && event.target.closest("summary, form, .results-player")) return;
       const itemCount = paused ? 3 : resultsActionCount;
       const currentIndex = paused ? pauseMenuIndex : resultsMenuIndex;
       const setIndex = paused ? setPauseMenuIndex : setResultsMenuIndex;

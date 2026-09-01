@@ -1,4 +1,5 @@
 import type { KeyboardPlatform, LetterCode, ShortcutDefinition, ShortcutInput } from "../game/types";
+import { isPlayableKeyCode } from "../game/input";
 import type { ShortcutTrack } from "./types";
 
 export interface CatalogBinding {
@@ -11,6 +12,14 @@ export interface CatalogShortcut {
   readonly id: string;
   readonly action: string;
   readonly context?: string;
+  /** Original documentation grouping and wording, independent of gameplay labels. */
+  readonly category?: string;
+  readonly sourceAction?: string;
+  readonly notes?: readonly string[];
+  /** All documented alternatives, including pointer gestures and numbered choices.
+   * Empty platform arrays mean no binding was documented. Never parsed as game input.
+   */
+  readonly sourceBindings?: Readonly<Record<KeyboardPlatform, readonly string[]>>;
   readonly source: {
     readonly url: string;
     readonly checkedAt: string;
@@ -76,6 +85,16 @@ export function validateCatalog(value: unknown): ShortcutCatalog {
       const path = `${appId}/${shortcut.id}`;
       requireValue(hasText(shortcut.action), `${path}.action is required`);
       requireValue(shortcut.context === undefined || hasText(shortcut.context), `${path}.context must be text`);
+      for (const field of ["category", "sourceAction"]) {
+        requireValue(shortcut[field] === undefined || hasText(shortcut[field]), `${path}.${field} must be text`);
+      }
+      requireValue(shortcut.notes === undefined || (Array.isArray(shortcut.notes) && shortcut.notes.every(hasText)), `${path}.notes must contain text`);
+      if (shortcut.sourceBindings !== undefined) {
+        const sourceBindings = object(shortcut.sourceBindings, `${path}.sourceBindings`);
+        for (const platform of PLATFORMS) {
+          requireValue(Array.isArray(sourceBindings[platform]) && sourceBindings[platform].every(hasText), `${path}.sourceBindings.${platform} must list documented bindings`);
+        }
+      }
       const source = object(shortcut.source, `${path}.source`);
       requireValue(hasText(source.url), `${path} needs a source URL`);
       requireValue(new URL(source.url).protocol === "https:", `${path} needs an HTTPS source URL`);
@@ -103,15 +122,15 @@ function isLetter(code: string | undefined): code is LetterCode {
 function playableInput(binding: CatalogBinding): ShortcutInput | null {
   const { steps, display } = binding;
   const first = steps[0];
-  if (steps.length === 1 && first.length === 1 && isLetter(first[0])) {
+  if (steps.length === 1 && first.length === 1 && isPlayableKeyCode(first[0])) {
     return { kind: "single", code: first[0], display };
   }
   if (steps.length === 2 && first.length === 1 && steps[1].length === 1 && isLetter(first[0]) && isLetter(steps[1][0])) {
     return { kind: "sequence", codes: [first[0], steps[1][0]], display, maxGapMs: 1_200 };
   }
   if (steps.length === 1 && first.length === 2 && first.includes("Shift")) {
-    const letter = first.find(isLetter);
-    if (letter) return { kind: "chord", code: letter, shift: true, display };
+    const code = first.find(isPlayableKeyCode);
+    if (code) return { kind: "chord", code, shift: true, display };
   }
   return null;
 }
@@ -121,6 +140,8 @@ export function loadCatalogTrack(catalog: ShortcutCatalog, appId: string, platfo
   if (!app) throw new Error(`Unknown shortcut app: ${appId}`);
   const decks: Record<"easy" | "medium" | "hard", ShortcutDefinition[]> = { easy: [], medium: [], hard: [] };
   for (const shortcut of app.shortcuts) {
+    // Historical references remain stored, but are not taught as current defaults.
+    if (shortcut.source.verification !== "current") continue;
     const binding = shortcut.bindings[platform];
     const input = binding ? playableInput(binding) : null;
     if (!input) continue;

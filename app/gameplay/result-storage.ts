@@ -1,5 +1,34 @@
 import { getHighScoreKey, type GameResults, type GameSession, type KeyboardPlatform } from "../game";
 import { EMPTY_CURRICULUM, type CurriculumProgress } from "../game/curriculum";
+import { createRoundId } from "../identity/anonymous-identity";
+
+export type StoredHighScore = {
+  readonly score: number;
+  readonly name: string;
+  readonly recordId: string | null;
+};
+
+export type SavedHighScore = {
+  readonly key: string;
+  readonly recordId: string;
+};
+
+export function readStoredHighScore(raw: string | null): StoredHighScore | null {
+  if (raw === null) return null;
+  try {
+    const saved: unknown = JSON.parse(raw);
+    if (typeof saved === "number" && Number.isFinite(saved) && saved >= 0) {
+      return { score: saved, name: "Guest", recordId: null };
+    }
+    if (!saved || typeof saved !== "object" || !("score" in saved) ||
+      typeof saved.score !== "number" || !Number.isFinite(saved.score) || saved.score < 0 ||
+      !("name" in saved) || typeof saved.name !== "string" ||
+      !("recordId" in saved) || typeof saved.recordId !== "string") return null;
+    return { score: saved.score, name: saved.name.trim().slice(0, 32) || "Guest", recordId: saved.recordId };
+  } catch {
+    return null;
+  }
+}
 
 function curriculumKey(trackId: string, platform: KeyboardPlatform): string {
   return `shortcut-hero:curriculum:v1:${trackId}:${platform === "macos" ? "macOS" : "Windows"}`;
@@ -33,15 +62,32 @@ export function persistCurriculumProgress(trackId: string, progress: CurriculumP
 export function persistHighScore(
   results: GameResults,
   session: GameSession,
-): boolean {
+  name = "Guest",
+): SavedHighScore | null {
   const key = getHighScoreKey(session.settings);
   try {
-    const previous = Number(window.localStorage.getItem(key) ?? 0);
-    if (results.score <= previous) return false;
-    window.localStorage.setItem(key, String(results.score));
-    return true;
+    const previous = readStoredHighScore(window.localStorage.getItem(key));
+    if (previous && results.score <= previous.score) return null;
+    const recordId = createRoundId();
+    window.localStorage.setItem(key, JSON.stringify({
+      score: results.score,
+      name: name.trim().slice(0, 32) || "Guest",
+      recordId,
+    }));
+    return { key, recordId };
   } catch {
     // Local persistence is optional; a blocked storage API should not stop play.
+    return null;
+  }
+}
+
+export function nameSavedHighScore(saved: SavedHighScore, name: string): boolean {
+  try {
+    const current = readStoredHighScore(window.localStorage.getItem(saved.key));
+    if (current?.recordId !== saved.recordId) return false;
+    window.localStorage.setItem(saved.key, JSON.stringify({ ...current, name: name.trim().slice(0, 32) || "Guest" }));
+    return true;
+  } catch {
     return false;
   }
 }

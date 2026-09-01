@@ -2,9 +2,10 @@ import {
   DIFFICULTIES,
   DIFFICULTY_DESCRIPTIONS,
   EFFECTS,
+  HINT_DESCRIPTIONS,
+  HINT_MODES,
   LABELS,
   PACES,
-  SESSIONS,
   SOUND,
   cycleValue,
 } from "./title-config";
@@ -12,146 +13,133 @@ import type { LaunchSettings } from "./settings";
 import { LESSON_SIZE } from "../../game/curriculum";
 import { deckForMode, getToolTrack } from "../../tools";
 import { BackButton, TitlePanel } from "./TitleShell";
-import { HintSelector } from "./HintSelector";
 
 export function OptionsView({
   settings,
-  draft,
   selectedIndex,
   onSelect,
   onChange,
-  onConfirm,
-  onCancel,
+  onBack,
 }: {
   readonly settings: LaunchSettings;
-  readonly draft: LaunchSettings;
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
   readonly onChange: (settings: LaunchSettings) => void;
-  readonly onConfirm: () => void;
-  readonly onCancel: () => void;
+  readonly onBack: () => void;
 }) {
-  const hasChanges = JSON.stringify(settings) !== JSON.stringify(draft);
-  const catalog = deckForMode(getToolTrack(draft.tool), draft.difficulty);
+  const track = getToolTrack(settings.tool);
+  const catalog = deckForMode(track, settings.difficulty);
+  const inputKinds = new Set(catalog.map(shortcut => shortcut.input.kind));
+  const difficultyDescription = inputKinds.size === 1 ? "single-key shortcuts in this pack"
+    : !inputKinds.has("sequence") ? "single keys + Shift chords"
+      : DIFFICULTY_DESCRIPTIONS[settings.difficulty];
 
   return (
     <TitlePanel title="options" subtitle="shape the next run">
       <p className="option-curriculum">
         {Math.min(LESSON_SIZE, catalog.length)} shortcuts per lesson · {catalog.length} available
-        <small>Hints stay fixed during a round. Change them here before you start.</small>
+        <small>Changes save automatically. Hints stay fixed during a round.</small>
       </p>
       <div className="option-list">
         <OptionRow
           label="difficulty"
-          value={LABELS.difficulty[draft.difficulty]}
-          description={DIFFICULTY_DESCRIPTIONS[draft.difficulty]}
+          value={LABELS.difficulty[settings.difficulty]}
+          description={difficultyDescription}
           active={selectedIndex === 0}
           onFocus={() => onSelect(0)}
           onPrevious={() =>
             onChange({
-              ...draft,
-              difficulty: cycleValue(DIFFICULTIES, draft.difficulty, -1),
+              ...settings,
+              difficulty: cycleValue(DIFFICULTIES, settings.difficulty, -1),
             })
           }
           onNext={() =>
             onChange({
-              ...draft,
-              difficulty: cycleValue(DIFFICULTIES, draft.difficulty, 1),
+              ...settings,
+              difficulty: cycleValue(DIFFICULTIES, settings.difficulty, 1),
             })
           }
         />
-        <HintSelector value={draft.hints} onChange={(hints) => onChange({ ...draft, hints })}
-          active={selectedIndex === 1} onFocus={() => onSelect(1)} />
         <OptionRow
-          label="pace"
-          value={LABELS.pace[draft.pace]}
+          label="hints"
+          value={LABELS.hints[settings.hints]}
+          description={HINT_DESCRIPTIONS[settings.hints]}
+          active={selectedIndex === 1}
+          onFocus={() => onSelect(1)}
+          onPrevious={() =>
+            onChange({
+              ...settings,
+              hints: cycleValue(HINT_MODES, settings.hints, -1),
+            })
+          }
+          onNext={() =>
+            onChange({
+              ...settings,
+              hints: cycleValue(HINT_MODES, settings.hints, 1),
+            })
+          }
+        />
+        <OptionRow
+          label="speed"
+          value={LABELS.pace[settings.pace]}
           active={selectedIndex === 2}
           onFocus={() => onSelect(2)}
           onPrevious={() =>
             onChange({
-              ...draft,
-              pace: cycleValue(PACES, draft.pace, -1),
+              ...settings,
+              pace: cycleValue(PACES, settings.pace, -1),
             })
           }
           onNext={() =>
             onChange({
-              ...draft,
-              pace: cycleValue(PACES, draft.pace, 1),
-            })
-          }
-        />
-        <OptionRow
-          label="session"
-          value={`${draft.session} seconds`}
-          active={selectedIndex === 3}
-          onFocus={() => onSelect(3)}
-          onPrevious={() =>
-            onChange({
-              ...draft,
-              session: cycleValue(SESSIONS, draft.session, -1),
-            })
-          }
-          onNext={() =>
-            onChange({
-              ...draft,
-              session: cycleValue(SESSIONS, draft.session, 1),
+              ...settings,
+              pace: cycleValue(PACES, settings.pace, 1),
             })
           }
         />
         <OptionRow
           label="music"
-          value={draft.sound === "on" ? "original score on" : "music off"}
-          active={selectedIndex === 4}
-          onFocus={() => onSelect(4)}
+          value={settings.sound === "on" ? "original score on" : "music off"}
+          active={selectedIndex === 3}
+          onFocus={() => onSelect(3)}
           onPrevious={() =>
             onChange({
-              ...draft,
-              sound: cycleValue(SOUND, draft.sound, -1),
+              ...settings,
+              sound: cycleValue(SOUND, settings.sound, -1),
             })
           }
           onNext={() =>
             onChange({
-              ...draft,
-              sound: cycleValue(SOUND, draft.sound, 1),
+              ...settings,
+              sound: cycleValue(SOUND, settings.sound, 1),
             })
           }
         />
         <OptionRow
           label="effects"
-          value={LABELS.effects[draft.effects]}
-          active={selectedIndex === 5}
-          onFocus={() => onSelect(5)}
+          value={LABELS.effects[settings.effects]}
+          active={selectedIndex === 4}
+          onFocus={() => onSelect(4)}
           onPrevious={() =>
             onChange({
-              ...draft,
-              effects: cycleValue(EFFECTS, draft.effects, -1),
+              ...settings,
+              effects: cycleValue(EFFECTS, settings.effects, -1),
             })
           }
           onNext={() =>
             onChange({
-              ...draft,
-              effects: cycleValue(EFFECTS, draft.effects, 1),
+              ...settings,
+              effects: cycleValue(EFFECTS, settings.effects, 1),
             })
           }
         />
-        <button
-          type="button"
-          className={`option-confirm${
-            selectedIndex === 6 ? " is-active" : ""
-          }`}
-          aria-current={selectedIndex === 6 ? "true" : undefined}
-          onFocus={() => onSelect(6)}
-          onClick={onConfirm}
-        >
-          {hasChanges ? "confirm changes" : "confirm settings"}
-        </button>
       </div>
-      <BackButton onClick={onCancel} />
+      <BackButton onClick={onBack} />
     </TitlePanel>
   );
 }
 
-function OptionRow({
+export function OptionRow({
   label,
   value,
   description,

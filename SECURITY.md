@@ -22,9 +22,11 @@ Every response receives:
 - strict referrer, permissions, opener, and resource policies;
 - one-year HSTS in production-compatible responses.
 
-The CSP allows inline scripts and styles because the current Vinext RSC output
+The CSP allows inline scripts and styles because the current Next.js RSC output
 requires them. It permits Blob scripts for Troika's generated 3D text worker and
 does not allow `unsafe-eval` in production.
+Only the `localhost` host omits the HTTPS-upgrade directive so Safari can load a
+local HTTP preview. Public hosts keep the directive and the full production policy.
 
 ## Analytics and errors
 
@@ -39,9 +41,14 @@ does not allow `unsafe-eval` in production.
   PostHog error retention to 30 days.
 - Application routes return generic failures and must never log request bodies,
   deletion secrets, names, or keystrokes.
-- No private server secret is required for launch. The PostHog project token and
-  app release are intentionally public client configuration; D1 is a managed
-  runtime binding.
+- Vercel validates and forwards only the three existing persistence endpoints to
+  the HTTPS origin in `SHORTCUT_HERO_BACKEND_ORIGIN`. The Sites backend retains
+  D1 identity checks, rate limits, idempotency, retention, and deletion behavior.
+- Forwarded requests omit browser cookies, authorization, origin, and forwarded-IP
+  headers. Redirects are rejected, responses are not cached, and requests time out
+  after ten seconds. Missing configuration or an unavailable backend returns 503.
+- No new database credential is required. The PostHog project token and app release
+  are intentionally public client configuration; the backend origin stays server-only.
 
 ## Retention and deletion
 
@@ -51,6 +58,8 @@ does not allow `unsafe-eval` in production.
 - Sanitized errors: 30 days.
 - The privacy page can delete the current device's anonymous server progress and
   all local `shortcut-hero:` data after explicit confirmation.
+- Identities are local to a site origin. A new domain does not automatically gain
+  the old domain's deletion secret; old-domain data can still be deleted there.
 
 ## Dependency audit
 

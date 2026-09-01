@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 
+import { TOOL_CATALOG } from "../../tools/registry";
 import type { ShortcutTrack } from "../../tools/types";
 import type { ScreenView } from "./title-types";
 
@@ -16,20 +17,28 @@ export function TitleShell({
   readonly children: ReactNode;
 }) {
   return (
-    <main className="title-screen">
+    <main className={`title-screen title-screen--flow${view === "menu" ? " title-screen--home" : " title-screen--options"}`}>
       <TitleWorld />
       <header className="title-brand">
-        <span className="title-brand__name">shortcut hero</span>
-        <span className="title-brand__edition">
-          Current app: <strong>{track.name}</strong>
-          <span className="title-brand__platform"> · {track.platform}</span>
-        </span>
+        <div className="title-brand__identity">
+          <div className="title-brand__wordmark">
+            <span className="title-brand__name">shortcut hero</span>
+            {view === "menu" ? <span className="title-brand__description">learn keyboard shortcuts</span> : null}
+          </div>
+          {view === "menu" ? <SupportedApps /> : null}
+        </div>
+        {view !== "menu" && view !== "setup" ? (
+          <span className="title-brand__edition">
+            Current app: <strong>{track.name}</strong>
+            <span className="title-brand__platform"> · {track.platform}</span>
+          </span>
+        ) : null}
       </header>
 
       {children}
 
       <footer className="title-footer">
-        <span>{summary}</span>
+        <span>{view === "setup" || view === "menu" ? null : summary}</span>
         <span className="title-footer__actions">
           <span className="title-footer__instructions">
             {footerInstructions(view)}
@@ -39,6 +48,31 @@ export function TitleShell({
         </span>
       </footer>
     </main>
+  );
+}
+
+function SupportedApps() {
+  const [index, setIndex] = useState(0);
+  const names = TOOL_CATALOG.map((app) => app.name);
+  if (names.length === 0) return null;
+
+  return (
+    <h1
+      className="title-apps"
+      aria-label={`Learn keyboard shortcuts for ${names.join(", ")}.`}
+    >
+      <span className="title-apps__motion" aria-hidden="true">
+        Learn{" "}
+        <span className="title-apps__names">
+          <span className="title-apps__current"
+            onAnimationIteration={() => setIndex((current) => (current + 1) % names.length)}>
+            {names[index % names.length]}
+          </span>
+        </span>
+        {" "}shortcuts
+      </span>
+      <span className="title-apps__static" aria-hidden="true">Learn shortcuts for {names.join(" · ")}</span>
+    </h1>
   );
 }
 
@@ -63,14 +97,9 @@ function TitleWorld() {
 function footerInstructions(view: ScreenView): string {
   if (view === "menu") return "↑ ↓ select · enter confirm";
   if (view === "options") {
-    return "↑ ↓ option · ← → change · enter confirm · esc cancel";
+    return "↑ ↓ option · ← → change · esc back";
   }
-  if (view === "onboarding-name") {
-    return "type your name · enter continue";
-  }
-  if (view === "onboarding-guide" || view === "tutorial") return "follow the card · finish at the line";
-  if (view === "onboarding-hints") return "choose hints · start playing";
-  if (view.startsWith("onboarding")) return "enter continue · esc back";
+  if (view === "setup") return "↑ ↓ select · ← → change · enter play · esc back";
   if (view === "compatibility") return "choose an action · esc back";
   return "enter or esc back";
 }
@@ -79,30 +108,31 @@ export function TitlePanel({
   title,
   subtitle,
   children,
-  onboarding = false,
 }: {
   readonly title: string;
-  readonly subtitle: string;
+  readonly subtitle?: string;
   readonly children: ReactNode;
-  readonly onboarding?: boolean;
 }) {
   return (
     <section
       className={`title-panel${
-        title === "options" ? " title-panel--options" : ""
-      }${onboarding ? " title-panel--onboarding" : ""}`}
+        title === "options" || title === "game setup" ? " title-panel--options" : ""
+      }`}
       aria-labelledby="title-panel-heading"
     >
-      <p className="title-panel__subtitle">{subtitle}</p>
+      {subtitle ? <p className="title-panel__subtitle">{subtitle}</p> : null}
       <h1 id="title-panel-heading">{title}</h1>
       {children}
     </section>
   );
 }
 
-export function BackButton({ onClick }: { readonly onClick: () => void }) {
+export function BackButton({ onClick, onFocus }: {
+  readonly onClick: () => void;
+  readonly onFocus?: () => void;
+}) {
   return (
-    <button type="button" className="title-panel__back" onClick={onClick}>
+    <button type="button" className="title-panel__back" onClick={onClick} onFocus={onFocus}>
       <span aria-hidden="true">←</span> back
     </button>
   );

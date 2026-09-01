@@ -11,40 +11,12 @@ export const SHORTCUT_CATALOG = validateCatalog(catalogData);
 export const AVAILABLE_TOOL_IDS = (Object.keys(catalogData.apps) as AvailableToolId[])
   .filter((id) => SHORTCUT_CATALOG.apps[id].releasedPlatforms.includes("macos"));
 
-export const TOOL_CATALOG: readonly ToolCatalogEntry[] = ([
-  ...AVAILABLE_TOOL_IDS.map((id) => ({
-    id,
-    name: SHORTCUT_CATALOG.apps[id].name,
-    status: "available" as const,
-    description: SHORTCUT_CATALOG.apps[id].description,
-  })),
-  {
-    id: "notion",
-    name: "Notion",
-    status: "coming-soon",
-    description: "Pages, blocks, databases, and navigation.",
-  },
-  {
-    id: "jira",
-    name: "Jira",
-    status: "coming-soon",
-    description: "Issues, boards, search, and workflows.",
-  },
-  {
-    id: "superhuman",
-    name: "Superhuman",
-    status: "coming-soon",
-    description: "Inbox navigation and email actions.",
-  },
-  {
-    id: "excel",
-    name: "Excel",
-    status: "coming-soon",
-    description: "Sheets, ranges, formulas, and formatting.",
-  },
-] satisfies ToolCatalogEntry[]).filter((tool, index, catalog) =>
-  catalog.findIndex((entry) => entry.id === tool.id) === index,
-);
+export const TOOL_CATALOG: readonly ToolCatalogEntry[] = AVAILABLE_TOOL_IDS.map((id) => ({
+  id,
+  name: SHORTCUT_CATALOG.apps[id].name,
+  status: "available",
+  description: SHORTCUT_CATALOG.apps[id].description,
+}));
 
 const tracks = new Map<string, ShortcutTrack>(AVAILABLE_TOOL_IDS.flatMap((id) =>
   (["macos", "windows"] as const).map((platform) =>

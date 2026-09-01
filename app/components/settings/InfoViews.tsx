@@ -22,14 +22,17 @@ export function InfoView({
                 <span className="score-list__rank">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <span className="score-list__label">{entry.label}</span>
+                <span className="score-list__identity">
+                  <span className="score-list__name">{entry.name}</span>
+                  <span className="score-list__label">{entry.label}</span>
+                </span>
                 <strong>{entry.score.toLocaleString("en-US")}</strong>
               </li>
             ))}
           </ol>
         ) : (
           <p className="title-panel__empty">
-            No runs yet. The highway is waiting.
+            No scores yet. Play a round to set your first score.
           </p>
         )}
         <BackButton onClick={onBack} />
@@ -55,8 +58,10 @@ export function InfoView({
           </li>
         </ol>
         <p className="title-panel__note">G → I: press G first, then I at the line. ⇧ E: hold Shift and press E.</p>
-        <button type="button" className="primary-button" onClick={onReplayDemo}>try the demo</button>
-        <BackButton onClick={onBack} />
+        <div className="setup-actions">
+          <button type="button" className="primary-button" onClick={onReplayDemo}>play tutorial</button>
+          <BackButton onClick={onBack} />
+        </div>
       </TitlePanel>
     );
   }

@@ -2,6 +2,44 @@ import { expect, test } from "@playwright/test";
 
 import { FAST_TEST_RUN, openAsReturningPlayer } from "./helpers";
 
+for (const [tool, action, key] of [
+  ["slack", "Edit your message", "e"],
+  ["notion", "Insert text block", "Enter"],
+  ["jira", "New issue", "c"],
+  ["superhuman", "New issue", "c"],
+  ["excel", "New issue", "c"],
+]) {
+  const supported = tool === "slack" || tool === "notion";
+  test(`${tool} ${supported ? "launches its own shortcuts" : "legacy link falls back to Linear"} and accepts the displayed key`, async ({ page }) => {
+    await openAsReturningPlayer(page, FAST_TEST_RUN.replace("tool=linear", `tool=${tool}`));
+    const game = page.locator("main.shortcut-hero");
+    await expect(game).toHaveAttribute("data-view-phase", "game", { timeout: 15_000 });
+    const cue = page.locator(".dom-action-ribbon.is-active").first();
+    await expect(cue).toBeVisible();
+    await expect(cue.locator("strong")).toHaveText(action);
+    await expect(cue.locator("kbd")).toHaveText(key.length === 1 ? key.toUpperCase() : key);
+    if (key === "Enter") {
+      await expect(page.locator(".keyboard-instrument")).toHaveClass(/is-extended/);
+    }
+    await page.keyboard.press(key);
+    await expect(page.getByLabel("Streak: 1", { exact: true })).toBeVisible();
+    let streak = 1;
+    if (tool === "notion") {
+      // Tab must hit the next card, not move focus to a page control.
+      await expect(cue.locator("kbd")).toHaveText("Tab");
+      await page.keyboard.press("Tab");
+      streak = 2;
+      await expect(page.getByLabel(`Streak: ${streak}`, { exact: true })).toBeVisible();
+    }
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible();
+    // Navigation keys stop being game input while the pause menu is open.
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible();
+    await expect(page.getByLabel(`Streak: ${streak}`, { exact: true })).toBeVisible();
+  });
+}
+
 test("a browser without WebGL still gets the action highway", async ({
   page,
 }) => {
@@ -188,6 +226,23 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   expect(progress.shortcuts["new-issue"].needsReview).toBe(false);
   expect(progress.shortcuts["assign-user"].needsReview).toBe(true);
 
+  await expect(page.locator(".results-player")).toContainText("Playing as Guest");
+  await page.getByRole("button", { name: "Add your name", exact: true }).click();
+  const nameInput = page.getByRole("textbox", { name: "Your name", exact: true });
+  await expect(nameInput).toBeFocused();
+  // Typing menu-navigation keys and spaces must edit the name, not restart a run.
+  await nameInput.pressSequentially("Ada Swift");
+  await expect(nameInput).toHaveValue("Ada Swift");
+  await nameInput.press("Enter");
+  await expect(page.getByRole("heading", { name: "Run complete" })).toBeVisible();
+  await expect(page.locator(".results-player")).toContainText("Playing as Ada Swift");
+  const savedScores = await page.evaluate(() => Object.keys(window.localStorage)
+    .filter((key) => key.startsWith("shortcut-hero:high-score:"))
+    .map((key) => JSON.parse(window.localStorage.getItem(key)!)));
+  expect(savedScores).toHaveLength(1);
+  expect(savedScores[0].name).toBe("Ada Swift");
+  expect(savedScores[0].score).toBeGreaterThan(0);
+
   await page.getByRole("button", { name: "Play again" }).click();
   await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/);
   await expect(game).toHaveAttribute("data-view-phase", "game");
@@ -196,4 +251,10 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   await expect(page.locator(".countdown-number")).toHaveText(/^[123]$/);
   await expect(game).toHaveAttribute("data-view-phase", "game");
   await expect(page.locator(".dom-action-ribbon").first()).toContainText("Assign user");
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "high scores", exact: true }).click();
+  await expect(page.locator(".score-list__name")).toHaveText("Ada Swift");
+  expect(await page.evaluate(() => JSON.parse(window.localStorage.getItem("shortcut-hero:onboarding") ?? "null")))
+    .toEqual({ name: "Ada Swift", complete: true });
 });

@@ -1,134 +1,211 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useGameAudio } from "../../audio";
 import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
-import { EMPTY_INPUT_STATE, getShortcutById, matchShortcutInput } from "../../game";
+  createGameSession, getPromptTiming, pauseSession, resumeSession, startSession,
+  type GameSession, type GameSettings, type ShortcutDefinition,
+} from "../../game";
+import { buildSceneCues, hintKeysFor } from "../../gameplay/runtime-view";
+import type { ProcessGameEffects } from "../../gameplay/types";
+import { useGameFeedback } from "../../gameplay/use-game-feedback";
+import { useGameplayInput } from "../../gameplay/use-gameplay-input";
+import { useSessionTicker } from "../../gameplay/use-session-ticker";
+import { useSystemReducedMotion } from "../../gameplay/use-system-reduced-motion";
+import { getToolTrack } from "../../tools";
+import { DomGameStage, KeyboardInstrument } from "../game";
+import type { LaunchSettings } from "./settings";
 
-type DemoStyle = CSSProperties & Record<`--${string}`, string | number>;
+const NO_SAVED_RESULTS = () => {};
 
-const DEMO_DURATION_MS = 2_600;
-const HIT_WINDOW_START = 0.72;
-const HIT_WINDOW_END = 0.96;
-const DEMO_STEPS = [
-  { shortcut: getShortcutById("new-issue"), instruction: "Press C when the card reaches the line." },
-  { shortcut: getShortcutById("go-inbox"), instruction: "Press G first. Press I at the line." },
-  { shortcut: getShortcutById("set-estimate"), instruction: "Hold Shift. Press E at the line." },
-] as const;
-
-export function OnboardingDemo({
-  onComplete,
-}: {
+export function OnboardingDemo({ settings, onComplete }: {
+  readonly settings: LaunchSettings;
   readonly onComplete: () => void;
 }) {
-  const [progress, setProgress] = useState(0);
   const [step, setStep] = useState(0);
+  const track = getToolTrack(settings.tool);
+  // Teach only input types the selected app actually contains.
+  const steps = [track.decks.easy[0], track.decks.medium[0], track.decks.hard[0]]
+    .filter((shortcut): shortcut is ShortcutDefinition => Boolean(shortcut));
+  return <TutorialStep key={steps[step].id} shortcut={steps[step]} settings={settings}
+    step={step} stepCount={steps.length} appName={track.name} onComplete={onComplete}
+    onContinue={() => step + 1 === steps.length ? onComplete() : setStep(step + 1)} />;
+}
+
+function TutorialStep({ shortcut, settings, step, stepCount, appName, onComplete, onContinue }: {
+  readonly shortcut: ShortcutDefinition;
+  readonly settings: LaunchSettings;
+  readonly step: number;
+  readonly stepCount: number;
+  readonly appName: string;
+  readonly onComplete: () => void;
+  readonly onContinue: () => void;
+}) {
+  const practiceSettings = useMemo<GameSettings>(() => ({
+    trackId: settings.tool, platform: "macos", mode: shortcut.difficulty,
+    speed: settings.pace, assistance: "novice", hints: "always", durationSeconds: 30,
+  }), [settings.pace, settings.tool, shortcut.difficulty]);
+  const makeSession = useCallback(() => createGameSession(practiceSettings, {
+    deck: [shortcut], maxRequeues: 0,
+  }), [practiceSettings, shortcut]);
+  const [session, setSessionState] = useState(makeSession);
+  const sessionRef = useRef<GameSession | null>(session);
+  const [frameNow, setFrameNow] = useState(0);
   const [hit, setHit] = useState(false);
-  const [message, setMessage] = useState("");
-  const progressRef = useRef(0);
-  const inputRef = useRef(EMPTY_INPUT_STATE);
   const hitRef = useRef(false);
-  const currentStep = DEMO_STEPS[step];
+  const [message, setMessage] = useState("");
+  const [pressedKeys, setPressedKeys] = useState<readonly string[]>([]);
+  const heldSuccessKey = useRef<string | null>(null);
+  const continueKey = useRef<string | null>(null);
+  const reducedMotion = useSystemReducedMotion(settings.effects);
+  const { start, pause: pauseAudio, stop, setMuted, playHit, playMiss, playCombo, isReady } = useGameAudio();
+  const feedbackAudio = useMemo(() => ({ playHit, playMiss, playCombo, stop }), [playHit, playMiss, playCombo, stop]);
+  const { feedback, departingCues, keyboardSignal, processEffects: showEffects,
+    resetFeedback, shiftDepartingCues } = useGameFeedback({ audio: feedbackAudio, onFinished: NO_SAVED_RESULTS });
+  const setSession = useCallback((next: GameSession) => {
+    sessionRef.current = next;
+    setSessionState(next);
+  }, []);
 
-  useEffect(() => {
-    if (hit) return;
-    const startedAt = performance.now();
-    let frame = 0;
-    let cycle = 0;
-    inputRef.current = EMPTY_INPUT_STATE;
-    hitRef.current = false;
-    progressRef.current = 0;
-
-    const animate = (now: number) => {
-      const nextCycle = Math.floor((now - startedAt) / DEMO_DURATION_MS);
-      if (nextCycle !== cycle) inputRef.current = EMPTY_INPUT_STATE;
-      cycle = nextCycle;
-      const next = ((now - startedAt) % DEMO_DURATION_MS) / DEMO_DURATION_MS;
-      progressRef.current = next;
-      setProgress(next);
-      frame = window.requestAnimationFrame(animate);
-    };
-
-    frame = window.requestAnimationFrame(animate);
-    return () => window.cancelAnimationFrame(frame);
-  }, [hit, step]);
-
-  useEffect(() => {
-    if (!hit) return;
-    const timer = window.setTimeout(() => {
-      if (step === DEMO_STEPS.length - 1) onComplete();
-      else {
-        setStep(step + 1);
-        setHit(false);
-        setMessage("");
-      }
-    }, 650);
-    return () => window.clearTimeout(timer);
-  }, [hit, onComplete, step]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (hitRef.current) return;
-      const match = matchShortcutInput(currentStep.shortcut.input, inputRef.current, event, performance.now());
-      if (match.status === "ignored") return;
-      event.preventDefault();
-      const current = progressRef.current;
-      if (match.status === "progress" && current >= 0.42 && current <= HIT_WINDOW_END) {
-        inputRef.current = match.state;
-        setMessage("G pressed. Now press I at the line.");
-      } else if (match.status === "correct" && current >= HIT_WINDOW_START && current <= HIT_WINDOW_END) {
+  const processEffects = useCallback<ProcessGameEffects>((effects, next, prompt, now) => {
+    if (hitRef.current) return;
+    // Practice rounds can be retried indefinitely, without saving a result.
+    if (effects.some(effect => effect.type === "finished")) {
+      setSession(startSession(makeSession(), now));
+      setFrameNow(now);
+      setMessage("");
+      resetFeedback();
+      return;
+    }
+    showEffects(effects, next, prompt, now);
+    for (const effect of effects) {
+      if (effect.type === "hit" && effect.outcome === "clean") {
         hitRef.current = true;
+        heldSuccessKey.current = shortcut.input.kind === "sequence" ? shortcut.input.codes[1] : shortcut.input.code;
         setHit(true);
-        setProgress(0.88);
         setMessage("Nice hit!");
-      } else if (current < HIT_WINDOW_START) {
-        inputRef.current = EMPTY_INPUT_STATE;
-        setMessage("Too early. Wait for the line.");
-      } else {
-        inputRef.current = match.state;
-        setMessage(match.status === "wrong" ? currentStep.instruction : "Too late. Try the next pass.");
+      } else if (effect.type === "hit") {
+        setMessage("Right keys. Try a clean hit on the next card.");
+      } else if (effect.type === "input-progress") {
+        const keys = shortcut.input.display.split(" → ");
+        setMessage(`${keys[0]} pressed. Now press ${keys[1]} at the line.`);
+      } else if (effect.type === "timing-input") {
+        setMessage(effect.timing === "too-early" ? "Too early. Wait for the line." : "Too late. Try the next card.");
+      } else if (effect.type === "wrong-input") {
+        setMessage(`Use ${shortcut.input.display}. Try the next card.`);
+      } else if (effect.type === "miss") {
+        setMessage("Missed. Try the next card.");
       }
-    };
+    }
+  }, [makeSession, resetFeedback, setSession, shortcut.input, showEffects]);
 
-    window.addEventListener("keydown", onKeyDown);
+  useSessionTicker({ active: session.phase === "playing", sessionRef, setSession, setFrameNow, processEffects });
+
+  const pause = useCallback(() => {
+    const current = sessionRef.current;
+    if (current?.phase !== "playing") return;
+    const now = performance.now();
+    setFrameNow(now);
+    setSession(pauseSession(current, now));
+    pauseAudio();
+  }, [pauseAudio, setSession]);
+
+  useGameplayInput({ active: session.phase === "playing" && !hit,
+    audioEnabled: settings.sound === "on", audioReady: isReady, speed: settings.pace,
+    sessionRef, setSession, setPressedKeys, startAudio: start, pause, processEffects });
+
+  const startOrResume = useCallback(() => {
+    const now = performance.now();
+    const current = sessionRef.current!;
+    setMuted(settings.sound === "off");
+    if (settings.sound === "on") void start(settings.pace);
+    if (current.phase === "paused") {
+      shiftDepartingCues(now - current.pausedAtMs!);
+      setSession(resumeSession(current, now));
+    } else {
+      resetFeedback();
+      setSession(startSession(current, now));
+    }
+    setFrameNow(now);
+    setMessage("");
+  }, [resetFeedback, setMuted, setSession, settings.pace, settings.sound, shiftDepartingCues, start]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.code === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (sessionRef.current?.phase === "paused") startOrResume();
+        else if (sessionRef.current?.phase === "playing" && !hitRef.current) pause();
+        else onComplete();
+        return;
+      }
+      if (hitRef.current) {
+        if (heldSuccessKey.current || continueKey.current || ["Shift", "Control", "Alt", "Meta", "Tab"].includes(event.key)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        continueKey.current = event.code;
+      } else if (sessionRef.current?.phase !== "playing" && event.code === "Space") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        startOrResume();
+      }
+    }
+    function onKeyUp(event: KeyboardEvent) {
+      if (event.code === heldSuccessKey.current) heldSuccessKey.current = null;
+      if (event.code === continueKey.current) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onContinue();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("keyup", onKeyUp, true);
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keyup", onKeyUp, true);
     };
-  }, [currentStep]);
+  }, [onComplete, onContinue, pause, startOrResume]);
 
-  const hittable = progress >= HIT_WINDOW_START && progress <= HIT_WINDOW_END;
+  const cues = buildSceneCues(session, frameNow, departingCues, settings.pace)
+    .filter(cue => !hit || cue.state === "cleared" || cue.state === "missed");
+  const timing = session.active ? getPromptTiming(session.active, frameNow, session.settings) : null;
+  const ready = session.phase === "ready";
+  const paused = session.phase === "paused";
+  const input = shortcut.input;
+  const [first, second] = input.display.split(" → ");
+  const instruction = input.kind === "sequence" ? `Press ${first} first. Press ${second} at the line.`
+    : input.kind === "chord" ? `Hold Shift. Press ${input.display.replace("⇧ ", "")} at the line.`
+      : `Press ${input.display} when the card reaches the line.`;
 
   return (
-    <div className="onboarding-demo">
-      <p>{step + 1} / {DEMO_STEPS.length} · {currentStep.instruction}</p>
-      <div
-        className={`onboarding-demo__stage${hit ? " is-hit" : ""}`}
-        style={{ "--demo-progress": progress } as DemoStyle}
-      >
-        <div
-          className="onboarding-demo__card"
-          data-hittable={hittable ? "true" : "false"}
-        >
-          <span>{currentStep.shortcut.action}</span>
-          <kbd>{currentStep.shortcut.input.display}</kbd>
-        </div>
-        <div className="onboarding-demo__line">
-          <span>strike</span>
-        </div>
+    <main className="tutorial-screen" aria-labelledby="tutorial-heading" data-phase={session.phase}>
+      <header className="tutorial-header">
+        <h1 id="tutorial-heading">tutorial</h1>
+        <span>{step + 1} / {stepCount} · {input.kind === "single" ? "Single key" : input.kind === "sequence" ? "Sequence" : "Chord"}</span>
+        <span>{appName} · sandbox</span>
+        <button type="button" onClick={onComplete}>skip tutorial</button>
+      </header>
+      <section className="tutorial-instruction" aria-label="Instructions">
+        <h2>{instruction}</h2>
+        <p>{input.kind === "sequence" ? `Up to ${input.maxGapMs / 1_000}s between keys. Finish at the line.`
+          : input.kind === "chord" ? "Keep Shift held as you press the other key."
+            : "Same timing as the game. No scores are saved."}</p>
+      </section>
+      <div className="tutorial-arena" data-hittable={!ready && !paused && !hit && timing?.canHit ? "true" : "false"}>
+        <DomGameStage cues={cues} feedback={feedback} paused={ready || paused} reducedMotion={reducedMotion} />
       </div>
-      <p className="onboarding-demo__status" aria-live="polite">
-        {message || "Follow the card to the line."}
-      </p>
-      <button
-        type="button"
-        className="title-panel__back onboarding-demo__skip"
-        onClick={onComplete}
-      >
-        skip demo
-      </button>
-    </div>
+      <KeyboardInstrument pressedKeys={pressedKeys} availableKeys={session.capturedCodes}
+        hintKeys={hit ? [] : hintKeysFor(session, frameNow)} feedbackKeys={keyboardSignal?.keys}
+        feedbackTone={keyboardSignal?.tone} guidance="always" status={paused ? "Paused" : `shortcut: ${input.display}`} />
+      <footer className={`tutorial-feedback${hit ? " is-hit" : ""}`} aria-live="polite">
+        <p>{ready ? "Ready when you are." : paused ? "Paused" : message || "Try it. Misses are free here."}</p>
+        {ready || paused ? <button type="button" onClick={startOrResume}>
+          {paused ? "Press Space to resume" : "Press Space to start"}
+        </button> : hit ? <button type="button" onClick={onContinue}>Press any key to continue</button>
+          : <button type="button" onClick={pause}>Esc to pause</button>}
+      </footer>
+    </main>
   );
 }

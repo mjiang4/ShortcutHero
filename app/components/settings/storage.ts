@@ -1,4 +1,4 @@
-import { getToolTrack, isAvailableToolId } from "../../tools";
+import { SHORTCUT_CATALOG } from "../../tools";
 import {
   DEFAULT_LAUNCH_SETTINGS,
   parseLaunchSettings,
@@ -9,6 +9,7 @@ import {
 import type { HintMode } from "../../game/types";
 import { LABELS } from "./title-config";
 import type { ScoreEntry } from "./title-types";
+import { readStoredHighScore } from "../../gameplay/result-storage";
 
 export const SETTINGS_STORAGE_KEY = "shortcut-hero:launch-settings";
 export const ONBOARDING_STORAGE_KEY = "shortcut-hero:onboarding";
@@ -36,6 +37,18 @@ export function persistOnboarding(name: string): void {
     );
   } catch {
     // The game remains usable when browser persistence is blocked.
+  }
+}
+
+export function persistPlayerName(name: string): boolean {
+  try {
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify({
+      ...restoreOnboarding(),
+      name: name.trim().slice(0, 32),
+    }));
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -83,15 +96,17 @@ export function readHighScores(): readonly ScoreEntry[] {
     for (let index = 0; index < window.localStorage.length; index += 1) {
       const key = window.localStorage.key(index);
       if (!key?.startsWith(SCORE_PREFIX)) continue;
-      const score = Number(window.localStorage.getItem(key) ?? 0);
-      if (!Number.isFinite(score) || score <= 0) continue;
+      const saved = readStoredHighScore(window.localStorage.getItem(key));
+      if (!saved) continue;
+      const { score, name } = saved;
       const parts = key.slice(SCORE_PREFIX.length).split(":");
       if (parts[0] === "v2") {
         const [, track, platform, mode, hints, pace, duration] = parts;
-        const trackId = isAvailableToolId(track) ? track : "linear";
+        const appName = SHORTCUT_CATALOG.apps[track]?.name ?? track;
         entries.push({
           score,
-          label: `${getToolTrack(trackId).name} · ${platform === "windows" ? "Windows" : "Mac"} · ${
+          name,
+          label: `${appName} · ${platform === "windows" ? "Windows" : "Mac"} · ${
             LABELS.difficulty[mode as GameDifficulty] ?? mode
           } · hints ${LABELS.hints[hints as HintMode] ?? hints} · ${LABELS.pace[pace as TempoPreset] ?? pace} · ${duration}`,
         });
@@ -105,10 +120,11 @@ export function readHighScores(): readonly ScoreEntry[] {
         pace = "fast",
         duration = "45s",
       ] = hasTrack ? parts : ["linear", ...parts];
-      const trackId = isAvailableToolId(track) ? track : "linear";
+      const appName = SHORTCUT_CATALOG.apps[track]?.name ?? track;
       entries.push({
         score,
-        label: `${getToolTrack(trackId).name} · ${
+        name,
+        label: `${appName} · ${
           LABELS.difficulty[mode as GameDifficulty] ?? mode
         } · ${
           assistance === "pro" ? "hints off" : "hints on"

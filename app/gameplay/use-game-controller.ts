@@ -15,6 +15,7 @@ import {
 } from "../analytics";
 import { useGameAudio } from "../audio";
 import type { EffectsMode } from "../components/settings/settings";
+import { persistPlayerName, restoreOnboarding } from "../components/settings/storage";
 import {
   createGameSession,
   getShortcutHintOpacity,
@@ -34,7 +35,7 @@ import {
   shareReferralChallenge,
 } from "../referrals/client";
 import type { SharePromptTrigger } from "../referrals/contract";
-import { persistHighScore, persistCurriculumProgress, readCurriculumProgress } from "./result-storage";
+import { nameSavedHighScore, persistHighScore, persistCurriculumProgress, readCurriculumProgress, type SavedHighScore } from "./result-storage";
 import {
   buildSceneCues,
   calculateRuntimeMetrics,
@@ -63,6 +64,8 @@ export function useGameController({
   const [countdown, setCountdown] = useState(3);
   const [session, setSessionState] = useState<GameSession | null>(null);
   const [results, setResults] = useState<GameResults | null>(null);
+  const [playerName, setPlayerName] = useState("Guest");
+  const savedHighScoreRef = useRef<SavedHighScore | null>(null);
   const [frameNow, setFrameNow] = useState(0);
   const [pressedKeys, setPressedKeys] = useState<readonly string[]>([]);
   const [pauseMenuIndex, setPauseMenuIndex] = useState(0);
@@ -107,7 +110,10 @@ export function useGameController({
         sourceSession.attempts,
       );
       persistCurriculumProgress(trackId, curriculumRef.current, platform);
-      const isPersonalBest = persistHighScore(finished, sourceSession);
+      const name = restoreOnboarding().name.trim() || "Guest";
+      setPlayerName(name);
+      savedHighScoreRef.current = persistHighScore(finished, sourceSession, name);
+      const isPersonalBest = savedHighScoreRef.current !== null && finished.score > 0;
       void persistRoundSummary(finished, sourceSession, effectsMode, soundEnabled)
         .then((persistence) => {
           if (persistence.referralConverted) {
@@ -255,6 +261,7 @@ export function useGameController({
 
   const beginRun = useCallback(() => {
     captureAbandonment("restart");
+    savedHighScoreRef.current = null;
     setResults(null);
     setSharePromptTrigger(null);
     setShareResult(null);
@@ -276,6 +283,15 @@ export function useGameController({
 
   const shareResults = useCallback(() => {
     void shareReferralChallenge().then(setShareResult);
+  }, []);
+
+  const savePlayerName = useCallback((name: string): boolean => {
+    const trimmed = name.trim().slice(0, 32);
+    if (!trimmed || !persistPlayerName(trimmed)) return false;
+    const saved = savedHighScoreRef.current;
+    if (saved && !nameSavedHighScore(saved, trimmed)) return false;
+    setPlayerName(trimmed);
+    return true;
   }, []);
 
   const resume = useCallback(() => {
@@ -340,6 +356,8 @@ export function useGameController({
     countdown,
     session,
     results,
+    playerName,
+    savePlayerName,
     pressedKeys,
     pauseMenuIndex,
     resultsMenuIndex,

@@ -7,6 +7,7 @@ import {
 } from "./round-payload";
 import { buildMasteryDeltas } from "./round-client";
 import type { PromptAttempt, ShortcutDefinition } from "../game";
+import { POST as saveRound } from "../api/rounds/route";
 
 const VALID_PAYLOAD = {
   roundId: `r_${"a".repeat(32)}`,
@@ -80,6 +81,30 @@ test("drops undeclared personal and shortcut-content fields", () => {
   assert.equal("pressedKeys" in parsed, false);
   assert.equal("action" in parsed.mastery[0], false);
   assert.equal("shortcut" in parsed.mastery[0], false);
+});
+
+test("the Vercel round endpoint validates and strips personal fields before forwarding", async (t) => {
+  const previousOrigin = process.env.SHORTCUT_HERO_BACKEND_ORIGIN;
+  process.env.SHORTCUT_HERO_BACKEND_ORIGIN = "https://storage.example.test";
+  t.after(() => {
+    if (previousOrigin === undefined) delete process.env.SHORTCUT_HERO_BACKEND_ORIGIN;
+    else process.env.SHORTCUT_HERO_BACKEND_ORIGIN = previousOrigin;
+  });
+  const fetchMock = t.mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, options?: RequestInit) => {
+    assert.deepEqual(JSON.parse(String(options?.body)), VALID_PAYLOAD);
+    return Response.json({ status: "created", referralConverted: false }, { status: 201 });
+  });
+  const response = await saveRound(new Request("https://game.example.test/api/rounds", {
+    method: "POST",
+    body: JSON.stringify({ ...VALID_PAYLOAD, name: "Ada", pressedKeys: ["A"] }),
+  }));
+  assert.equal(response.status, 201);
+  const rejected = await saveRound(new Request("https://game.example.test/api/rounds", {
+    method: "POST",
+    body: JSON.stringify({ ...VALID_PAYLOAD, correctAnswers: 100 }),
+  }));
+  assert.equal(rejected.status, 400);
+  assert.equal(fetchMock.mock.callCount(), 1);
 });
 
 test("rejects inconsistent mastery totals", () => {

@@ -1,5 +1,6 @@
 import type {
   GameKeyEvent,
+  GameKeyCode,
   InputMatcherState,
   ShortcutDefinition,
   ShortcutInput,
@@ -32,6 +33,12 @@ export type InputMatchResult =
 
 function isLetterCode(code: string): boolean {
   return /^Key[A-Z]$/.test(code);
+}
+
+/** Navigation keys are captured only when the active lesson uses them. Esc stays pause. */
+export function isPlayableKeyCode(code: string): code is GameKeyCode {
+  return isLetterCode(code) || ["Enter", "Tab", "Space", "Backspace",
+    "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code);
 }
 
 function hasReservedModifier(event: GameKeyEvent): boolean {
@@ -75,7 +82,7 @@ export function matchShortcutInput(
     event.repeat ||
     event.isComposing ||
     hasReservedModifier(event) ||
-    !isLetterCode(event.code)
+    !isPlayableKeyCode(event.code)
   ) {
     return { status: "ignored", state };
   }

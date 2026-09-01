@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { GameResults } from "../../game";
 import { SCORE_FORMATTER } from "../../gameplay/constants";
 import type { ShareResult } from "../../platform/share-game";
@@ -10,6 +11,8 @@ type ResultsScreenProps = {
   readonly onSelect: (index: number) => void;
   readonly onPlayAgain: () => void;
   readonly onReturnHome: () => void;
+  readonly playerName: string;
+  readonly onSaveName: (name: string) => boolean;
   readonly sharePromptTrigger: SharePromptTrigger | null;
   readonly shareResult: ShareResult | null;
   readonly onShare: () => void;
@@ -21,10 +24,15 @@ export function ResultsScreen({
   onSelect,
   onPlayAgain,
   onReturnHome,
+  playerName,
+  onSaveName,
   sharePromptTrigger,
   shareResult,
   onShare,
 }: ResultsScreenProps) {
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(playerName === "Guest" ? "" : playerName);
+  const [nameError, setNameError] = useState(false);
   const titleIndex = sharePromptTrigger ? 2 : 1;
   const shareLabel =
     shareResult === "copied"
@@ -47,6 +55,61 @@ export function ResultsScreen({
           <span className="results-score-value">
             {SCORE_FORMATTER.format(results.score)}
           </span>
+        </div>
+
+        <div className="results-player">
+          {editingName ? (
+            <form
+              className="results-player__form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!draftName.trim()) return;
+                if (onSaveName(draftName)) {
+                  setEditingName(false);
+                  setNameError(false);
+                } else {
+                  setNameError(true);
+                }
+              }}
+            >
+              <label htmlFor="player-name">Your name</label>
+              <div className="results-player__controls">
+                <input
+                  id="player-name"
+                  autoFocus
+                  autoComplete="nickname"
+                  maxLength={32}
+                  value={draftName}
+                  onChange={(event) => setDraftName(event.target.value)}
+                />
+                <button type="submit" disabled={!draftName.trim()}>Save name</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingName(false);
+                    setNameError(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+              <p>Best scores stay on this device. No account needed.</p>
+              {nameError ? <p role="alert">Couldn’t save in this browser. You can keep playing.</p> : null}
+            </form>
+          ) : (
+            <>
+              <span>Playing as <strong>{playerName}</strong></span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftName(playerName === "Guest" ? "" : playerName);
+                  setEditingName(true);
+                }}
+              >
+                {playerName === "Guest" ? "Add your name" : "Change name"}
+              </button>
+            </>
+          )}
         </div>
 
         <ResultsAnalytics results={results} />

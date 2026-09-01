@@ -1,32 +1,24 @@
-import type { LaunchSettings } from "./settings";
 import type { SystemInfo as LaunchSystemInfo } from "../../platform/launch-compatibility";
 
 export type TitleView =
   | "menu"
+  | "setup"
   | "options"
   | "scores"
   | "help"
   | "tutorial"
+  | "warmup"
   | "credits"
   | "compatibility";
-export type OnboardingView =
-  | "onboarding-name"
-  | "onboarding-system"
-  | "onboarding-guide"
-  | "onboarding-hints";
-export type ScreenView = TitleView | OnboardingView;
+export type ScreenView = TitleView;
 export type MenuAction =
-  | Exclude<TitleView, "menu" | "compatibility" | "tutorial">
+  | Exclude<TitleView, "menu" | "setup" | "compatibility" | "tutorial" | "warmup">
   | "start";
 
 export type ScoreEntry = {
   readonly label: string;
   readonly score: number;
+  readonly name: string;
 };
 
 export type SystemInfo = LaunchSystemInfo;
-
-export type TitleSettingsState = {
-  readonly saved: LaunchSettings;
-  readonly draft: LaunchSettings;
-};

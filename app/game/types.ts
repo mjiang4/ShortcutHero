@@ -12,10 +12,12 @@ export type SpeedPreset = "relaxed" | "standard" | "turbo";
 export type SessionDurationSeconds = 30 | 45 | 60;
 
 export type LetterCode = `Key${string}`;
+export type GameKeyCode = LetterCode | "Enter" | "Tab" | "Space" | "Backspace" |
+  "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
 
 export interface SingleShortcutInput {
   readonly kind: "single";
-  readonly code: LetterCode;
+  readonly code: GameKeyCode;
   readonly display: string;
 }
 
@@ -28,7 +30,7 @@ export interface SequenceShortcutInput {
 
 export interface ChordShortcutInput {
   readonly kind: "chord";
-  readonly code: LetterCode;
+  readonly code: GameKeyCode;
   readonly shift: true;
   readonly display: string;
 }

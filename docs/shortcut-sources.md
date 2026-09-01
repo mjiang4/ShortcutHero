@@ -1,8 +1,28 @@
 # Shortcut sources and catalog updates
 
-Reference snapshot: **2026-08-30**. These are documented defaults, not evidence that every shortcut has been exercised in the installed app. Context, product surface, keyboard layout, app version, and user remapping matter.
+Reference snapshot: the initial Linear catalog and research-only sections were reviewed **2026-08-30**; the other starter packs and the expanded Linear/Notion catalogs were reviewed **2026-08-31**. Per-entry dates record each review. These are documented defaults, not evidence that every shortcut has been exercised in the installed app. Context, product surface, keyboard layout, app version, and user remapping matter.
 
-**Playable now:** the browser-safe macOS subset of Linear. The other products below are research references, not released game packs. Do not register a pack until its bindings, contexts, and browser safety are verified.
+**Playable in the local game:** browser-safe macOS packs for **Linear, Slack, and Notion only**. Jira, Superhuman Mail, and Excel remain stored but have empty `releasedPlatforms`; they are hidden from setup and the home animation. Old links fall back to Linear, without deleting or relabeling old scores. Cursor, Claude Code, ChatGPT, and Codex remain research-only below. Windows bindings are stored explicitly where documented; Windows launch support is not enabled.
+
+## New app packs
+
+| App | Catalog entries | Easy / Medium / Hard eligible | Primary source |
+|---|---:|---:|---|
+| Slack | 101 | 10 / 10 / 13 | [Slack shortcut reference](https://slack.com/help/articles/201374536-Slack-keyboard-shortcuts) |
+| Notion | 61 | 10 / 10 / 14 | [Notion shortcut reference](https://www.notion.com/help/keyboard-shortcuts) |
+| Jira (not released) | 9 | — | [Jira Cloud shortcuts](https://support.atlassian.com/jira-software-cloud/docs/use-keyboard-shortcuts/) |
+| Superhuman Mail (not released) | 29 | — | [Mac v8 keymap](https://download.superhuman.com/Superhuman%20Keyboard%20Shortcuts.pdf), [Windows/Linux v8 keymap](https://download.superhuman.com/Superhuman_Keyboard_Shortcuts.pdf) |
+| Excel (not released) | 18 | — | [Microsoft Excel shortcuts](https://support.microsoft.com/en-US/Accessibility/excel/keyboard-shortcuts-in-excel) |
+
+Counts are a snapshot of the catalog validator output, not constants used by the UI. The JSON holds individual actions, contexts, physical key codes, display labels, platform bindings, and source dates. The existing importer updates these packs without changing gameplay code.
+
+- Slack teaches focused-message actions plus composer line breaks and selection. Letter shortcuts do not work while typing a message. The Up-arrow edit-last-message action assumes Slack's default preference, as recorded in its context and notes.
+- Notion teaches block navigation/editing, including horizontal selection and editing/opening selected blocks. The expanded reference includes formatting, block conversions, window/page navigation, database operations, and platform-specific bindings. Cmd/Ctrl actions, Esc, and the OS emoji picker are stored but excluded from play.
+- Jira uses the current Cloud documentation, not older Server shortcut lists. Its starter pack has only singles, so Medium/Hard do not invent extra command types.
+- Superhuman means **Mail**, not Docs or Go. The pack covers inbox actions, folder sequences, and Shift filters.
+- Excel uses desktop defaults. Return direction can be customized; this pack assumes its default and Scroll Lock off. Mac Delete is the physical Backspace key. Function-key and reserved-modifier actions are reference-only.
+
+Input capture is limited to active play. Esc pauses; menus retain native Tab navigation. Cmd, Ctrl, and Option/Alt remain untouched. Source review and browser-game checks do not constitute testing in each installed third-party app.
 
 ## Updating the catalog
 
@@ -52,7 +72,20 @@ Minimal shape:
 
 This is a format example, not a verified Example-app binding. A stroke such as `["Shift", "KeyE"]` means simultaneous keys; separate strokes mean a sequence. Explicit `null` means the platform binding is not supplied. The loader does **not** infer Windows bindings from Mac bindings.
 
-The currently playable subset is one unmodified letter, two successive unmodified letters, or Shift + one letter. Command/Control/Alt, navigation/system keys, longer sequences, and other unsupported inputs can be recorded but do not enter the game. Counts come from the resulting app/platform deck. `releasedPlatforms` is a review gate, not proof of compatibility; only Mac packs are currently exposed in the launcher.
+Optional, validated source-preservation fields (used by every Slack row):
+
+| Field | Meaning |
+|---|---|
+| `category` | Original documentation section name; free text, not a game-mode enum |
+| `sourceAction` | Source action label, kept separately from the short in-game `action` |
+| `sourceBindings.macos` / `.windows` | Arrays of documented shortcut alternatives, including pointer gestures and `[number]` choices; an empty array means the source does not supply that platform |
+| `notes` | Desktop-only restrictions, keyboard-layout caveats, preference-dependent behavior, and audit discrepancies |
+
+For example, `slack/new-message` stores category `Slack basics`, source action `Compose a new message`, Mac alternatives `["⌘ N", "⌘ Shift K"]`, and Windows alternatives `["Ctrl N", "Ctrl Shift K"]`. Its normalized `bindings` still contain one canonical keyboard input per platform. The original category can be queried from `SHORTCUT_CATALOG.apps.slack.shortcuts`; no new service or game-mode layer is needed.
+
+These optional fields extend schema version 1 without invalidating older packs. The existing importer validates and retains them. `sourceBindings` are reference strings, **never parsed or executed as gameplay input**. A pointer gesture or numbered choice can therefore have full source data while its normalized `bindings` remain null. Aliases do not silently become extra game answers; gameplay still uses the displayed canonical binding.
+
+The playable subset is one letter or supported editing/navigation key, two successive letters, or Shift + one supported key, with `source.verification: "current"`. Supported nonletters are Enter, Tab, Space, Backspace, and the four arrows. They enter the on-screen keyboard only when used by the lesson. Command/Control/Alt, Esc, function keys, longer sequences, and other unsupported inputs can be recorded but do not enter the game. Historical records are retained but excluded from every playable pool. Counts come from the resulting app/platform deck. `releasedPlatforms` is a review gate, not proof of installed-app compatibility; only the three released Mac packs are exposed in the launcher.
 
 ### Why there is no “download every shortcut” connector
 
@@ -66,7 +99,7 @@ No live connector, account authorization, override-file reader, or arbitrary com
 
 ## Linear — current game catalog
 
-Sources below are primary. The checked catalog retains the original 24 actions and adds 11 documented browser-safe actions. **35 playable Mac bindings:** 14 singles, 13 sequences, 8 Shift chords. One additional reserved-modifier action is stored as reference-only. Windows letter bindings have not been individually verified and are deliberately absent.
+Sources below are primary. The catalog contains **75 entries**, including **37 playable Mac bindings:** 14 singles, 14 sequences, 9 Shift chords. The other 38 are reference-only, including four historical bindings that are no longer offered in gameplay. Existing command IDs are retained. Windows bindings are stored only where explicitly paired in the source; Windows gameplay is not released.
 
 | Input | Action / required context | Primary source |
 |---|---|---|
@@ -98,13 +131,55 @@ Sources below are primary. The checked catalog retains the original 24 actions a
 | Shift + F | Clear last filter — historical reference | [Historical changelog](https://linear.app/changelog/page/11) |
 | Shift + D | Set due date; issue selected | [Due dates](https://linear.app/docs/due-dates) |
 | Shift + M | Set project milestone; issue selected | [Milestones](https://linear.app/docs/project-milestones) |
+| M → B; M → X; M → R | Mark blocked; mark blocking; relate an issue | [Issue relations](https://linear.app/docs/issue-relations) |
+| Shift + Up / Down | Extend selection; issue list | [Selecting issues](https://linear.app/docs/select-issues) |
+| Shift + Enter | Line break; description editor | [Editor](https://linear.app/docs/editor) |
 | Mac Control + R; Windows Control + Alt + R | New customer request; **reference-only**, reserved modifiers | [Customer requests](https://linear.app/docs/customer-requests) |
 
-Audit limits: the selecting-issues page mentions J/K together; verify direction in the actual app before calling that a fresh runtime check. The four historical bindings are marked `historical` in the data and retained from the existing game, not silently presented as newly verified. The coverage is partial. Do not assume every navigation command works from every context, or promote old E/H entries without checking their current meaning.
+Additional reference-only entries cover command-menu/search actions, template/sub-issue creation, selection and reordering, subscriber management, text formatting, lists, code blocks, attachments, comments, undo, and redo. Each JSON entry links to its specific primary source and records its required context.
+
+### Differences from the pasted Linear list
+
+- **My issues is G → M**, not G → A; G → A opens the current team's active issues. See [My issues](https://linear.app/docs/my-issues) and [team pages](https://linear.app/docs/default-team-pages).
+- Linear's [June 11, 2026 release note](https://linear.app/changelog/2026-06-11-coding-sessions) explicitly changes strikethrough to **Cmd/Ctrl + Shift + X**. This supersedes the S binding still shown on the [editor help page](https://linear.app/docs/editor); the catalog records X and notes the discrepancy. Inline code remains **Cmd/Ctrl + E**. The editor page lists **Cmd + Shift + U** for editor uploads; the separate [comment reference](https://linear.app/docs/comment-on-issues) specifies **Cmd/Ctrl + Shift + A** for comment attachments. Contexts remain distinct.
+- Old navigation/editing entries without a matching current primary reference were not added as verified defaults. Markdown text and mouse gestures are not gameplay chords. G → V, O → C, Shift + C, and Shift + F retain historical references but are now excluded from gameplay until re-verified against current documentation.
+
+Audit limits: the selecting-issues page mentions J/K together; verify direction in the actual app before calling that a fresh runtime check. Historical entries are archival data, not current lessons. The coverage is partial. Do not assume every navigation command works from every context, or promote old E/H entries without checking their current meaning.
+
+## Slack — categorized Mac and Windows/Linux reference
+
+Source: [Slack keyboard shortcuts](https://slack.com/help/articles/201374536-Slack-keyboard-shortcuts), checked **2026-08-31** against the two user-provided extracts. The `windows` data corresponds to Slack's combined Windows/Linux column; it does not enable a new launch platform. The source tables and relevant tips are preserved as 101 rows across these original categories:
+
+| Category | Stored rows |
+|---|---:|
+| Slack basics | 21 |
+| Navigate conversations and messages | 18 |
+| Mark messages read or unread | 3 |
+| Navigate unread messages | 5 |
+| Switch workspaces | 4 |
+| Switch tabs | 3 |
+| Take actions on messages | 10 |
+| Format messages | 17 |
+| Format text in a canvas | 8 |
+| Navigate a canvas | 12 |
+
+The game uses 13 canonical Mac bindings (10 singles, 3 Shift chords). The larger reference includes browser-reserved modifiers, pointer gestures, variable-number choices, and repeated actions in different source categories. Direction-pair rows such as sidebar resizing retain both arrows as source strings without choosing an arbitrary game direction. Common message formatting also applies to canvases, as Slack states; it is not duplicated into every category.
+
+Corrections and limits:
+
+- The supplied Windows navigation section contained Mac text. The official Windows column uses **Alt + Left/Right** for history, **Ctrl + Shift + 1/0** for Home/More, and **Ctrl + Shift + 2** for browsing DMs. These are stored explicitly, not derived by replacing Command with Control.
+- The official Windows specific-tab entry includes **Ctrl + Shift + [number]**; the pasted version omitted Shift. Number assignments remain parameterized source strings.
+- Canvas context menus differ: **Cmd + Shift + /** on Mac versus **Shift + F10** on Windows. Copying a canvas anchor uses **Control + Option + Q on Mac**, not Command.
+- No Windows underline binding or Mac jump-to-conversation row was invented where the respective source column omitted one. Missing source arrays and normalized bindings remain empty/null.
+- English keyboard-layout variants, desktop-only marks, focus requirements, and the configurable Up-arrow behavior are kept in per-row notes. Mouse gestures are not simulated by invented key codes.
+
+This is a reviewed snapshot, not an automatically synchronized database or evidence of tests inside Slack. It is ready for future category/platform filtering without implementing those future challenges now.
 
 ## Notion — web and desktop reference
 
 Primary source: [Notion keyboard shortcuts](https://www.notion.com/help/keyboard-shortcuts). In the table, **M** means the source's Command (Mac) / Control (Windows) pairing, and **O** means Option / Alt. Explicit exceptions are written out. Desktop-only actions do not imply equivalent browser behavior.
+
+The supplied Notion Help text was cross-checked against this reference and expanded into **61 catalog entries**: 14 playable actions and 47 reference-only entries. Aliases such as Cmd/Ctrl + K versus Cmd/Ctrl + P for search remain documented below; the catalog uses one canonical binding per action/context instead of inflating the lesson pool with aliases. For US QWERTY, the physical `+` key is stored as Shift + Equal. Mouse gestures and variable-length typing syntax remain in these notes rather than being mislabeled as gameplay shortcuts.
 
 | Binding | Action / context |
 |---|---|

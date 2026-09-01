@@ -28,30 +28,23 @@ export function buildContentSecurityPolicy(production: boolean): string {
   return directives.join("; ");
 }
 
-export function applySecurityHeaders(
-  response: Response,
+export function getSecurityHeaders(
   production: boolean,
-): Response {
-  if (response.status === 101) return response;
-  const secured = new Response(response.body, response);
-  secured.headers.set(
-    "content-security-policy",
-    buildContentSecurityPolicy(production),
-  );
-  secured.headers.set("cross-origin-opener-policy", "same-origin");
-  secured.headers.set("cross-origin-resource-policy", "same-origin");
-  secured.headers.set("referrer-policy", "strict-origin-when-cross-origin");
-  secured.headers.set(
-    "permissions-policy",
-    "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
-  );
+): { key: string; value: string }[] {
+  const headers = [
+    { key: "content-security-policy", value: buildContentSecurityPolicy(production) },
+    { key: "cross-origin-opener-policy", value: "same-origin" },
+    { key: "cross-origin-resource-policy", value: "same-origin" },
+    { key: "referrer-policy", value: "strict-origin-when-cross-origin" },
+    { key: "permissions-policy", value: "camera=(), geolocation=(), microphone=(), payment=(), usb=()" },
+    { key: "x-content-type-options", value: "nosniff" },
+    { key: "x-frame-options", value: "DENY" },
+  ];
   if (production) {
-    secured.headers.set(
-      "strict-transport-security",
-      "max-age=31536000; includeSubDomains",
-    );
+    headers.push({
+      key: "strict-transport-security",
+      value: "max-age=31536000; includeSubDomains",
+    });
   }
-  secured.headers.set("x-content-type-options", "nosniff");
-  secured.headers.set("x-frame-options", "DENY");
-  return secured;
+  return headers;
 }

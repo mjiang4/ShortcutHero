@@ -13,11 +13,8 @@ type TitleKeyboardNavigationOptions = {
   readonly setView: Dispatch<SetStateAction<ScreenView>>;
   readonly setMenuIndex: Dispatch<SetStateAction<number>>;
   readonly setOptionIndex: Dispatch<SetStateAction<number>>;
-  readonly onContinueName: () => void;
   readonly onOpen: (action: MenuAction) => void;
   readonly onAdjustOption: (index: number, direction: -1 | 1) => void;
-  readonly onConfirmOptions: () => void;
-  readonly onCancelOptions: () => void;
 };
 
 export function useTitleKeyboardNavigation({
@@ -28,53 +25,26 @@ export function useTitleKeyboardNavigation({
   setView,
   setMenuIndex,
   setOptionIndex,
-  onContinueName,
   onOpen,
   onAdjustOption,
-  onConfirmOptions,
-  onCancelOptions,
 }: TitleKeyboardNavigationOptions): void {
   useEffect(() => {
     if (!enabled) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
 
-      if (view === "onboarding-name") {
-        if (event.code === "Enter") {
-          event.preventDefault();
-          onContinueName();
-        }
-        return;
-      }
-      if (view === "onboarding-system") {
-        if (event.code === "Escape" || event.code === "Backspace") {
-          event.preventDefault();
-          setView("onboarding-name");
-        } else if (event.code === "Enter" || event.code === "Space") {
-          event.preventDefault();
-          setView("onboarding-guide");
-        }
-        return;
-      }
-      if (view === "onboarding-guide") {
-        if (event.code === "Escape" || event.code === "Backspace") {
-          event.preventDefault();
-          setView("onboarding-system");
-        }
-        return;
-      }
-      if (view === "onboarding-hints" || view === "tutorial") {
-        if (event.code === "Escape") {
-          event.preventDefault();
-          setView(view === "tutorial" ? "help" : "onboarding-guide");
-        }
+      // GameSetup owns its screen-wide keyboard navigation.
+      if (view === "setup") return;
+
+      if (view === "warmup" || view === "tutorial") {
+        // The sandbox owns gameplay input, including Escape to pause.
         return;
       }
       if (view === "options") {
         if (event.code === "Escape" || event.code === "Backspace") {
           event.preventDefault();
-          onCancelOptions();
+          setView("menu");
         } else if (event.code === "ArrowDown" || event.code === "KeyS") {
           event.preventDefault();
           setOptionIndex((index) => (index + 1) % OPTION_COUNT);
@@ -88,12 +58,13 @@ export function useTitleKeyboardNavigation({
           onAdjustOption(optionIndex, -1);
         } else if (event.code === "ArrowRight" || event.code === "KeyD") {
           event.preventDefault();
-          if (optionIndex < OPTION_COUNT - 1) {
+          onAdjustOption(optionIndex, 1);
+        } else if (event.code === "Enter" || event.code === "Space") {
+          // Focused buttons retain their native keyboard activation.
+          if (!(event.target instanceof HTMLElement && event.target.closest("button"))) {
+            event.preventDefault();
             onAdjustOption(optionIndex, 1);
           }
-        } else if (event.code === "Enter" || event.code === "Space") {
-          event.preventDefault();
-          onConfirmOptions();
         }
         return;
       }
@@ -138,9 +109,6 @@ export function useTitleKeyboardNavigation({
     enabled,
     menuIndex,
     onAdjustOption,
-    onCancelOptions,
-    onConfirmOptions,
-    onContinueName,
     onOpen,
     optionIndex,
     setMenuIndex,

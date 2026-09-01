@@ -5,10 +5,12 @@ const ONBOARDING_STORAGE_KEY = "shortcut-hero:onboarding";
 export async function openAsReturningPlayer(page: Page, url = "/"): Promise<void> {
   await page.addInitScript(
     ({ key }) => {
-      window.localStorage.setItem(
-        key,
-        JSON.stringify({ name: "Ada", complete: true }),
-      );
+      if (!window.localStorage.getItem(key)) {
+        window.localStorage.setItem(
+          key,
+          JSON.stringify({ name: "", complete: true }),
+        );
+      }
     },
     { key: ONBOARDING_STORAGE_KEY },
   );

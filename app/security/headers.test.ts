@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  applySecurityHeaders,
+  getSecurityHeaders,
   buildContentSecurityPolicy,
 } from "./headers";
 
@@ -14,10 +14,10 @@ test("production CSP allows PostHog ingestion without unsafe eval", () => {
   assert.doesNotMatch(policy, /unsafe-eval/);
 });
 
-test("adds launch security headers without changing the response body", async () => {
-  const response = applySecurityHeaders(new Response("shortcut hero"), true);
-  assert.equal(await response.text(), "shortcut hero");
-  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
-  assert.equal(response.headers.get("x-frame-options"), "DENY");
-  assert.equal(response.headers.get("cross-origin-opener-policy"), "same-origin");
+test("provides the launch security headers for Next.js responses", () => {
+  const headers = new Headers(getSecurityHeaders(true).map(({ key, value }) => [key, value]));
+  assert.equal(headers.get("x-content-type-options"), "nosniff");
+  assert.equal(headers.get("x-frame-options"), "DENY");
+  assert.equal(headers.get("cross-origin-opener-policy"), "same-origin");
+  assert.equal(headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains");
 });

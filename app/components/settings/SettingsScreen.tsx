@@ -8,9 +8,9 @@ import { primeGameAudio } from "../../audio/use-game-audio";
 import { captureReferralLanding } from "../../referrals/client";
 import { getToolTrack } from "../../tools";
 import { CompatibilityView } from "./CompatibilityView";
+import { GameSetup } from "./GameSetup";
 import { InfoView } from "./InfoViews";
 import { MainMenu } from "./MainMenu";
-import { OnboardingViews } from "./OnboardingViews";
 import { OnboardingDemo } from "./OnboardingDemo";
 import { OptionsView } from "./OptionsView";
 import { DEFAULT_SYSTEM_INFO, detectSystem } from "./platform";
@@ -33,35 +33,27 @@ import {
   HINT_MODES,
   LABELS,
   PACES,
-  SESSIONS,
   SOUND,
   cycleValue,
 } from "./title-config";
-import { TitlePanel, TitleShell } from "./TitleShell";
+import { TitleShell } from "./TitleShell";
 import type {
   MenuAction,
-  OnboardingView,
   ScoreEntry,
   ScreenView,
 } from "./title-types";
 import { useTitleKeyboardNavigation } from "./use-title-keyboard-navigation";
 
-function isOnboardingView(view: ScreenView): view is OnboardingView {
-  return view.startsWith("onboarding");
-}
-
 export function SettingsScreen() {
-  const [view, setView] = useState<ScreenView>("onboarding-name");
+  const [view, setView] = useState<ScreenView>("menu");
   const [menuIndex, setMenuIndex] = useState(0);
   const [optionIndex, setOptionIndex] = useState(0);
-  const [userName, setUserName] = useState("");
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [systemInfo, setSystemInfo] = useState(DEFAULT_SYSTEM_INFO);
   const [settings, setSettings] = useState<LaunchSettings>(
     DEFAULT_LAUNCH_SETTINGS,
   );
-  const [draftSettings, setDraftSettings] = useState<LaunchSettings>(
-    DEFAULT_LAUNCH_SETTINGS,
-  );
+  const [previewingFirstVisit, setPreviewingFirstVisit] = useState(false);
   const [scores, setScores] = useState<readonly ScoreEntry[]>([]);
   const [hasRestoredSettings, setHasRestoredSettings] = useState(false);
   const [activeGame, setActiveGame] = useState<LaunchSettings | null>(null);
@@ -82,27 +74,15 @@ export function SettingsScreen() {
         viewportWidth: window.innerWidth,
       });
       const launchSettings = requestedPlay ? requestedSettings : restored;
-      const initialSettings: LaunchSettings = {
-        ...launchSettings,
-        hints: onboarding.complete ? launchSettings.hints : "always",
-      };
+      const initialSettings = launchSettings;
       setSettings(initialSettings);
-      setDraftSettings(initialSettings);
       setScores(readHighScores());
       setSystemInfo(detectedSystem);
-      setUserName((current) => current || onboarding.name);
+      setOnboardingComplete(onboarding.complete);
       if (detectedSystem.launchSupport === "mobile") {
         setView("compatibility");
       } else if (requestedPlay && onboarding.complete) {
         setActiveGame(initialSettings);
-      } else if (onboarding.complete) {
-        setView("menu");
-      } else {
-        analytics.capture("onboarding_started", {
-          operating_system: detectedSystem.operatingSystem,
-          browser: detectedSystem.browser,
-          launch_support: detectedSystem.launchSupport,
-        });
       }
       setHasRestoredSettings(true);
     }, 0);
@@ -110,32 +90,59 @@ export function SettingsScreen() {
   }, []);
 
   useEffect(() => {
-    if (hasRestoredSettings) persistSettings(settings);
-  }, [hasRestoredSettings, settings]);
+    if (hasRestoredSettings && !previewingFirstVisit) persistSettings(settings);
+  }, [hasRestoredSettings, previewingFirstVisit, settings]);
 
   const startGame = useCallback(() => {
-    void primeGameAudio(settings.pace, settings.sound === "off");
     window.history.replaceState(window.history.state, "", createPlayHref(settings));
     setActiveGame(settings);
   }, [settings]);
 
-  const continueFromName = useCallback(() => {
-    if (userName.trim()) setView("onboarding-system");
-  }, [userName]);
-
-  const completeOnboarding = useCallback(() => {
-    persistOnboarding(userName);
-    analytics.capture("onboarding_completed", {
+  const showWarmup = useCallback(() => {
+    if (!previewingFirstVisit) analytics.capture("onboarding_started", {
       operating_system: systemInfo.operatingSystem,
       browser: systemInfo.browser,
       launch_support: systemInfo.launchSupport,
     });
+    setView("warmup");
+  }, [previewingFirstVisit, systemInfo]);
+
+  const completeOnboarding = useCallback(() => {
+    if (!previewingFirstVisit) persistOnboarding(restoreOnboarding().name);
+    setOnboardingComplete(true);
+    if (!previewingFirstVisit) analytics.capture("onboarding_completed", {
+      operating_system: systemInfo.operatingSystem,
+      browser: systemInfo.browser,
+      launch_support: systemInfo.launchSupport,
+    });
+    window.history.replaceState(window.history.state, "", "/");
+    setView("menu");
+  }, [previewingFirstVisit, systemInfo]);
+
+  const beginPlay = useCallback(() => {
+    if (!onboardingComplete) completeOnboarding();
+    void primeGameAudio(settings.pace, settings.sound === "off");
     startGame();
-  }, [startGame, systemInfo, userName]);
+  }, [completeOnboarding, onboardingComplete, settings.pace, settings.sound, startGame]);
+
+  const toggleFirstVisitPreview = useCallback(() => {
+    if (previewingFirstVisit) {
+      setSettings(restoreSettings());
+      setOnboardingComplete(restoreOnboarding().complete);
+    } else {
+      setSettings(DEFAULT_LAUNCH_SETTINGS);
+      setOnboardingComplete(false);
+    }
+    setPreviewingFirstVisit(!previewingFirstVisit);
+    setMenuIndex(0);
+    setView("menu");
+    window.history.replaceState(window.history.state, "", "/");
+  }, [previewingFirstVisit]);
 
   const openView = useCallback(
     (action: MenuAction) => {
       if (action === "start") {
+        if (!hasRestoredSettings) return;
         if (
           systemInfo.launchSupport === "mobile" ||
           systemInfo.launchSupport === "untested"
@@ -143,21 +150,20 @@ export function SettingsScreen() {
           setView("compatibility");
           return;
         }
-        startGame();
+        setView("setup");
         return;
       }
-      if (action === "scores") setScores(readHighScores());
+      if (action === "scores") setScores(previewingFirstVisit ? [] : readHighScores());
       if (action === "options") {
-        setDraftSettings(settings);
         setOptionIndex(0);
       }
       setView(action);
     },
-    [settings, startGame, systemInfo.launchSupport],
+    [hasRestoredSettings, previewingFirstVisit, systemInfo.launchSupport],
   );
 
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
-    setDraftSettings((current) => {
+    setSettings((current) => {
       switch (index) {
         case 0:
           return {
@@ -181,14 +187,9 @@ export function SettingsScreen() {
         case 3:
           return {
             ...current,
-            session: cycleValue(SESSIONS, current.session, direction),
-          };
-        case 4:
-          return {
-            ...current,
             sound: cycleValue(SOUND, current.sound, direction),
           };
-        case 5:
+        case 4:
           return {
             ...current,
             effects: cycleValue(EFFECTS, current.effects, direction),
@@ -199,29 +200,16 @@ export function SettingsScreen() {
     });
   }, []);
 
-  const confirmOptions = useCallback(() => {
-    setSettings(draftSettings);
-    setView("menu");
-  }, [draftSettings]);
-
-  const cancelOptions = useCallback(() => {
-    setDraftSettings(settings);
-    setView("menu");
-  }, [settings]);
-
   useTitleKeyboardNavigation({
-    enabled: activeGame === null,
+    enabled: activeGame === null && hasRestoredSettings,
     view,
     menuIndex,
     optionIndex,
     setView,
     setMenuIndex,
     setOptionIndex,
-    onContinueName: continueFromName,
     onOpen: openView,
     onAdjustOption: adjustOption,
-    onConfirmOptions: confirmOptions,
-    onCancelOptions: cancelOptions,
   });
 
   const activeTrack = getToolTrack(settings.tool);
@@ -249,55 +237,43 @@ export function SettingsScreen() {
     );
   }
 
+  if (view === "warmup" || view === "tutorial") {
+    return <OnboardingDemo settings={settings} onComplete={view === "warmup" ? completeOnboarding : () => setView("help")} />;
+  }
+
   return (
     <TitleShell track={activeTrack} view={view} summary={summary}>
-      {isOnboardingView(view) ? (
-        <OnboardingViews
-          view={view}
-          userName={userName}
-          setUserName={setUserName}
-          systemInfo={systemInfo}
-          restored={hasRestoredSettings}
-          onContinueName={continueFromName}
-          onContinueSystem={() => setView("onboarding-guide")}
-          onDemoComplete={() => setView("onboarding-hints")}
-          hints={settings.hints}
-          onHintsChange={(hints) => setSettings((current) => ({ ...current, hints }))}
-          onComplete={completeOnboarding}
-        />
-      ) : null}
-
-      {view === "tutorial" ? (
-        <TitlePanel title="try the keys" subtitle="three quick steps" onboarding>
-          <OnboardingDemo onComplete={() => setView("help")} />
-        </TitlePanel>
-      ) : null}
-
       {view === "menu" ? (
         <MainMenu
-          track={activeTrack}
+          ready={hasRestoredSettings}
+          summary={`${settings.session} seconds · ${LABELS.difficulty[settings.difficulty]} · ${LABELS.hints[settings.hints]} hints`}
           selectedIndex={menuIndex}
           onSelect={setMenuIndex}
           onOpen={openView}
+          onPreviewFirstVisit={process.env.NODE_ENV === "development" ? toggleFirstVisitPreview : undefined}
+          previewingFirstVisit={previewingFirstVisit}
         />
+      ) : null}
+
+      {view === "setup" ? (
+        <GameSetup settings={settings} firstVisit={!onboardingComplete} onChange={setSettings}
+          onContinue={beginPlay} onPlayTutorial={showWarmup} onBack={() => setView("menu")} />
       ) : null}
 
       {view === "options" ? (
         <OptionsView
           settings={settings}
-          draft={draftSettings}
           selectedIndex={optionIndex}
           onSelect={setOptionIndex}
-          onChange={setDraftSettings}
-          onConfirm={confirmOptions}
-          onCancel={cancelOptions}
+          onChange={setSettings}
+          onBack={() => setView("menu")}
         />
       ) : null}
 
       {view === "compatibility" ? (
         <CompatibilityView
           systemInfo={systemInfo}
-          onContinue={startGame}
+          onContinue={() => setView("setup")}
           onBack={() => setView("menu")}
         />
       ) : null}

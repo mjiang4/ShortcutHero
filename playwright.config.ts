@@ -41,9 +41,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run dev -- --port ${PORT}`,
+    command: `npm run start -- --port ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // Never reuse a development server that might be connected to live storage.
+    reuseExistingServer: false,
+    env: { SHORTCUT_HERO_BACKEND_ORIGIN: "" },
     timeout: 120_000,
   },
 });

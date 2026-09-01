@@ -618,6 +618,10 @@ a:focus-visible {
   gap: var(--keyboard-gap);
 }
 
+.keyboard-instrument.is-extended .keyboard-key {
+  height: 22px;
+}
+
 .keyboard-instrument__row {
   display: flex;
   justify-content: center;
@@ -852,6 +856,71 @@ a:focus-visible {
   font-weight: 300;
   letter-spacing: -0.07em;
   line-height: 0.95;
+}
+
+.results-player {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 22px auto 0;
+  color: var(--mist);
+  font-size: 13px;
+}
+
+.results-player strong {
+  color: var(--paper);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.results-player button {
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  color: var(--sun);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.results-player button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.results-player__form {
+  width: min(100%, 440px);
+  text-align: left;
+}
+
+.results-player__controls {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.results-player input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(244, 241, 234, 0.3);
+  border-radius: 0;
+  color: var(--paper);
+  background: var(--ink);
+  font: inherit;
+}
+
+.results-player__form p {
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+
+.results-player [role="alert"] {
+  color: var(--danger);
 }
 
 .results-grid {

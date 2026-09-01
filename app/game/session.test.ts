@@ -4,6 +4,8 @@ import test from "node:test";
 import { EASY_SHORTCUTS, HARD_SHORTCUTS, MEDIUM_SHORTCUTS, getShortcutDeck } from "./content";
 import { EMPTY_CURRICULUM, recordLesson, selectLesson } from "./curriculum";
 import { hintKeysFor } from "../gameplay/runtime-view";
+import { nameSavedHighScore, persistCurriculumProgress, persistHighScore, readCurriculumProgress, readStoredHighScore } from "../gameplay/result-storage";
+import { persistOnboarding, persistPlayerName, readHighScores, restoreOnboarding } from "../components/settings/storage";
 import { parseLaunchSettings, createPlayHref } from "../components/settings/settings";
 import { calculateResults } from "./scoring";
 import {
@@ -38,7 +40,23 @@ test("uses fast travel independently from difficulty-specific cue cadence", () =
   assert.equal(getPromptCadenceMs("showcase", "standard"), 750);
 });
 
-test("defaults sessions to 30 seconds and honours supported durations", () => {
+test("fixes new rounds at 30 seconds while preserving other explicit settings", () => {
+  const defaults = parseLaunchSettings(new URLSearchParams());
+  assert.equal(defaults.tool, "linear");
+  assert.equal(defaults.difficulty, "medium");
+  assert.equal(defaults.pace, "standard");
+  assert.equal(defaults.session, 30);
+  assert.equal(defaults.hints, "near-line");
+  assert.equal(parseLaunchSettings(new URLSearchParams("hints=invalid")).hints, "near-line");
+  for (const hints of ["always", "near-line", "off"] as const) {
+    assert.equal(parseLaunchSettings(new URLSearchParams({ hints })).hints, hints);
+  }
+  assert.equal(parseLaunchSettings(new URLSearchParams("guidance=novice")).hints, "always");
+  assert.equal(parseLaunchSettings(new URLSearchParams("guidance=pro")).hints, "off");
+  for (const session of ["30", "45", "60"]) {
+    assert.equal(parseLaunchSettings(new URLSearchParams({ session })).session, 30);
+  }
+  assert.equal(parseLaunchSettings(new URLSearchParams("difficulty=easy")).difficulty, "easy");
   assert.equal(getSessionDurationSeconds(BASE_SETTINGS), 30);
   assert.equal(
     getSessionDurationSeconds({ ...BASE_SETTINGS, durationSeconds: 30 }),
@@ -48,6 +66,92 @@ test("defaults sessions to 30 seconds and honours supported durations", () => {
     getSessionDurationSeconds({ ...BASE_SETTINGS, durationSeconds: 60 }),
     60,
   );
+});
+
+test("keeps named scores and lesson history separate by app and platform", (t) => {
+  const values = new Map<string, string>();
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { localStorage: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); },
+      key: (index: number) => [...values.keys()][index] ?? null,
+      get length() { return values.size; },
+    } },
+  });
+  t.after(() => {
+    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  });
+
+  const session = createGameSession(BASE_SETTINGS);
+  const scoreKey = getHighScoreKey(session.settings);
+  values.set(scoreKey, "500");
+  assert.deepEqual(readStoredHighScore("500"), { score: 500, name: "Guest", recordId: null });
+  assert.equal(readHighScores()[0].name, "Guest");
+  assert.equal(persistHighScore(calculateResults([], 400, 0, 0, 30_000), session, "Ada"), null);
+  assert.equal(persistHighScore(calculateResults([], 500, 0, 0, 30_000), session, "Ada"), null);
+  assert.equal(values.get(scoreKey), "500");
+
+  const saved = persistHighScore(calculateResults([], 600, 0, 0, 30_000), session);
+  assert.ok(saved);
+  assert.equal(readHighScores()[0].name, "Guest");
+  assert.equal(nameSavedHighScore(saved, " Ada Swift "), true);
+  assert.equal(readHighScores()[0].name, "Ada Swift");
+  assert.equal(readHighScores()[0].score, 600);
+
+  persistOnboarding("");
+  assert.equal(persistPlayerName("Ada Swift"), true);
+  assert.deepEqual(restoreOnboarding(), { name: "Ada Swift", complete: true });
+  persistHighScore(calculateResults([], 700, 0, 0, 30_000), session, restoreOnboarding().name);
+  assert.equal(nameSavedHighScore(saved, "Different player"), false);
+  assert.equal(readHighScores()[0].name, "Ada Swift");
+  assert.equal(readHighScores()[0].score, 700);
+
+  const firstRun = createGameSession({ ...BASE_SETTINGS, speed: "turbo" });
+  const zeroScore = persistHighScore(calculateResults([], 0, 0, 0, 30_000), firstRun);
+  assert.ok(zeroScore);
+  assert.equal(readStoredHighScore(values.get(zeroScore.key)!)?.name, "Guest");
+
+  const slack = createGameSession({ ...BASE_SETTINGS, trackId: "slack" });
+  const slackScore = persistHighScore(calculateResults([], 650, 0, 0, 30_000), slack, "Sam");
+  assert.ok(slackScore);
+  assert.notEqual(slackScore.key, scoreKey);
+  assert.equal(readStoredHighScore(values.get(scoreKey)!)?.score, 700);
+  assert.ok(readHighScores().some(entry => entry.label.startsWith("Slack ·") && entry.name === "Sam"));
+  assert.ok(readHighScores().some(entry => entry.label.startsWith("Linear ·") && entry.name === "Ada Swift"));
+
+  const scopes = [
+    ["notion", "macos"],
+    ["superhuman", "macos"],
+    ["notion", "windows"],
+  ] as const;
+  for (const [index, [trackId, platform]] of scopes.entries()) {
+    const progress = {
+      completedLessons: index + 1,
+      // Command IDs are app-local; identical IDs must not share progress.
+      shortcuts: { "shared-command": { lastPractised: index + 1, needsReview: index === 0 } },
+    };
+    persistCurriculumProgress(trackId, progress, platform);
+    persistHighScore(
+      calculateResults([], 800 + index, 0, 0, 30_000),
+      createGameSession({ ...BASE_SETTINGS, trackId, platform }),
+    );
+  }
+  for (const [index, [trackId, platform]] of scopes.entries()) {
+    assert.deepEqual(readCurriculumProgress(trackId, platform), {
+      completedLessons: index + 1,
+      shortcuts: { "shared-command": { lastPractised: index + 1, needsReview: index === 0 } },
+    });
+    const key = getHighScoreKey({ ...BASE_SETTINGS, trackId, platform });
+    assert.equal(readStoredHighScore(values.get(key)!)?.score, 800 + index);
+  }
+  assert.deepEqual(readCurriculumProgress("linear"), EMPTY_CURRICULUM);
+  assert.equal(readStoredHighScore(values.get(scoreKey)!)?.score, 700);
+  assert.ok(readHighScores().some(entry => entry.label.startsWith("Superhuman ·") && entry.score === 801));
+  values.set("shortcut-hero:high-score:excel:easy:novice:standard:30s", "999");
+  assert.ok(readHighScores().some(entry => entry.label.startsWith("Excel ·") && entry.score === 999));
 });
 
 test("cycles a short deck with unique, continuously increasing cue ids", () => {
@@ -155,6 +259,32 @@ test("does not capture a matching letter when it belongs to a browser shortcut",
   assert.equal(update.preventDefault, false);
   assert.equal(update.effects.length, 0);
   assert.equal(update.session, started);
+});
+
+test("navigation keys work only in the selected lesson; reserved controls remain native", () => {
+  const notion = getShortcutDeck("hard", "notion");
+  const nest = notion.find(shortcut => shortcut.id === "nest-block")!;
+  const started = startSession(createGameSession(BASE_SETTINGS, { deck: [nest] }), 0);
+  const strike = started.active!.strikeAtMs;
+  assert.equal(handleSessionKey(started, key("Tab"), strike).session.attempts[0]?.outcome, "clean");
+  for (const modifier of ["metaKey", "ctrlKey", "altKey"] as const) {
+    const reserved = handleSessionKey(started, { ...key("Tab"), [modifier]: true }, strike);
+    assert.equal(reserved.preventDefault, false);
+    assert.equal(reserved.session, started);
+  }
+  const paused = { ...started, phase: "paused" as const };
+  assert.equal(handleSessionKey(paused, key("Tab"), strike).preventDefault, false);
+  const linear = startSession(createGameSession(BASE_SETTINGS), 0);
+  for (const code of ["Tab", "Enter", "Space", "Backspace", "ArrowDown", "Escape", "F2"]) {
+    const ignored = handleSessionKey(linear, key(code), linear.active!.strikeAtMs);
+    assert.equal(ignored.preventDefault, false);
+    assert.equal(ignored.session, linear);
+  }
+  const unnest = notion.find(shortcut => shortcut.id === "unnest-block")!;
+  const shifted = startSession(createGameSession(BASE_SETTINGS, { deck: [unnest] }), 0);
+  assert.equal(handleSessionKey(shifted, key("Tab", true), strike).session.attempts[0]?.outcome, "clean");
+  assert.equal(handleSessionKey(shifted, key("Tab"), strike).effects[0]?.type, "wrong-input");
+  assert.equal(handleSessionKey(shifted, { ...key("Tab", true), repeat: true }, strike).session, shifted);
 });
 
 test("keeps each difficulty deck aligned with its intended input type", () => {

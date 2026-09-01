@@ -10,6 +10,7 @@ export interface KeyboardInstrumentProps {
   readonly feedbackTone?: KeyboardFeedbackTone | null;
   readonly status: string;
   readonly guidance: HintMode;
+  readonly availableKeys?: readonly string[];
 }
 
 type KeySpec = {
@@ -36,6 +37,17 @@ const KEY_ROWS: readonly (readonly KeySpec[])[] = [
   ],
 ] as const;
 
+const NAVIGATION_KEYS: readonly KeySpec[] = [
+  { id: "TAB", label: "Tab" },
+  { id: "BACKSPACE", label: "Delete", flex: 1.5 },
+  { id: "ENTER", label: "Enter", flex: 1.5 },
+  { id: "SPACE", label: "Space", flex: 2 },
+  { id: "ARROWLEFT", label: "←" },
+  { id: "ARROWUP", label: "↑" },
+  { id: "ARROWDOWN", label: "↓" },
+  { id: "ARROWRIGHT", label: "→" },
+];
+
 export function normalizeInstrumentKey(value: string): string {
   const normalized = value.trim().toUpperCase();
   if (
@@ -58,14 +70,18 @@ export function KeyboardInstrument({
   feedbackTone = null,
   status,
   guidance,
+  availableKeys = [],
 }: KeyboardInstrumentProps) {
   const pressed = new Set(pressedKeys.map(normalizeInstrumentKey));
   const hints = new Set(hintKeys.map(normalizeInstrumentKey));
   const feedback = new Set(feedbackKeys.map(normalizeInstrumentKey));
+  const available = new Set(availableKeys.map(normalizeInstrumentKey));
+  const navigation = NAVIGATION_KEYS.filter(key => available.has(key.id));
+  const rows = navigation.length ? [...KEY_ROWS, navigation] : KEY_ROWS;
 
   return (
     <section
-      className={`keyboard-instrument is-${guidance}`}
+      className={`keyboard-instrument is-${guidance}${navigation.length ? " is-extended" : ""}`}
       aria-label="Shortcut keyboard"
     >
       <header className="keyboard-instrument__header">
@@ -74,7 +90,7 @@ export function KeyboardInstrument({
         <span>{guidance === "off" ? "hints off" : guidance === "near-line" ? "late hints" : "hints on"}</span>
       </header>
       <div className="keyboard-instrument__deck" aria-hidden="true">
-        {KEY_ROWS.map((row, rowIndex) => (
+        {rows.map((row, rowIndex) => (
           <div className="keyboard-instrument__row" key={rowIndex}>
             {row.map((key) => {
               const isPressed = pressed.has(key.id);

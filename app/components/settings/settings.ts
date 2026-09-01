@@ -1,7 +1,7 @@
 export type GameDifficulty = "easy" | "medium" | "hard";
 import type { HintMode } from "../../game/types";
 export type TempoPreset = "relaxed" | "standard" | "turbo";
-export type SessionLength = 30 | 45 | 60;
+export type SessionLength = 30;
 export type SoundMode = "on" | "off";
 export type EffectsMode = "full" | "system" | "reduced";
 
@@ -17,8 +17,8 @@ export interface LaunchSettings {
 
 export const DEFAULT_LAUNCH_SETTINGS: LaunchSettings = {
   tool: "linear",
-  difficulty: "easy",
-  hints: "always",
+  difficulty: "medium",
+  hints: "near-line",
   pace: "standard",
   session: 30,
   sound: "on",
@@ -28,7 +28,6 @@ export const DEFAULT_LAUNCH_SETTINGS: LaunchSettings = {
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 const HINT_MODES = ["always", "near-line", "off"] as const;
 const TEMPO_PRESETS = ["relaxed", "standard", "turbo"] as const;
-const SESSION_LENGTHS = [30, 45, 60] as const;
 const SOUND_MODES = ["on", "off"] as const;
 const EFFECTS_MODES = ["full", "system", "reduced"] as const;
 
@@ -48,7 +47,6 @@ export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): Launc
   const difficulty = params.get("difficulty");
   const hints = params.get("hints");
   const pace = params.get("pace");
-  const session = params.get("session");
   const sound = params.get("sound");
   const effects = params.get("effects");
 
@@ -59,13 +57,14 @@ export function parseLaunchSettings(params: Pick<URLSearchParams, "get">): Launc
       : DEFAULT_LAUNCH_SETTINGS.difficulty,
     hints: includes(HINT_MODES, hints)
       ? hints
-      : params.get("guidance") === "pro" ? "off" : "always",
+      : params.get("guidance") === "pro" ? "off"
+        : params.get("guidance") === "novice" ? "always"
+          : DEFAULT_LAUNCH_SETTINGS.hints,
     pace: includes(TEMPO_PRESETS, pace)
       ? pace
       : DEFAULT_LAUNCH_SETTINGS.pace,
-    session: includes(SESSION_LENGTHS, session)
-      ? Number(session) as SessionLength
-      : DEFAULT_LAUNCH_SETTINGS.session,
+    // Old saved settings and shared links must not restore longer rounds.
+    session: DEFAULT_LAUNCH_SETTINGS.session,
     sound: includes(SOUND_MODES, sound)
       ? sound
       : DEFAULT_LAUNCH_SETTINGS.sound,
