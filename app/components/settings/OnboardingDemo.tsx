@@ -83,7 +83,7 @@ function TutorialStep({ shortcut, settings, step, stepCount, appName, onComplete
         hitRef.current = true;
         heldSuccessKey.current = shortcut.input.kind === "sequence" ? shortcut.input.codes[1] : shortcut.input.code;
         setHit(true);
-        setMessage("Nice hit!");
+        setMessage("");
       } else if (effect.type === "hit") {
         setMessage("Right keys. Try a clean hit on the next card.");
       } else if (effect.type === "input-progress") {
@@ -200,7 +200,7 @@ function TutorialStep({ shortcut, settings, step, stepCount, appName, onComplete
         hintKeys={hit ? [] : hintKeysFor(session, frameNow)} feedbackKeys={keyboardSignal?.keys}
         feedbackTone={keyboardSignal?.tone} guidance="always" status={paused ? "Paused" : `shortcut: ${input.display}`} />
       <footer className={`tutorial-feedback${hit ? " is-hit" : ""}`} aria-live="polite">
-        <p>{ready ? "Ready when you are." : paused ? "Paused" : message || "Try it. Misses are free here."}</p>
+        <p>{hit ? "" : ready ? "Ready when you are." : paused ? "Paused" : message || "Try it. Misses are free here."}</p>
         {ready || paused ? <button type="button" onClick={startOrResume}>
           {paused ? "Press Space to resume" : "Press Space to start"}
         </button> : hit ? <button type="button" onClick={onContinue}>Press any key to continue</button>

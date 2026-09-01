@@ -11,7 +11,7 @@ import {
 } from "./title-config";
 import type { LaunchSettings } from "./settings";
 import { LESSON_SIZE } from "../../game/curriculum";
-import { deckForMode, getToolTrack } from "../../tools";
+import { AVAILABLE_TOOL_IDS, deckForMode, getToolTrack } from "../../tools";
 import { BackButton, TitlePanel } from "./TitleShell";
 
 export function OptionsView({
@@ -42,11 +42,29 @@ export function OptionsView({
       </p>
       <div className="option-list">
         <OptionRow
+          label="app"
+          value={track.name}
+          active={selectedIndex === 0}
+          onFocus={() => onSelect(0)}
+          onPrevious={() =>
+            onChange({
+              ...settings,
+              tool: cycleValue(AVAILABLE_TOOL_IDS, settings.tool, -1),
+            })
+          }
+          onNext={() =>
+            onChange({
+              ...settings,
+              tool: cycleValue(AVAILABLE_TOOL_IDS, settings.tool, 1),
+            })
+          }
+        />
+        <OptionRow
           label="difficulty"
           value={LABELS.difficulty[settings.difficulty]}
           description={difficultyDescription}
-          active={selectedIndex === 0}
-          onFocus={() => onSelect(0)}
+          active={selectedIndex === 1}
+          onFocus={() => onSelect(1)}
           onPrevious={() =>
             onChange({
               ...settings,
@@ -64,8 +82,8 @@ export function OptionsView({
           label="hints"
           value={LABELS.hints[settings.hints]}
           description={HINT_DESCRIPTIONS[settings.hints]}
-          active={selectedIndex === 1}
-          onFocus={() => onSelect(1)}
+          active={selectedIndex === 2}
+          onFocus={() => onSelect(2)}
           onPrevious={() =>
             onChange({
               ...settings,
@@ -82,8 +100,8 @@ export function OptionsView({
         <OptionRow
           label="speed"
           value={LABELS.pace[settings.pace]}
-          active={selectedIndex === 2}
-          onFocus={() => onSelect(2)}
+          active={selectedIndex === 3}
+          onFocus={() => onSelect(3)}
           onPrevious={() =>
             onChange({
               ...settings,
@@ -100,8 +118,8 @@ export function OptionsView({
         <OptionRow
           label="music"
           value={settings.sound === "on" ? "original score on" : "music off"}
-          active={selectedIndex === 3}
-          onFocus={() => onSelect(3)}
+          active={selectedIndex === 4}
+          onFocus={() => onSelect(4)}
           onPrevious={() =>
             onChange({
               ...settings,
@@ -118,8 +136,8 @@ export function OptionsView({
         <OptionRow
           label="effects"
           value={LABELS.effects[settings.effects]}
-          active={selectedIndex === 4}
-          onFocus={() => onSelect(4)}
+          active={selectedIndex === 5}
+          onFocus={() => onSelect(5)}
           onPrevious={() =>
             onChange({
               ...settings,

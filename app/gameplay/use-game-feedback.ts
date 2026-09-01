@@ -158,13 +158,10 @@ export function useGameFeedback({
               shortcutKeys(effect.shortcut),
               clean ? "hit" : "miss",
               clean
-                ? `${effect.judgement} hit`
-                : "recovered · counted as miss",
+                ? ""
+                : `missed · correct: ${effect.shortcut.input.display}`,
             );
-            showJudgement(
-              clean ? effect.judgement : "Miss",
-              clean ? effect.judgement : "miss",
-            );
+            if (!clean) showJudgement("Missed", "miss");
             break;
           }
           case "combo-tier":
@@ -184,7 +181,7 @@ export function useGameFeedback({
               "miss",
               `correct shortcut: ${effect.shortcut.input.display}`,
             );
-            showJudgement("Miss", "miss");
+            showJudgement("Missed", "miss");
             break;
           case "finished":
             onFinished(effect.results, sourceSession);

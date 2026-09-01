@@ -16,6 +16,19 @@ for (const [tool, action, key] of [
     await expect(game).toHaveAttribute("data-view-phase", "game", { timeout: 15_000 });
     const cue = page.locator(".dom-action-ribbon.is-active").first();
     await expect(cue).toBeVisible();
+    const cueTextStyle = await cue.locator("strong").evaluate(label => {
+      const style = getComputedStyle(label);
+      return {
+        lineClamp: style.getPropertyValue("-webkit-line-clamp"),
+        textOverflow: style.textOverflow,
+        whiteSpace: style.whiteSpace,
+      };
+    });
+    expect(cueTextStyle).toEqual({
+      lineClamp: "2",
+      textOverflow: "clip",
+      whiteSpace: "normal",
+    });
     await expect(cue.locator("strong")).toHaveText(action);
     await expect(cue.locator("kbd")).toHaveText(key.length === 1 ? key.toUpperCase() : key);
     if (key === "Enter") {
@@ -113,6 +126,8 @@ test("the full-effects stage initializes", async ({ page }) => {
     const shortcut = await cue.locator("kbd").innerText();
     await page.keyboard.press(shortcut.toLowerCase());
     await expect(page.getByLabel(`Streak: ${combo}`, { exact: true })).toBeVisible();
+    await expect(page.locator(".judgement-toast")).toHaveCount(0);
+    await expect(page.locator(".keyboard-instrument__header strong")).not.toContainText(/hit/i);
     await expect(page.locator(".streak-count")).toHaveClass(/is-hit/);
     if (combo === 3) await expect(page.locator(".streak-count")).toHaveClass(/is-milestone/);
     await expect(page.locator(".combo-pop")).toHaveCount(0);

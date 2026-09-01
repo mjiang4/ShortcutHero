@@ -344,7 +344,7 @@ export function useGameController({
     session.input.sequenceIndex > 0 && session.input.lastInputAtMs !== null &&
     frameNow - session.input.lastInputAtMs <= session.active.shortcut.input.maxGapMs;
   const keyboardStatus = sequenceStarted ? "finish the shortcut at the line" :
-    keyboardSignal?.status ??
+    keyboardSignal?.status ||
     (session?.active
       ? getShortcutHintOpacity(settings, session.active.strikeAtMs - frameNow) > 0
         ? `shortcut: ${session.active.shortcut.input.display}`

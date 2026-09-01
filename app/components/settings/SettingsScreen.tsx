@@ -6,7 +6,7 @@ import { ShortcutHeroGame } from "../../ShortcutHeroGame";
 import { analytics } from "../../analytics";
 import { primeGameAudio } from "../../audio/use-game-audio";
 import { captureReferralLanding } from "../../referrals/client";
-import { getToolTrack } from "../../tools";
+import { AVAILABLE_TOOL_IDS, getToolTrack } from "../../tools";
 import { CompatibilityView } from "./CompatibilityView";
 import { GameSetup } from "./GameSetup";
 import { InfoView } from "./InfoViews";
@@ -150,7 +150,8 @@ export function SettingsScreen() {
           setView("compatibility");
           return;
         }
-        setView("setup");
+        if (onboardingComplete) beginPlay();
+        else setView("setup");
         return;
       }
       if (action === "scores") setScores(previewingFirstVisit ? [] : readHighScores());
@@ -159,7 +160,7 @@ export function SettingsScreen() {
       }
       setView(action);
     },
-    [hasRestoredSettings, previewingFirstVisit, systemInfo.launchSupport],
+    [beginPlay, hasRestoredSettings, onboardingComplete, previewingFirstVisit, systemInfo.launchSupport],
   );
 
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
@@ -168,28 +169,33 @@ export function SettingsScreen() {
         case 0:
           return {
             ...current,
+            tool: cycleValue(AVAILABLE_TOOL_IDS, current.tool, direction),
+          };
+        case 1:
+          return {
+            ...current,
             difficulty: cycleValue(
               DIFFICULTIES,
               current.difficulty,
               direction,
             ),
           };
-        case 1:
+        case 2:
           return {
             ...current,
             hints: cycleValue(HINT_MODES, current.hints, direction),
           };
-        case 2:
+        case 3:
           return {
             ...current,
             pace: cycleValue(PACES, current.pace, direction),
           };
-        case 3:
+        case 4:
           return {
             ...current,
             sound: cycleValue(SOUND, current.sound, direction),
           };
-        case 4:
+        case 5:
           return {
             ...current,
             effects: cycleValue(EFFECTS, current.effects, direction),
@@ -273,7 +279,7 @@ export function SettingsScreen() {
       {view === "compatibility" ? (
         <CompatibilityView
           systemInfo={systemInfo}
-          onContinue={() => setView("setup")}
+          onContinue={() => onboardingComplete ? beginPlay() : setView("setup")}
           onBack={() => setView("menu")}
         />
       ) : null}

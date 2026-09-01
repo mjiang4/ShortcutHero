@@ -73,7 +73,7 @@ test("onboarding teaches all input types and returns Home before the player star
     )
     .toBe("true");
   await page.keyboard.down("c");
-  await expect(page.getByText("Nice hit!", { exact: true })).toBeVisible();
+  await expect(page.getByText("Nice hit!", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Press any key to continue" })).toBeVisible();
   // Holding the successful key or pressing another before release cannot skip a step.
   await page.keyboard.down("c");
@@ -92,7 +92,7 @@ test("onboarding teaches all input types and returns Home before the player star
   await page.keyboard.press("g");
   await expect(page.getByText("G pressed. Now press I at the line.")).toBeVisible();
   await page.keyboard.press("i");
-  await expect(page.getByText("Nice hit!", { exact: true })).toBeVisible();
+  await expect(page.getByText("Nice hit!", { exact: true })).toHaveCount(0);
   await page.keyboard.press("Space");
   await expect(page.getByText("Hold Shift. Press E at the line.")).toBeVisible();
   await page.keyboard.press("Space");
@@ -124,8 +124,8 @@ test("onboarding teaches all input types and returns Home before the player star
   await page.reload();
   await expect(page.getByRole("navigation")).toBeVisible();
   await page.getByRole("button", { name: "play now", exact: true }).click();
-  await page.getByRole("button", { name: "play now", exact: true }).click();
   await expect(page.locator("main.shortcut-hero")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "game setup" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "tutorial", exact: true })).toHaveCount(0);
   await expect(page).toHaveURL(/difficulty=medium&hints=near-line.*session=30/);
 
@@ -157,9 +157,8 @@ test("first-time players can press Enter to play a 30-second round without the t
   await expect(page.getByRole("region", { name: "Main menu" })).toBeVisible();
   await expect(page.locator(".title-menu__summary")).toContainText("Off hints");
   await page.getByRole("button", { name: "play now", exact: true }).click();
-  await page.getByRole("heading", { name: "game setup" }).click();
-  await page.keyboard.press("Enter");
   await expect(page.locator("main.shortcut-hero")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "game setup" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "tutorial", exact: true })).toHaveCount(0);
 });
 
@@ -214,7 +213,7 @@ test("the sandbox keeps cards moving after misses and preserves their position w
   await expect.poll(() => page.locator(".tutorial-arena").getAttribute("data-hittable"),
     { intervals: [16, 32, 50] }).toBe("true");
   await page.keyboard.press("c");
-  await expect(page.getByText("Nice hit!", { exact: true })).toBeVisible();
+  await expect(page.getByText("Nice hit!", { exact: true })).toHaveCount(0);
   await expect(page.locator(".dom-action-ribbon.is-cleared")).toHaveCount(0, { timeout: 2_000 });
   await expect(page.getByRole("button", { name: "Press any key to continue" })).toBeVisible();
 });

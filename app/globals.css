@@ -211,9 +211,10 @@ a:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
-  gap: 4px 24px;
-  width: clamp(330px, 40vw, 580px);
-  min-height: 76px;
+  gap: 4px clamp(12px, 2vw, 24px);
+  box-sizing: border-box;
+  width: min(680px, calc(100vw - 32px));
+  min-height: 96px;
   padding: 13px 18px 15px;
   border: 1px solid rgba(168, 151, 255, 0.56);
   border-right-width: 3px;
@@ -251,14 +252,17 @@ a:focus-visible {
 
 .dom-action-ribbon strong {
   align-self: end;
+  display: -webkit-box;
   overflow: hidden;
-  font-size: clamp(24px, 2.7vw, 38px);
+  font-size: clamp(18px, 2.35vw, 34px);
   font-weight: 460;
   letter-spacing: -0.05em;
-  line-height: 1;
-  text-overflow: ellipsis;
+  line-height: 0.98;
   text-shadow: 0 2px 20px rgba(3, 4, 12, 0.86);
-  white-space: nowrap;
+  text-wrap: balance;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .dom-action-context {

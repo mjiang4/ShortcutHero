@@ -7,7 +7,7 @@ const appNames = Object.values(catalogData.apps)
   .filter(app => app.releasedPlatforms.some(platform => platform === "macos"))
   .map(app => app.name);
 
-test("Home opens compact game setup and keeps changed launch settings", async ({ page }) => {
+test("Home starts returning players with their saved settings", async ({ page }) => {
   await openAsReturningPlayer(page);
   await expect(page.getByText("learn keyboard shortcuts", { exact: true })).toBeVisible();
   await expect(page.locator(".title-brand")).toContainText("learn keyboard shortcuts");
@@ -65,100 +65,31 @@ test("Home opens compact game setup and keeps changed launch settings", async ({
   await play.focus();
   await expect(play).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "game setup" })).toBeVisible();
-  await expect(page.getByText("make it yours", { exact: true })).toHaveCount(0);
-  await expect(page.locator(".setup-description")).toHaveCount(0);
-  const start = page.getByRole("button", { name: "play now", exact: true });
-  const back = page.getByRole("button", { name: "back", exact: true });
-  expect(await start.evaluate(button => getComputedStyle(button).backgroundColor)).toBe("rgb(255, 214, 163)");
-  expect((await start.boundingBox())!.height).toBeGreaterThan((await back.boundingBox())!.height);
-  await expect(page.getByRole("combobox")).toHaveCount(0);
-  await expect(page.getByText("Linear", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Next app" })).toBeFocused();
-  // Clicking non-interactive text must not leave the setup's arrow keys inert.
-  await page.getByRole("heading", { name: "game setup" }).click();
-  await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("button", { name: "Next speed" })).toBeFocused();
-  for (const name of ["Previous speed", "Next speed"]) {
-    const style = await page.getByRole("button", { name }).evaluate(button => ({
-      outline: getComputedStyle(button).outlineStyle,
-      color: getComputedStyle(button).color,
-    }));
-    expect(style).toEqual({ outline: "none", color: "rgba(244, 241, 234, 0.54)" });
-  }
-  await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByText("Slack", { exact: true })).toBeVisible();
-  await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
-  await expect(start).toBeEnabled();
-  await expect(page.locator("main.shortcut-hero")).toHaveCount(0);
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByText("Notion", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Previous app" }).click();
-  await page.getByRole("button", { name: "Previous app" }).click();
-  await expect(page.getByText("Linear", { exact: true })).toBeVisible();
-  await page.getByRole("heading", { name: "game setup" }).click();
-  await page.keyboard.press("ArrowLeft");
-  await expect(page.getByText("Notion", { exact: true })).toBeVisible();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await expect(start).toBeFocused();
-  await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("button", { name: "back", exact: true })).toBeFocused();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByText("Linear", { exact: true })).toBeVisible();
-  await expect(page.getByText("Medium", { exact: true })).toBeVisible();
-  await expect(page.getByText("Reveal", { exact: true })).toBeVisible();
-  await expect(page.locator("main.shortcut-hero")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Next difficulty" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Next session" })).toHaveCount(0);
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowLeft");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowLeft");
-  await page.getByRole("heading", { name: "game setup" }).click();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("navigation")).toBeVisible();
-  await page.keyboard.press("Enter");
-  await expect(page.getByText("Slow", { exact: true })).toBeVisible();
-  await expect(page.getByText("Always", { exact: true })).toBeVisible();
-  await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("button", { name: "back", exact: true })).toBeFocused();
-  await page.keyboard.press("ArrowUp");
-  await expect(start).toBeFocused();
-  await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("button", { name: "Next hints" })).toBeFocused();
-  // Enter launches from a setting, without cycling that setting first.
-  await page.keyboard.press("Enter");
   await expect(page.locator("main.shortcut-hero")).toBeVisible();
-  await expect(page).toHaveURL(/tool=linear&difficulty=medium&hints=always&pace=relaxed&session=30.*play=1/);
+  await expect(page.getByRole("heading", { name: "game setup" })).toHaveCount(0);
+  await expect(page).toHaveURL(/tool=linear&difficulty=medium&hints=near-line&pace=standard&session=30.*play=1/);
 });
 
-test("switching apps in setup replaces the playable shortcut deck", async ({ page }) => {
+test("the saved app is changed in Options and reused on later plays", async ({ page }) => {
   await openAsReturningPlayer(page);
-  for (const [app, action, key, direction, steps] of [
-    ["Notion", "Insert text block", "Enter", "ArrowRight", 2],
-    ["Slack", "Edit your message", "e", "ArrowLeft", 1],
-    ["Notion", "Insert text block", "Enter", "ArrowRight", 1],
-  ] as const) {
-    await page.getByRole("button", { name: "play now", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Next app" })).toBeFocused();
-    for (let index = 0; index < steps; index += 1) await page.keyboard.press(direction);
-    await expect(page.getByText(app, { exact: true })).toBeVisible();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(new RegExp(`tool=${app.toLowerCase()}&`));
-    await expect(page.locator("main.shortcut-hero")).toHaveAttribute("data-view-phase", "game", { timeout: 15_000 });
-    const cue = page.locator(".dom-action-ribbon.is-active").first();
-    await expect(cue.locator("strong")).toHaveText(action);
-    await expect(cue.locator("kbd")).toHaveText(key.length === 1 ? key.toUpperCase() : key);
-    await page.keyboard.press(key);
-    await expect(page.getByLabel("Streak: 1", { exact: true })).toBeVisible();
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Home", exact: true }).click();
-    await expect(page.getByRole("navigation")).toBeVisible();
-  }
+  await page.getByRole("button", { name: "options", exact: true }).click();
+  const options = page.getByRole("region", { name: "options" });
+  await expect(options.getByText("Linear", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next app" }).click();
+  await page.getByRole("button", { name: "Next app" }).click();
+  await expect(options.getByText("Notion", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "back", exact: true }).click();
+  await page.reload();
+
+  await page.getByRole("button", { name: "options", exact: true }).click();
+  await expect(page.getByRole("region", { name: "options" }).getByText("Notion", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "back", exact: true }).click();
+  await page.getByRole("button", { name: "play now", exact: true }).click();
+  await expect(page).toHaveURL(/tool=notion&/);
+  await expect(page.locator("main.shortcut-hero")).toHaveAttribute("data-view-phase", "game", { timeout: 15_000 });
+  const cue = page.locator(".dom-action-ribbon.is-active").first();
+  await expect(cue.locator("strong")).toHaveText("Insert text block");
+  await expect(cue.locator("kbd")).toHaveText("Enter");
 });
 
 test("Home and Options keep their content between the header and footer in small windows", async ({ page }) => {
@@ -178,15 +109,14 @@ test("Home and Options keep their content between the header and footer in small
     await page.getByRole("button", { name: "options", exact: true }).click();
     await expect(page.getByRole("heading", { name: "options", exact: true })).toBeVisible();
     await expect(page.locator(".title-world__sun")).toBeHidden();
-    await expect(page.locator(".option-list > .option-row")).toHaveCount(5);
+    await expect(page.locator(".option-list > .option-row")).toHaveCount(6);
     await expectSeparatedLayout(".title-panel--options");
     await expect(page.getByRole("button", { name: /confirm/ })).toHaveCount(0);
     await page.getByRole("button", { name: "back", exact: true }).click();
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.getByRole("button", { name: "play now", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "game setup" })).toBeVisible();
-    await expectSeparatedLayout(".title-panel");
-    await expect(page.getByRole("button", { name: "play now", exact: true })).toBeInViewport();
+    await expect(page.locator("main.shortcut-hero")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "game setup" })).toHaveCount(0);
   }
 
   async function expectSeparatedLayout(contentSelector: string) {
@@ -227,6 +157,8 @@ test("Options restore old timers as 30 seconds and keep other keyboard and point
   await expect(page.getByRole("heading", { name: "options" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Next session" })).toHaveCount(0);
 
+  await expect(page.getByRole("region", { name: "options" }).getByText("Linear", { exact: true })).toBeVisible();
+  await page.keyboard.press("ArrowDown");
   await expect(page.getByText("medium", { exact: true })).toBeVisible();
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByText("easy", { exact: true })).toBeVisible();

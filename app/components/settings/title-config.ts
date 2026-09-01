@@ -24,7 +24,7 @@ export const PACES: readonly TempoPreset[] = ["relaxed", "standard", "turbo"];
 export const HINT_MODES: readonly HintMode[] = ["always", "near-line", "off"];
 export const SOUND: readonly SoundMode[] = ["on", "off"];
 export const EFFECTS: readonly EffectsMode[] = ["full", "system", "reduced"];
-export const OPTION_COUNT = 5;
+export const OPTION_COUNT = 6;
 
 export const DIFFICULTY_DESCRIPTIONS = {
   easy: "single-key shortcuts",
