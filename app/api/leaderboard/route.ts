@@ -16,8 +16,8 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ entries: await readLeaderboard(board) }, {
       headers: { "cache-control": "public, s-maxage=30, stale-while-revalidate=60" },
     });
-  } catch {
-    return unavailable();
+  } catch (error) {
+    return unavailable(error);
   }
 }
 
@@ -36,12 +36,13 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
     return Response.json({ rank: result.rank, entries: result.entries }, { headers: NO_STORE });
-  } catch {
-    // Never log deletion secrets or database errors alongside player names.
-    return unavailable();
+  } catch (error) {
+    return unavailable(error);
   }
 }
 
-function unavailable(): Response {
+function unavailable(error?: unknown): Response {
+  // Log only the database error text; never request bodies, names, or deletion secrets.
+  if (error) console.error("leaderboard unavailable:", error instanceof Error ? error.message : String(error));
   return Response.json({ error: "The public board is unavailable." }, { status: 503, headers: NO_STORE });
 }

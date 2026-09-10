@@ -44,7 +44,9 @@ async function db(): Promise<NeonQueryFunction<false, false>> {
 }
 
 export async function readLeaderboard(board: LeaderboardBoard): Promise<readonly LeaderboardEntry[]> {
-  const rows = await (await db())`
+  // Keep the client in a local; `(await db())\`…\`` is miscompiled by the production minifier.
+  const query = await db();
+  const rows = await query`
     SELECT name, score, completed_at
     FROM leaderboard
     WHERE board_key = ${boardKey(board)} AND completed_at > now() - ${RETENTION}::interval
@@ -90,7 +92,8 @@ export async function postLeaderboardScore(payload: LeaderboardPostPayload): Pro
 
 export async function deleteLeaderboardScores(visitorId: string, deletionToken: string): Promise<void> {
   const tokenHash = await sha256(deletionToken);
-  await (await db())`DELETE FROM leaderboard WHERE visitor_id = ${visitorId} AND deletion_token_hash = ${tokenHash}`;
+  const query = await db();
+  await query`DELETE FROM leaderboard WHERE visitor_id = ${visitorId} AND deletion_token_hash = ${tokenHash}`;
 }
 
 function allowPost(visitorId: string): boolean {
