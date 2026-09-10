@@ -13,9 +13,8 @@ export async function GET(request: Request): Promise<Response> {
   if (!board) return Response.json({ error: "Invalid board." }, { status: 400, headers: NO_STORE });
   if (!isLeaderboardConfigured()) return unavailable();
   try {
-    return Response.json({ entries: await readLeaderboard(board) }, {
-      headers: { "cache-control": "public, s-maxage=30, stale-while-revalidate=60" },
-    });
+    // Players open the board right after posting; a CDN cache would show them a stale list.
+    return Response.json({ entries: await readLeaderboard(board) }, { headers: NO_STORE });
   } catch (error) {
     return unavailable(error);
   }
