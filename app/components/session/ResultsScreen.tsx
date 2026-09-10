@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { GameResults } from "../../game";
 import { SCORE_FORMATTER } from "../../gameplay/constants";
+import type { LeaderboardPostState } from "../../gameplay/use-game-controller";
 import type { ShareResult } from "../../platform/share-game";
 import type { SharePromptTrigger } from "../../referrals/contract";
 import { ResultsAnalytics } from "./ResultsAnalytics";
@@ -16,6 +17,8 @@ type ResultsScreenProps = {
   readonly sharePromptTrigger: SharePromptTrigger | null;
   readonly shareResult: ShareResult | null;
   readonly onShare: () => void;
+  readonly leaderboardPost: LeaderboardPostState | null;
+  readonly onPublishScore: () => void;
 };
 
 export function ResultsScreen({
@@ -29,6 +32,8 @@ export function ResultsScreen({
   sharePromptTrigger,
   shareResult,
   onShare,
+  leaderboardPost,
+  onPublishScore,
 }: ResultsScreenProps) {
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(playerName === "Guest" ? "" : playerName);
@@ -93,7 +98,7 @@ export function ResultsScreen({
                   Cancel
                 </button>
               </div>
-              <p>Best scores stay on this device. No account needed.</p>
+              <p>Best scores stay on this device unless you post them to the public board. No account needed.</p>
               {nameError ? <p role="alert">Couldn’t save in this browser. You can keep playing.</p> : null}
             </form>
           ) : (
@@ -111,6 +116,37 @@ export function ResultsScreen({
             </>
           )}
         </div>
+
+        {results.score > 0 ? (
+          <div className="results-leaderboard">
+            {leaderboardPost?.status === "posted" ? (
+              <span role="status">
+                {leaderboardPost.rank
+                  ? <>Posted. You are <strong>#{leaderboardPost.rank}</strong> on the public board.</>
+                  : <>Posted to the public board.</>}
+              </span>
+            ) : leaderboardPost?.status === "rate-limited" ? (
+              <span role="status">Too many posts for now. Try again in an hour.</span>
+            ) : leaderboardPost?.status === "unavailable" ? (
+              <span role="status">The public board is unavailable right now.</span>
+            ) : (
+              <>
+                <span>
+                  {playerName === "Guest"
+                    ? "Add your name to post this score publicly."
+                    : `Post ${SCORE_FORMATTER.format(results.score)} as ${playerName}?`}
+                </span>
+                <button
+                  type="button"
+                  disabled={playerName === "Guest" || leaderboardPost?.status === "posting"}
+                  onClick={onPublishScore}
+                >
+                  {leaderboardPost?.status === "posting" ? "Posting…" : "Post to public board"}
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
 
         <ResultsAnalytics results={results} />
 

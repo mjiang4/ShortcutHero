@@ -43,14 +43,14 @@ test("server-renders the Shortcut Hero home shell without the game", async () =>
   const html = await response.text();
   assert.match(html, /Shortcut Hero/i);
   assert.match(html, /Learn keyboard shortcuts through play/i);
-  assert.match(html, /Learn keyboard shortcuts for Linear, Notion, and Slack/i);
+  assert.match(html, /Learn keyboard shortcuts for Linear, Notion, Slack, and GitHub/i);
   const canonical = html.match(/rel="canonical" href="([^"]+)"/i)?.[1];
   assert.ok(canonical);
   assert.equal(new URL(canonical).href, `${origin}/`);
   assert.match(html, /twitter:card[^>]+summary_large_image/i);
   assert.match(html, /og\.png/i);
   assert.match(html, /class="title-menu__items"/i);
-  assert.match(html, /aria-label="Learn keyboard shortcuts for Linear, Slack, Notion\."/);
+  assert.match(html, /aria-label="Learn keyboard shortcuts for Linear, Slack, Notion, GitHub\."/);
   assert.match(html, />play now<\/button>/);
   assert.doesNotMatch(html, /like guitar hero, but for keyboard shortcuts instead of guitars/i);
   assert.doesNotMatch(html, /Select app|app-picker|app-card/i);

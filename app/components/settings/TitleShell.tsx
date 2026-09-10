@@ -53,7 +53,7 @@ export function TitleShell({
 
 function SupportedApps() {
   const [index, setIndex] = useState(0);
-  const names = TOOL_CATALOG.map((app) => app.name);
+  const names = TOOL_CATALOG.filter((app) => app.status === "available").map((app) => app.name);
   if (names.length === 0) return null;
 
   return (

@@ -1,7 +1,7 @@
 export const SITE_NAME = "Shortcut Hero";
 export const SITE_TITLE = "Shortcut Hero — Learn keyboard shortcuts through play";
 export const SITE_DESCRIPTION =
-  "Learn keyboard shortcuts for Linear, Notion, and Slack in a rhythm game built for your browser.";
+  "Learn keyboard shortcuts for Linear, Notion, Slack, and GitHub in a rhythm game built for your browser.";
 export const SOCIAL_IMAGE_PATH = "/og.png";
 export const SOCIAL_IMAGE_ALT =
   "Shortcut Hero's sunset action highway with a Linear shortcut racing toward the strike line";

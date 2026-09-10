@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test app/analytics/client.test.ts app/api/request.test.ts app/game/session.test.ts app/persistence/round-payload.test.ts app/platform/launch-compatibility.test.ts app/referrals/client.test.ts app/security/headers.test.ts app/site-config.test.ts app/tools/registry.test.ts",
+    "test:unit": "tsx --test app/analytics/client.test.ts app/api/request.test.ts app/game/session.test.ts app/leaderboard/contract.test.ts app/persistence/round-payload.test.ts app/platform/launch-compatibility.test.ts app/referrals/client.test.ts app/security/headers.test.ts app/site-config.test.ts app/tools/registry.test.ts",
     "test:render": "NEXT_PUBLIC_SITE_URL= npm run build && node --test tests/rendered-html.test.mjs",
     "test:browser": "playwright test",
     "test": "npm run test:unit && npm run test:render && npm run test:browser",
@@ -22,6 +22,7 @@
     "social-card": "node scripts/capture-social-card.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",

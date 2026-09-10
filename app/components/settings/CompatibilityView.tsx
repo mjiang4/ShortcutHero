@@ -25,14 +25,14 @@ export function CompatibilityView({
           ? "link sent"
           : shareResult === "unavailable"
             ? "copy this page's URL"
-            : "send link to a Mac";
+            : "send link to a computer";
 
     return (
-      <TitlePanel title="play on a Mac" subtitle="bring a keyboard">
+      <TitlePanel title="play on a computer" subtitle="bring a keyboard">
         <div className="compatibility-copy">
           <p>
             Learn Linear shortcuts in a fast 3D game. Open Shortcut Hero on a
-            Mac with Chrome, Safari, or Firefox to play.
+            Mac or Windows computer with Chrome, Edge, Safari, or Firefox to play.
           </p>
           <button
             type="button"
@@ -53,8 +53,8 @@ export function CompatibilityView({
     <TitlePanel title="browser check" subtitle="this setup is untested">
       <div className="compatibility-copy">
         <p>
-          Shortcut Hero is launch-tested on macOS with Chrome, Safari, and
-          Firefox. You can continue, but graphics or keyboard input may vary.
+          Shortcut Hero is launch-tested on Mac and Windows with Chrome, Edge,
+          Safari, and Firefox. You can continue, but graphics or keyboard input may vary.
         </p>
         <button
           type="button"

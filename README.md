@@ -4,7 +4,7 @@ Learn the shortcuts that make great software feel fast.
 
 Shortcut Hero is a 3D browser game that helps new users build keyboard-shortcut muscle memory. Actions race down a Guitar Hero-inspired highway; press the right shortcut at the strike line, chain accurate hits, and turn repetitive memorization into a game.
 
-Play browser-safe macOS shortcut packs for **Linear, Notion, and Slack**. These are reviewed packs, not each app's complete playable keymap.
+Play browser-safe Mac and Windows shortcut packs for **Linear, Notion, Slack, and GitHub**. These are reviewed packs, not each app's complete playable keymap.
 
 ## How it works
 
@@ -86,16 +86,16 @@ to serve the game.
 
 | Capability | With no backend configured | With the existing Sites backend |
 |---|---|---|
-| All app packs, tutorial, gameplay | Works on Vercel | Works on Vercel |
+| All app packs, tutorial, gameplay (Mac and Windows) | Works on Vercel | Works on Vercel |
 | Local scores, names, lesson history | Saved in this browser | Saved in this browser |
+| Public leaderboard (`/api/leaderboard`) | Works when `POSTGRES_URL` is set (Vercel Neon integration); otherwise reports unavailable | Same |
 | Sharing | Plain game link | Referral link when available |
-| Server round saves, referral attribution, server-data deletion | Unavailable (API returns 503) | Forwarded to Sites; requires a compatible, reachable deployment |
+| Server round saves, referral attribution | Unavailable (API returns 503) | Forwarded to Sites; requires a compatible, reachable deployment |
+| Server-data deletion | Removes leaderboard rows and returns 204 | Also forwarded to Sites |
 
-The current privacy-page deletion action also needs a successful server response
-before clearing local records. A fully local-only release must adjust this flow
-and its privacy copy. A fully independent release **with cloud saves** needs a
-replacement database and migration of the existing server handlers/data. Neither
-option is silently substituted for the existing behavior.
+Names reach the server only when a player presses **Post to public board** on the
+results screen. A fully independent release **with cloud round saves** still needs
+migration of the existing Sites handlers/data; the leaderboard does not replace them.
 
 1. Push the intended version to GitHub and import the repository into Vercel.
 2. Use the **Next.js** framework preset, repository root, and Node.js **22.x**.
@@ -111,6 +111,8 @@ option is silently substituted for the existing behavior.
    never prefix it with `NEXT_PUBLIC_` or point it at the Vercel/custom domain.
    Keep the old Sites deployment running and do not deploy this frontend over it.
    Leave the backend unset in previews unless using a separate test backend.
+   For the leaderboard, add the Neon integration (`npx vercel integration add neon`)
+   so `POSTGRES_URL` is injected; no migration step is needed.
    Optional analytics variables are listed in [.env.example](./.env.example).
 4. Deploy, then add your domain under **Settings → Domains** and copy Vercel's
    exact DNS records to your DNS provider. Redeploy if environment values change.

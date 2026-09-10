@@ -28,6 +28,8 @@ import {
   type GameSettings,
 } from "../game";
 import { recordLesson, selectLesson, type CurriculumProgress } from "../game/curriculum";
+import { postLeaderboardScore, type LeaderboardPost } from "../leaderboard/client";
+import { boardFromGameSettings } from "../leaderboard/contract";
 import { persistRoundSummary } from "../persistence/round-client";
 import type { ShareResult } from "../platform/share-game";
 import {
@@ -55,6 +57,8 @@ type GameControllerOptions = {
   readonly soundEnabled: boolean;
 };
 
+export type LeaderboardPostState = LeaderboardPost | { readonly status: "posting" };
+
 export function useGameController({
   settings,
   effectsMode,
@@ -73,6 +77,7 @@ export function useGameController({
   const [sharePromptTrigger, setSharePromptTrigger] =
     useState<SharePromptTrigger | null>(null);
   const [shareResult, setShareResult] = useState<ShareResult | null>(null);
+  const [leaderboardPost, setLeaderboardPost] = useState<LeaderboardPostState | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const sessionRef = useRef<GameSession | null>(null);
   const runNumberRef = useRef(0);
@@ -265,6 +270,7 @@ export function useGameController({
     setResults(null);
     setSharePromptTrigger(null);
     setShareResult(null);
+    setLeaderboardPost(null);
     resetFeedback();
     setSession(null);
     setCountdown(3);
@@ -293,6 +299,15 @@ export function useGameController({
     setPlayerName(trimmed);
     return true;
   }, []);
+
+  // Names leave the device only through this explicit action on the results screen.
+  const publishScore = useCallback(() => {
+    const finished = results;
+    if (!finished || finished.score <= 0 || playerName === "Guest") return;
+    setLeaderboardPost({ status: "posting" });
+    void postLeaderboardScore(boardFromGameSettings(settings), playerName, finished.score)
+      .then(setLeaderboardPost);
+  }, [playerName, results, settings]);
 
   const resume = useCallback(() => {
     const current = sessionRef.current;
@@ -363,6 +378,8 @@ export function useGameController({
     resultsMenuIndex,
     sharePromptTrigger,
     shareResult,
+    leaderboardPost,
+    publishScore,
     sceneReady,
     setSceneReady,
     setPauseMenuIndex,

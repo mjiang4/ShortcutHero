@@ -862,7 +862,8 @@ a:focus-visible {
   line-height: 0.95;
 }
 
-.results-player {
+.results-player,
+.results-leaderboard {
   display: flex;
   justify-content: center;
   align-items: baseline;
@@ -873,13 +874,19 @@ a:focus-visible {
   font-size: 13px;
 }
 
-.results-player strong {
+.results-leaderboard {
+  margin-top: 10px;
+}
+
+.results-player strong,
+.results-leaderboard strong {
   color: var(--paper);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 
-.results-player button {
+.results-player button,
+.results-leaderboard button {
   padding: 4px 0;
   border: 0;
   border-bottom: 1px solid currentColor;
@@ -889,7 +896,8 @@ a:focus-visible {
   font: inherit;
 }
 
-.results-player button:disabled {
+.results-player button:disabled,
+.results-leaderboard button:disabled {
   opacity: 0.4;
   cursor: default;
 }

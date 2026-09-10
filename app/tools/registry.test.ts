@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { deckForMode } from "./types";
-import { getToolTrack, TOOL_CATALOG, AVAILABLE_TOOL_IDS, SHORTCUT_CATALOG, isAvailableToolId } from "./registry";
+import { appRequestHref, getToolTrack, TOOL_CATALOG, AVAILABLE_TOOL_IDS, SHORTCUT_CATALOG, isAvailableToolId } from "./registry";
 import { loadCatalogTrack, validateCatalog } from "./catalog";
 import { createPlayHref, parseLaunchSettings } from "../components/settings/settings";
 import { createGameSession, startSession, handleSessionKey } from "../game/session";
@@ -44,7 +44,7 @@ test("loads a new app and distinct OS bindings from data, without inferring miss
           macos: { steps: [["KeyA"]], display: "A" },
           windows: { steps: [["KeyB"]], display: "B" },
         } },
-        { ...original, id: "mac-only" },
+        { ...original, id: "mac-only", bindings: { macos: original.bindings.macos, windows: null } },
         { ...original, id: "reserved", bindings: {
           macos: { steps: [["Meta", "KeyW"]], display: "⌘ W" },
           windows: { steps: [["Control", "KeyW"]], display: "Ctrl W" },
@@ -61,7 +61,12 @@ test("loads a new app and distinct OS bindings from data, without inferring miss
   assert.equal(mac.decks.easy.length, 2);
   assert.equal(windows.decks.easy.length, 1);
   assert.ok(!deckForMode(mac, "hard").some((item) => item.id === "reserved"));
-  assert.equal(deckForMode(getToolTrack("linear", "windows"), "hard").length, 0);
+  // Linear's letter shortcuts are OS-independent; the Windows track mirrors the Mac pools.
+  assert.deepEqual(
+    deckForMode(getToolTrack("linear", "windows"), "hard").map((item) => item.id),
+    deckForMode(getToolTrack("linear"), "hard").map((item) => item.id),
+  );
+  assert.equal(catalogData.apps.linear.shortcuts.find(shortcut => shortcut.id === "command-menu")?.bindings.windows?.display, "Ctrl K");
 });
 
 test("rejects invalid catalog imports before replacing the current data", () => {
@@ -114,7 +119,9 @@ test("preserves Slack source categories, alternatives, notes, and OS exceptions 
 
 test("releases source-backed app packs with playable pools and isolated launch settings", () => {
   const available = TOOL_CATALOG.filter((tool) => tool.status === "available");
-  assert.deepEqual(available.map((tool) => tool.id), ["linear", "slack", "notion"]);
+  assert.deepEqual(available.map((tool) => tool.id), ["linear", "slack", "notion", "github"]);
+  assert.deepEqual(TOOL_CATALOG.filter((tool) => tool.status === "coming-soon").map((tool) => tool.id), ["cursor", "chatgpt", "claude", "superhuman"]);
+  assert.equal(appRequestHref("Cursor"), "https://github.com/mjiang4/ShortcutHero/issues/new?labels=app-request&title=App+request%3A+Cursor");
   for (const id of ["jira", "superhuman", "excel"] as const) {
     assert.equal(isAvailableToolId(id), false);
     assert.equal(parseLaunchSettings(new URLSearchParams({ tool: id })).tool, "linear");
@@ -125,21 +132,34 @@ test("releases source-backed app packs with playable pools and isolated launch s
     const launch = parseLaunchSettings(new URLSearchParams({ tool }));
     assert.equal(launch.tool, tool);
     assert.equal(parseLaunchSettings(new URL(createPlayHref(launch), "https://example.test").searchParams).tool, tool);
-    for (const difficulty of ["easy", "medium", "hard"] as const) {
-      assert.ok(deckForMode(getToolTrack(tool), difficulty).length > 0);
-    }
-    for (const shortcut of deckForMode(getToolTrack(tool), "hard")) {
-      let session = startSession(createGameSession({ trackId: tool, mode: "medium", speed: "standard", assistance: "novice" }, { deck: [shortcut] }), 0);
-      const strike = session.active!.strikeAtMs;
-      const input = shortcut.input;
-      const codes = input.kind === "sequence" ? input.codes : [input.code];
-      for (let index = 0; index < codes.length; index += 1) {
-        const update = handleSessionKey(session, { code: codes[index], shiftKey: input.kind === "chord", ctrlKey: false, metaKey: false, altKey: false }, strike - (codes.length - index - 1) * 500);
-        assert.equal(update.preventDefault, true, `${tool}/${shortcut.id}`);
-        session = update.session;
+    for (const platform of ["macos", "windows"] as const) {
+      for (const difficulty of ["easy", "medium", "hard"] as const) {
+        assert.ok(deckForMode(getToolTrack(tool, platform), difficulty).length > 0, `${tool}/${platform}/${difficulty}`);
       }
-      assert.equal(session.attempts[0]?.outcome, "clean", `${tool}/${shortcut.id}`);
+      for (const shortcut of deckForMode(getToolTrack(tool, platform), "hard")) {
+        let session = startSession(createGameSession({ trackId: tool, platform, mode: "medium", speed: "standard", assistance: "novice" }, { deck: [shortcut] }), 0);
+        const strike = session.active!.strikeAtMs;
+        const input = shortcut.input;
+        const codes = input.kind === "sequence" ? input.codes : [input.code];
+        for (let index = 0; index < codes.length; index += 1) {
+          const update = handleSessionKey(session, { code: codes[index], shiftKey: input.kind === "chord", ctrlKey: false, metaKey: false, altKey: false }, strike - (codes.length - index - 1) * 500);
+          assert.equal(update.preventDefault, true, `${tool}/${platform}/${shortcut.id}`);
+          session = update.session;
+        }
+        assert.equal(session.attempts[0]?.outcome, "clean", `${tool}/${platform}/${shortcut.id}`);
+      }
     }
+  }
+  const github = getToolTrack("github");
+  assert.equal(github.decks.easy.length, 18);
+  assert.equal(github.decks.medium.length, 9);
+  assert.equal(github.decks.hard.length, 6);
+  assert.deepEqual(github.decks.easy.slice(0, 2).map(shortcut => shortcut.input.display), ["S", "E"]);
+  assert.equal(github.decks.medium.find(shortcut => shortcut.id === "go-pull-requests")?.input.display, "G → P");
+  assert.equal(github.decks.hard.find(shortcut => shortcut.id === "mark-unread")?.input.display, "⇧ U");
+  assert.deepEqual(getToolTrack("github", "windows").decks.hard.map(shortcut => shortcut.id), github.decks.hard.map(shortcut => shortcut.id));
+  for (const shortcut of catalogData.apps.github.shortcuts) {
+    assert.equal(shortcut.source.url, "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts");
   }
   assert.equal(getToolTrack("slack").decks.easy.length, 10);
   assert.equal(getToolTrack("notion").decks.hard.length, 4);

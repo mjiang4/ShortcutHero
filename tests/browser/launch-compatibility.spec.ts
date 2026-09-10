@@ -10,16 +10,16 @@ test.use({
   hasTouch: true,
 });
 
-test("a mobile visitor lands directly on the Mac handoff", async ({
+test("a mobile visitor lands directly on the desktop handoff", async ({
   page,
 }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "play on a Mac" }),
+    page.getByRole("heading", { name: "play on a computer" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "send link to a Mac" }),
+    page.getByRole("button", { name: "send link to a computer" }),
   ).toBeVisible();
   await expect(
     page.getByText("Learn Linear shortcuts in a fast 3D game."),
@@ -34,7 +34,7 @@ test("a direct mobile game link never initializes the action stage", async ({
   await page.goto(FAST_TEST_RUN);
 
   await expect(
-    page.getByRole("heading", { name: "play on a Mac" }),
+    page.getByRole("heading", { name: "play on a computer" }),
   ).toBeVisible();
   await expect(page.locator(".dom-game-stage")).toHaveCount(0);
 });

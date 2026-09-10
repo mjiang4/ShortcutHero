@@ -68,8 +68,8 @@ export function DeleteDataButton() {
       </button>
       {state === "confirm" ? (
         <p className={styles.deleteStatus} role="status">
-          This removes server progress, settings, your local name, and scores.
-          This cannot be undone.
+          This removes server progress, your public board entries, settings,
+          your local name, and scores. This cannot be undone.
         </p>
       ) : null}
       {state === "deleted" ? (

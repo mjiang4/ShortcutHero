@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import type { KeyboardPlatform } from "../game/types";
+
 export type OperatingSystem =
   | "macOS"
   | "Windows"
@@ -16,7 +18,6 @@ export type BrowserName =
   | "your browser";
 export type LaunchSupport =
   | "supported"
-  | "mac-layout"
   | "mobile"
   | "untested";
 
@@ -102,11 +103,9 @@ export function detectSystem(
   ].includes(browser);
   const launchSupport: LaunchSupport = !likelyPhysicalKeyboard
     ? "mobile"
-    : operatingSystem === "macOS" && browserSupported
+    : (operatingSystem === "macOS" || operatingSystem === "Windows") && browserSupported
       ? "supported"
-      : operatingSystem === "Windows" && browserSupported
-        ? "mac-layout"
-        : "untested";
+      : "untested";
 
   return {
     operatingSystem,
@@ -119,13 +118,18 @@ export function detectSystem(
 
 export function supportMessage(systemInfo: SystemInfo): string {
   if (systemInfo.launchSupport === "supported") {
-    return "Ready for the Mac shortcut track.";
-  }
-  if (systemInfo.launchSupport === "mac-layout") {
-    return "This version shows Mac shortcuts. You can still preview the game.";
+    return `Ready for the ${keyboardPlatformLabel(systemInfo)} shortcut track.`;
   }
   if (systemInfo.launchSupport === "mobile") {
     return "A physical keyboard is required to play.";
   }
-  return "For launch, use a Mac with Chrome, Safari, or Firefox.";
+  return "For launch, use a Mac or Windows computer with Chrome, Edge, Safari, or Firefox.";
+}
+
+export function keyboardPlatform(systemInfo: SystemInfo): KeyboardPlatform {
+  return systemInfo.operatingSystem === "Windows" ? "windows" : "macos";
+}
+
+export function keyboardPlatformLabel(systemInfo: SystemInfo): "Mac" | "Windows" {
+  return keyboardPlatform(systemInfo) === "windows" ? "Windows" : "Mac";
 }

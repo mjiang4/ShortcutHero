@@ -11,23 +11,26 @@ import {
 } from "./title-config";
 import type { LaunchSettings } from "./settings";
 import { LESSON_SIZE } from "../../game/curriculum";
+import type { KeyboardPlatform } from "../../game/types";
 import { AVAILABLE_TOOL_IDS, deckForMode, getToolTrack } from "../../tools";
 import { BackButton, TitlePanel } from "./TitleShell";
 
 export function OptionsView({
   settings,
+  platform,
   selectedIndex,
   onSelect,
   onChange,
   onBack,
 }: {
   readonly settings: LaunchSettings;
+  readonly platform: KeyboardPlatform;
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
   readonly onChange: (settings: LaunchSettings) => void;
   readonly onBack: () => void;
 }) {
-  const track = getToolTrack(settings.tool);
+  const track = getToolTrack(settings.tool, platform);
   const catalog = deckForMode(track, settings.difficulty);
   const inputKinds = new Set(catalog.map(shortcut => shortcut.input.kind));
   const difficultyDescription = inputKinds.size === 1 ? "single-key shortcuts in this pack"

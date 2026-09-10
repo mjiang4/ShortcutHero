@@ -83,7 +83,7 @@ function ShortcutHeroGameRuntime({
       <SystemScreen
         eyebrow="physical keyboard required"
         title="continue on desktop"
-        message="Shortcut Hero needs timing-sensitive keyboard input. Open this game on a Mac with Chrome, Safari, or Firefox."
+        message="Shortcut Hero needs timing-sensitive keyboard input. Open this game on a Mac or Windows computer with Chrome, Edge, Safari, or Firefox."
         primaryLabel={shareLabel}
         onPrimary={() =>
           void shareGameLink("mobile_game").then(setShareResult)
@@ -100,7 +100,7 @@ function ShortcutHeroGameRuntime({
       <SystemScreen
         eyebrow="browser check"
         title="this setup is untested"
-        message="Shortcut Hero is launch-tested on macOS with Chrome, Safari, and Firefox. You can continue, but graphics or keyboard input may vary."
+        message="Shortcut Hero is launch-tested on Mac and Windows with Chrome, Edge, Safari, and Firefox. You can continue, but graphics or keyboard input may vary."
         primaryLabel="continue anyway"
         onPrimary={() => setCompatibilityAcknowledged(true)}
       />
@@ -134,11 +134,6 @@ function ShortcutHeroGameRuntime({
 
       <div className="ui-layer">
         <div className="capability-notices">
-          {systemInfo.launchSupport === "mac-layout" ? (
-            <p className="capability-notice" role="status">
-              Preview mode: shortcuts use the Mac keyboard layout.
-            </p>
-          ) : null}
           {soundEnabled && capabilities.audio === "unavailable" ? (
             <p className="capability-notice" role="status">
               Sound is unavailable. The game will continue silently.
@@ -227,6 +222,8 @@ function ShortcutHeroGameRuntime({
             sharePromptTrigger={controller.sharePromptTrigger}
             shareResult={controller.shareResult}
             onShare={controller.shareResults}
+            leaderboardPost={controller.leaderboardPost}
+            onPublishScore={controller.publishScore}
           />
         ) : null}
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { detectSystem } from "./launch-compatibility";
+import { detectSystem, keyboardPlatform } from "./launch-compatibility";
 
 const MAC_PREFIX = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ";
 
@@ -20,12 +20,14 @@ test("supports the launch browsers on a Mac with a physical keyboard", () => {
   }
 });
 
-test("labels Windows as a Mac-layout preview", () => {
+test("supports Windows desktop browsers with the Windows shortcut track", () => {
   const system = detectSystem(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/149.0.0.0 Safari/537.36",
   );
   assert.equal(system.operatingSystem, "Windows");
-  assert.equal(system.launchSupport, "mac-layout");
+  assert.equal(system.launchSupport, "supported");
+  assert.equal(keyboardPlatform(system), "windows");
+  assert.equal(keyboardPlatform(detectSystem(`${MAC_PREFIX}Gecko/20100101 Firefox/142.0`)), "macos");
 });
 
 test("blocks touch-first phones and iPads from keyboard gameplay", () => {

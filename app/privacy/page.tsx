@@ -14,7 +14,16 @@ export default function PrivacyPage() {
       <LegalSection title="What stays on your device">
         <p>
           Your name, game settings, and local high scores stay in this browser.
-          Shortcut Hero does not send your name to its database or analytics.
+          Shortcut Hero never sends your name to analytics, and only stores it
+          on the server when you choose “Post to public board” on a results screen.
+        </p>
+      </LegalSection>
+      <LegalSection title="Public board">
+        <p>
+          Posting a score publishes the name you entered, the score, and the
+          game settings for that board. Your anonymous visitor ID and hashed
+          deletion secret are stored with it so that you can remove it below.
+          Public board entries expire after 90 days.
         </p>
       </LegalSection>
       <LegalSection title="What the service stores">

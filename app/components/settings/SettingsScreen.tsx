@@ -5,15 +5,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShortcutHeroGame } from "../../ShortcutHeroGame";
 import { analytics } from "../../analytics";
 import { primeGameAudio } from "../../audio/use-game-audio";
+import { fetchLeaderboard } from "../../leaderboard/client";
+import { boardFromLaunchSettings } from "../../leaderboard/contract";
 import { captureReferralLanding } from "../../referrals/client";
 import { AVAILABLE_TOOL_IDS, getToolTrack } from "../../tools";
 import { CompatibilityView } from "./CompatibilityView";
 import { GameSetup } from "./GameSetup";
-import { InfoView } from "./InfoViews";
+import { InfoView, type LeaderboardView } from "./InfoViews";
 import { MainMenu } from "./MainMenu";
 import { OnboardingDemo } from "./OnboardingDemo";
 import { OptionsView } from "./OptionsView";
-import { DEFAULT_SYSTEM_INFO, detectSystem } from "./platform";
+import { DEFAULT_SYSTEM_INFO, detectSystem, keyboardPlatform } from "./platform";
 import {
   DEFAULT_LAUNCH_SETTINGS,
   createPlayHref,
@@ -55,6 +57,7 @@ export function SettingsScreen() {
   );
   const [previewingFirstVisit, setPreviewingFirstVisit] = useState(false);
   const [scores, setScores] = useState<readonly ScoreEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardView>({ status: "loading" });
   const [hasRestoredSettings, setHasRestoredSettings] = useState(false);
   const [activeGame, setActiveGame] = useState<LaunchSettings | null>(null);
 
@@ -154,13 +157,17 @@ export function SettingsScreen() {
         else setView("setup");
         return;
       }
-      if (action === "scores") setScores(previewingFirstVisit ? [] : readHighScores());
+      if (action === "scores") {
+        setScores(previewingFirstVisit ? [] : readHighScores());
+        setLeaderboard({ status: "loading" });
+        void fetchLeaderboard(boardFromLaunchSettings(settings)).then(setLeaderboard);
+      }
       if (action === "options") {
         setOptionIndex(0);
       }
       setView(action);
     },
-    [beginPlay, hasRestoredSettings, onboardingComplete, previewingFirstVisit, systemInfo.launchSupport],
+    [beginPlay, hasRestoredSettings, onboardingComplete, previewingFirstVisit, settings, systemInfo.launchSupport],
   );
 
   const adjustOption = useCallback((index: number, direction: -1 | 1) => {
@@ -218,7 +225,8 @@ export function SettingsScreen() {
     onAdjustOption: adjustOption,
   });
 
-  const activeTrack = getToolTrack(settings.tool);
+  const platform = keyboardPlatform(systemInfo);
+  const activeTrack = getToolTrack(settings.tool, platform);
   const summary = useMemo(
     () =>
       `${LABELS.difficulty[settings.difficulty]} · hints ${LABELS.hints[settings.hints]} · ${settings.session}s`,
@@ -233,7 +241,7 @@ export function SettingsScreen() {
           mode: activeGame.difficulty,
           assistance: activeGame.hints === "off" ? "pro" : "novice",
           hints: activeGame.hints,
-          platform: "macos",
+          platform,
           speed: activeGame.pace,
           durationSeconds: activeGame.session,
         }}
@@ -244,7 +252,7 @@ export function SettingsScreen() {
   }
 
   if (view === "warmup" || view === "tutorial") {
-    return <OnboardingDemo settings={settings} onComplete={view === "warmup" ? completeOnboarding : () => setView("help")} />;
+    return <OnboardingDemo settings={settings} platform={platform} onComplete={view === "warmup" ? completeOnboarding : () => setView("help")} />;
   }
 
   return (
@@ -269,6 +277,7 @@ export function SettingsScreen() {
       {view === "options" ? (
         <OptionsView
           settings={settings}
+          platform={platform}
           selectedIndex={optionIndex}
           onSelect={setOptionIndex}
           onChange={setSettings}
@@ -288,6 +297,8 @@ export function SettingsScreen() {
         <InfoView
           view={view}
           scores={scores}
+          leaderboard={leaderboard}
+          leaderboardLabel={`${activeTrack.name} · ${LABELS.difficulty[settings.difficulty]} · hints ${LABELS.hints[settings.hints]} · ${LABELS.pace[settings.pace]} · ${settings.session}s`}
           onBack={() => setView("menu")}
           onReplayDemo={() => setView("tutorial")}
         />

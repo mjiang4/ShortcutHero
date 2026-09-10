@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameAudio } from "../../audio";
 import {
   createGameSession, getPromptTiming, pauseSession, resumeSession, startSession,
-  type GameSession, type GameSettings, type ShortcutDefinition,
+  type GameSession, type GameSettings, type KeyboardPlatform, type ShortcutDefinition,
 } from "../../game";
 import { buildSceneCues, hintKeysFor } from "../../gameplay/runtime-view";
 import type { ProcessGameEffects } from "../../gameplay/types";
@@ -18,23 +18,25 @@ import type { LaunchSettings } from "./settings";
 
 const NO_SAVED_RESULTS = () => {};
 
-export function OnboardingDemo({ settings, onComplete }: {
+export function OnboardingDemo({ settings, platform, onComplete }: {
   readonly settings: LaunchSettings;
+  readonly platform: KeyboardPlatform;
   readonly onComplete: () => void;
 }) {
   const [step, setStep] = useState(0);
-  const track = getToolTrack(settings.tool);
+  const track = getToolTrack(settings.tool, platform);
   // Teach only input types the selected app actually contains.
   const steps = [track.decks.easy[0], track.decks.medium[0], track.decks.hard[0]]
     .filter((shortcut): shortcut is ShortcutDefinition => Boolean(shortcut));
-  return <TutorialStep key={steps[step].id} shortcut={steps[step]} settings={settings}
+  return <TutorialStep key={steps[step].id} shortcut={steps[step]} settings={settings} platform={platform}
     step={step} stepCount={steps.length} appName={track.name} onComplete={onComplete}
     onContinue={() => step + 1 === steps.length ? onComplete() : setStep(step + 1)} />;
 }
 
-function TutorialStep({ shortcut, settings, step, stepCount, appName, onComplete, onContinue }: {
+function TutorialStep({ shortcut, settings, platform, step, stepCount, appName, onComplete, onContinue }: {
   readonly shortcut: ShortcutDefinition;
   readonly settings: LaunchSettings;
+  readonly platform: KeyboardPlatform;
   readonly step: number;
   readonly stepCount: number;
   readonly appName: string;
@@ -42,9 +44,9 @@ function TutorialStep({ shortcut, settings, step, stepCount, appName, onComplete
   readonly onContinue: () => void;
 }) {
   const practiceSettings = useMemo<GameSettings>(() => ({
-    trackId: settings.tool, platform: "macos", mode: shortcut.difficulty,
+    trackId: settings.tool, platform, mode: shortcut.difficulty,
     speed: settings.pace, assistance: "novice", hints: "always", durationSeconds: 30,
-  }), [settings.pace, settings.tool, shortcut.difficulty]);
+  }), [platform, settings.pace, settings.tool, shortcut.difficulty]);
   const makeSession = useCallback(() => createGameSession(practiceSettings, {
     deck: [shortcut], maxRequeues: 0,
   }), [practiceSettings, shortcut]);

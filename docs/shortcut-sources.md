@@ -2,7 +2,7 @@
 
 Reference snapshot: the initial Linear catalog and research-only sections were reviewed **2026-08-30**; the other starter packs and the expanded Linear/Notion catalogs were reviewed **2026-08-31**. Per-entry dates record each review. These are documented defaults, not evidence that every shortcut has been exercised in the installed app. Context, product surface, keyboard layout, app version, and user remapping matter.
 
-**Playable in the local game:** browser-safe macOS packs for **Linear, Slack, and Notion only**. Jira, Superhuman Mail, and Excel remain stored but have empty `releasedPlatforms`; they are hidden from setup and the home animation. Old links fall back to Linear, without deleting or relabeling old scores. Cursor, Claude Code, ChatGPT, and Codex remain research-only below. Windows bindings are stored explicitly where documented; Windows launch support is not enabled.
+**Playable in the local game:** browser-safe packs for **Linear, Slack, Notion, and GitHub** on Mac and Windows (`releasedPlatforms: ["macos", "windows"]`; a released pack must cover both because the game launches on both). Jira, Superhuman Mail, and Excel remain stored but have empty `releasedPlatforms`; they are hidden from setup and the home animation. Old links fall back to Linear, without deleting or relabeling old scores. Cursor, Claude Code, ChatGPT, and Codex remain research-only below and appear in setup only as coming-soon entries with a link to request them; they rely on Cmd/Ctrl, which the browser engine cannot capture. Windows bindings are stored explicitly; Linear's letter shortcuts were copied to Windows on 2026-09-10 because Linear documents them as OS-independent, and its Cmd shortcuts map to Ctrl as reference-only.
 
 ## New app packs
 
@@ -10,6 +10,7 @@ Reference snapshot: the initial Linear catalog and research-only sections were r
 |---|---:|---:|---|
 | Slack | 101 | 10 / 10 / 13 | [Slack shortcut reference](https://slack.com/help/articles/201374536-Slack-keyboard-shortcuts) |
 | Notion | 61 | 10 / 10 / 14 | [Notion shortcut reference](https://www.notion.com/help/keyboard-shortcuts) |
+| GitHub | 33 | 18 / 27 / 33 | [GitHub keyboard shortcuts](https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts) (reviewed 2026-09-10) |
 | Jira (not released) | 9 | — | [Jira Cloud shortcuts](https://support.atlassian.com/jira-software-cloud/docs/use-keyboard-shortcuts/) |
 | Superhuman Mail (not released) | 29 | — | [Mac v8 keymap](https://download.superhuman.com/Superhuman%20Keyboard%20Shortcuts.pdf), [Windows/Linux v8 keymap](https://download.superhuman.com/Superhuman_Keyboard_Shortcuts.pdf) |
 | Excel (not released) | 18 | — | [Microsoft Excel shortcuts](https://support.microsoft.com/en-US/Accessibility/excel/keyboard-shortcuts-in-excel) |
@@ -21,6 +22,7 @@ Counts are a snapshot of the catalog validator output, not constants used by the
 - Jira uses the current Cloud documentation, not older Server shortcut lists. Its starter pack has only singles, so Medium/Hard do not invent extra command types.
 - Superhuman means **Mail**, not Docs or Go. The pack covers inbox actions, folder sequences, and Shift filters.
 - Excel uses desktop defaults. Return direction can be customized; this pack assumes its default and Scroll Lock off. Mac Delete is the physical Backspace key. Function-key and reserved-modifier actions are reference-only.
+- GitHub teaches the character-key shortcuts from the official reference: `S` search (`/` is an alias, kept in `sourceBindings`), `G` sequences for notifications, repository tabs, and the workflow file, file/PR browsing keys (`T L W Y I B E`), issue-list and issue actions (`C U O Q M L A X`), `R` quote reply, and Shift chords for line highlight, Actions logs, and notifications. The same letters apply on Mac and Windows/Linux. Duplicated letters (`E`, `L`) carry distinct contexts. Cmd/Ctrl Markdown, editor, project-board, and network-graph shortcuts are out of scope. GitHub's own dialog (`?`) is the in-app reference.
 
 Input capture is limited to active play. Esc pauses; menus retain native Tab navigation. Cmd, Ctrl, and Option/Alt remain untouched. Source review and browser-game checks do not constitute testing in each installed third-party app.
 

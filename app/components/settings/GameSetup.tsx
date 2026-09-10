@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { isAvailableToolId, TOOL_CATALOG, type ToolId } from "../../tools";
+import { appRequestHref, isAvailableToolId, TOOL_CATALOG, type ToolId } from "../../tools";
 import { OptionRow } from "./OptionsView";
 import type { LaunchSettings } from "./settings";
 import { HINT_DESCRIPTIONS, HINT_MODES, LABELS, PACES, cycleValue } from "./title-config";
@@ -80,7 +80,7 @@ export function GameSetup({ settings, firstVisit, onChange, onContinue, onPlayTu
         if (event.target instanceof HTMLElement) event.target.closest("button")?.focus();
       }}>
         <div className="option-list">
-          <OptionRow label="app" value={app.name} description={canStart ? undefined : "Coming soon"}
+          <OptionRow label="app" value={app.name} description={canStart ? undefined : `Coming soon. ${app.description}`}
             active={selected === 0} onFocus={() => setSelected(0)}
             onPrevious={() => adjust(0, -1)} onNext={() => adjust(0, 1)} />
           <OptionRow label="speed" value={LABELS.pace[settings.pace]} active={selected === 1}
@@ -99,6 +99,10 @@ export function GameSetup({ settings, firstVisit, onChange, onContinue, onPlayTu
           {firstVisit ? <button type="button" className="title-panel__back"
             onFocus={() => setSelected(4)} onClick={onPlayTutorial}>play tutorial</button> : null}
           <BackButton onFocus={() => setSelected(firstVisit ? 5 : 4)} onClick={onBack} />
+          <a className="title-panel__back" href={appRequestHref(canStart ? undefined : app.name)}
+            target="_blank" rel="noreferrer">
+            {canStart ? "request an app" : `vote for ${app.name}`} <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </div>
     </TitlePanel>

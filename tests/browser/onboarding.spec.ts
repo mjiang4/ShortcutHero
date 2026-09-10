@@ -238,21 +238,22 @@ test("legal pages expose direct policies and launch security headers", async ({
   await expect(page.getByText("No account or purchase")).toBeVisible();
 });
 
-test.describe("unsupported operating systems", () => {
+test.describe("Windows players", () => {
   test.use({
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
   });
 
-  test("desktop players can preview without setup and see the Mac-layout notice", async ({ page }) => {
+  test("play the Windows shortcut track without a preview notice", async ({ page }) => {
     await page.goto("/");
+    await page.getByRole("button", { name: "options", exact: true }).click();
+    await expect(page.locator(".title-brand__platform")).toContainText("Windows");
+    await page.getByRole("button", { name: "back", exact: true }).click();
     await page.getByRole("button", { name: "play now", exact: true }).click();
     await page.getByRole("button", { name: "play now", exact: true }).click();
-    await expect(
-      page.getByText(
-        "Preview mode: shortcuts use the Mac keyboard layout.",
-      ),
-    ).toBeVisible();
+    const game = page.locator("main.shortcut-hero");
+    await expect(game).toHaveAttribute("data-view-phase", "game", { timeout: 15_000 });
+    await expect(page.locator(".capability-notice")).toHaveCount(0);
   });
 });

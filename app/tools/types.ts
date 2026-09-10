@@ -6,7 +6,7 @@ import type {
 import type catalogData from "./catalog-data.json";
 
 export type AvailableToolId = keyof typeof catalogData.apps;
-export type PlannedToolId = "slack" | "notion" | "jira" | "superhuman" | "excel";
+export type PlannedToolId = "cursor" | "chatgpt" | "claude" | "superhuman";
 export type ToolId = AvailableToolId | PlannedToolId;
 
 export interface ToolCatalogEntry {

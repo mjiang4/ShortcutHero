@@ -5,9 +5,10 @@
       "name": "Linear",
       "description": "Issues, projects, cycles, and navigation.",
       "surface": "desktop / web",
-      "coverage": "Current primary-source defaults are playable. Four historical bindings are retained as reference-only. Reserved modifiers are also reference-only. This is a reviewed snapshot, not a live keymap feed; Windows gameplay is not released.",
+      "coverage": "Current primary-source defaults are playable. Four historical bindings are retained as reference-only. Reserved modifiers are also reference-only. This is a reviewed snapshot, not a live keymap feed. Letter shortcuts are identical on Windows per Linear's docs; Cmd shortcuts map to Ctrl as reference only.",
       "releasedPlatforms": [
-        "macos"
+        "macos",
+        "windows"
       ],
       "shortcuts": [
         {
@@ -27,7 +28,14 @@
               ],
               "display": "C"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "C"
+            }
           }
         },
         {
@@ -48,7 +56,14 @@
               ],
               "display": "A"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "A"
+            }
           }
         },
         {
@@ -69,7 +84,14 @@
               ],
               "display": "I"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "I"
+            }
           }
         },
         {
@@ -90,7 +112,14 @@
               ],
               "display": "L"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "L"
+            }
           }
         },
         {
@@ -111,7 +140,14 @@
               ],
               "display": "P"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyP"
+                ]
+              ],
+              "display": "P"
+            }
           }
         },
         {
@@ -132,7 +168,14 @@
               ],
               "display": "S"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyS"
+                ]
+              ],
+              "display": "S"
+            }
           }
         },
         {
@@ -152,7 +195,14 @@
               ],
               "display": "F"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyF"
+                ]
+              ],
+              "display": "F"
+            }
           }
         },
         {
@@ -173,7 +223,14 @@
               ],
               "display": "X"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "X"
+            }
           }
         },
         {
@@ -194,7 +251,14 @@
               ],
               "display": "J"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyJ"
+                ]
+              ],
+              "display": "J"
+            }
           }
         },
         {
@@ -215,7 +279,14 @@
               ],
               "display": "K"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyK"
+                ]
+              ],
+              "display": "K"
+            }
           }
         },
         {
@@ -238,7 +309,17 @@
               ],
               "display": "G → I"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "G → I"
+            }
           }
         },
         {
@@ -261,7 +342,17 @@
               ],
               "display": "G → M"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyM"
+                ]
+              ],
+              "display": "G → M"
+            }
           }
         },
         {
@@ -285,7 +376,17 @@
               ],
               "display": "G → B"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyB"
+                ]
+              ],
+              "display": "G → B"
+            }
           }
         },
         {
@@ -309,7 +410,17 @@
               ],
               "display": "G → V"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyV"
+                ]
+              ],
+              "display": "G → V"
+            }
           }
         },
         {
@@ -332,7 +443,17 @@
               ],
               "display": "O → F"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyF"
+                ]
+              ],
+              "display": "O → F"
+            }
           }
         },
         {
@@ -355,7 +476,17 @@
               ],
               "display": "O → P"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyP"
+                ]
+              ],
+              "display": "O → P"
+            }
           }
         },
         {
@@ -378,7 +509,17 @@
               ],
               "display": "O → C"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "O → C"
+            }
           }
         },
         {
@@ -401,7 +542,17 @@
               ],
               "display": "O → T"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "O → T"
+            }
           }
         },
         {
@@ -423,7 +574,15 @@
               ],
               "display": "⇧ E"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyE"
+                ]
+              ],
+              "display": "⇧ E"
+            }
           }
         },
         {
@@ -445,7 +604,15 @@
               ],
               "display": "⇧ P"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyP"
+                ]
+              ],
+              "display": "⇧ P"
+            }
           }
         },
         {
@@ -467,7 +634,15 @@
               ],
               "display": "⇧ C"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyC"
+                ]
+              ],
+              "display": "⇧ C"
+            }
           }
         },
         {
@@ -489,7 +664,15 @@
               ],
               "display": "⇧ S"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyS"
+                ]
+              ],
+              "display": "⇧ S"
+            }
           }
         },
         {
@@ -510,7 +693,15 @@
               ],
               "display": "⇧ V"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyV"
+                ]
+              ],
+              "display": "⇧ V"
+            }
           }
         },
         {
@@ -531,7 +722,15 @@
               ],
               "display": "⇧ F"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyF"
+                ]
+              ],
+              "display": "⇧ F"
+            }
           }
         },
         {
@@ -552,7 +751,14 @@
               ],
               "display": "V"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyV"
+                ]
+              ],
+              "display": "V"
+            }
           }
         },
         {
@@ -573,7 +779,14 @@
               ],
               "display": "H"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyH"
+                ]
+              ],
+              "display": "H"
+            }
           }
         },
         {
@@ -594,7 +807,14 @@
               ],
               "display": "U"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyU"
+                ]
+              ],
+              "display": "U"
+            }
           }
         },
         {
@@ -615,7 +835,14 @@
               ],
               "display": "T"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "T"
+            }
           }
         },
         {
@@ -639,7 +866,17 @@
               ],
               "display": "G → A"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "G → A"
+            }
           }
         },
         {
@@ -663,7 +900,17 @@
               ],
               "display": "G → X"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "G → X"
+            }
           }
         },
         {
@@ -687,7 +934,17 @@
               ],
               "display": "G → T"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "G → T"
+            }
           }
         },
         {
@@ -710,7 +967,17 @@
               ],
               "display": "O → L"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "O → L"
+            }
           }
         },
         {
@@ -733,7 +1000,17 @@
               ],
               "display": "O → I"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ],
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "O → I"
+            }
           }
         },
         {
@@ -755,7 +1032,15 @@
               ],
               "display": "⇧ D"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyD"
+                ]
+              ],
+              "display": "⇧ D"
+            }
           }
         },
         {
@@ -777,7 +1062,15 @@
               ],
               "display": "⇧ M"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyM"
+                ]
+              ],
+              "display": "⇧ M"
+            }
           }
         },
         {
@@ -832,7 +1125,17 @@
               ],
               "display": "M → B"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyM"
+                ],
+                [
+                  "KeyB"
+                ]
+              ],
+              "display": "M → B"
+            }
           }
         },
         {
@@ -856,7 +1159,17 @@
               ],
               "display": "M → X"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyM"
+                ],
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "M → X"
+            }
           }
         },
         {
@@ -880,7 +1193,17 @@
               ],
               "display": "M → R"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "KeyM"
+                ],
+                [
+                  "KeyR"
+                ]
+              ],
+              "display": "M → R"
+            }
           }
         },
         {
@@ -902,7 +1225,15 @@
               ],
               "display": "⇧ ↑"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "ArrowUp"
+                ]
+              ],
+              "display": "⇧ ↑"
+            }
           }
         },
         {
@@ -924,7 +1255,15 @@
               ],
               "display": "⇧ ↓"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "ArrowDown"
+                ]
+              ],
+              "display": "⇧ ↓"
+            }
           }
         },
         {
@@ -946,7 +1285,15 @@
               ],
               "display": "⇧ Enter"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "Enter"
+                ]
+              ],
+              "display": "⇧ Enter"
+            }
           }
         },
         {
@@ -1027,7 +1374,14 @@
               ],
               "display": "Esc"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Escape"
+                ]
+              ],
+              "display": "Esc"
+            }
           }
         },
         {
@@ -1078,7 +1432,14 @@
               ],
               "display": "/"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Slash"
+                ]
+              ],
+              "display": "/"
+            }
           }
         },
         {
@@ -1227,7 +1588,16 @@
               ],
               "display": "⌘ ⇧ P"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Control",
+                  "Shift",
+                  "KeyP"
+                ]
+              ],
+              "display": "Ctrl ⇧ P"
+            }
           }
         },
         {
@@ -1249,7 +1619,15 @@
               ],
               "display": "#"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "Digit3"
+                ]
+              ],
+              "display": "#"
+            }
           }
         },
         {
@@ -1709,7 +2087,16 @@
               ],
               "display": "⌘ ⇧ U"
             },
-            "windows": null
+            "windows": {
+              "steps": [
+                [
+                  "Control",
+                  "Shift",
+                  "KeyU"
+                ]
+              ],
+              "display": "Ctrl ⇧ U"
+            }
           }
         },
         {
@@ -1936,9 +2323,10 @@
       "name": "Slack",
       "description": "Message actions, navigation, formatting, and canvases.",
       "surface": "desktop / web",
-      "coverage": "Categorized snapshot of Slack's official Mac and Windows/Linux tables, including alternatives, desktop/layout notes, pointer gestures, and numbered choices. Canonical browser-safe keys are playable; sourceBindings preserve the full reference and are never parsed as game input. US QWERTY. Windows launch support is not enabled.",
+      "coverage": "Categorized snapshot of Slack's official Mac and Windows/Linux tables, including alternatives, desktop/layout notes, pointer gestures, and numbered choices. Canonical browser-safe keys are playable; sourceBindings preserve the full reference and are never parsed as game input. US QWERTY.",
       "releasedPlatforms": [
-        "macos"
+        "macos",
+        "windows"
       ],
       "shortcuts": [
         {
@@ -5992,7 +6380,8 @@
       "surface": "desktop / web",
       "coverage": "Expanded snapshot of the official keyboard reference. Block navigation and Shift editing actions are playable; reserved modifiers and Esc are reference-only. Typed slash/Markdown commands and mouse gestures are documented separately. Mac Delete is the Backspace physical key. English US QWERTY.",
       "releasedPlatforms": [
-        "macos"
+        "macos",
+        "windows"
       ],
       "shortcuts": [
         {
@@ -9540,6 +9929,1346 @@
                 ]
               ],
               "display": "F2"
+            }
+          }
+        }
+      ]
+    },
+    "github": {
+      "name": "GitHub",
+      "description": "Repository navigation, issues, pull requests, and notifications.",
+      "surface": "web",
+      "coverage": "Character-key shortcuts from GitHub's official keyboard shortcuts reference. Letter keys are identical on Mac and Windows/Linux; Cmd/Ctrl editor and Markdown shortcuts are out of scope for browser play.",
+      "releasedPlatforms": [
+        "macos",
+        "windows"
+      ],
+      "shortcuts": [
+        {
+          "id": "focus-search",
+          "action": "Focus the search bar",
+          "context": "Any page",
+          "category": "Site wide shortcuts",
+          "sourceAction": "Focus the search bar",
+          "sourceBindings": {
+            "macos": [
+              "S",
+              "/"
+            ],
+            "windows": [
+              "S",
+              "/"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyS"
+                ]
+              ],
+              "display": "S"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyS"
+                ]
+              ],
+              "display": "S"
+            }
+          }
+        },
+        {
+          "id": "go-notifications",
+          "action": "Go to your notifications",
+          "context": "Any page",
+          "category": "Site wide shortcuts",
+          "sourceAction": "Go to your notifications",
+          "sourceBindings": {
+            "macos": [
+              "G N"
+            ],
+            "windows": [
+              "G N"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyN"
+                ]
+              ],
+              "display": "G → N"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyN"
+                ]
+              ],
+              "display": "G → N"
+            }
+          }
+        },
+        {
+          "id": "go-code",
+          "action": "Go to the Code tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Code tab",
+          "sourceBindings": {
+            "macos": [
+              "G C"
+            ],
+            "windows": [
+              "G C"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "G → C"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "G → C"
+            }
+          }
+        },
+        {
+          "id": "go-issues",
+          "action": "Go to the Issues tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Issues tab",
+          "sourceBindings": {
+            "macos": [
+              "G I"
+            ],
+            "windows": [
+              "G I"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "G → I"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "G → I"
+            }
+          }
+        },
+        {
+          "id": "go-pull-requests",
+          "action": "Go to the Pull requests tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Pull requests tab",
+          "sourceBindings": {
+            "macos": [
+              "G P"
+            ],
+            "windows": [
+              "G P"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyP"
+                ]
+              ],
+              "display": "G → P"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyP"
+                ]
+              ],
+              "display": "G → P"
+            }
+          }
+        },
+        {
+          "id": "go-actions",
+          "action": "Go to the Actions tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Actions tab",
+          "sourceBindings": {
+            "macos": [
+              "G A"
+            ],
+            "windows": [
+              "G A"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "G → A"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "G → A"
+            }
+          }
+        },
+        {
+          "id": "go-wiki",
+          "action": "Go to the Wiki tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Wiki tab",
+          "sourceBindings": {
+            "macos": [
+              "G W"
+            ],
+            "windows": [
+              "G W"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyW"
+                ]
+              ],
+              "display": "G → W"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyW"
+                ]
+              ],
+              "display": "G → W"
+            }
+          }
+        },
+        {
+          "id": "go-discussions",
+          "action": "Go to the Discussions tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Discussions tab",
+          "sourceBindings": {
+            "macos": [
+              "G G"
+            ],
+            "windows": [
+              "G G"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyG"
+                ]
+              ],
+              "display": "G → G"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyG"
+                ]
+              ],
+              "display": "G → G"
+            }
+          }
+        },
+        {
+          "id": "go-security",
+          "action": "Go to the Security and quality tab",
+          "context": "Repository",
+          "category": "Repositories",
+          "sourceAction": "Go to the Security and quality tab",
+          "sourceBindings": {
+            "macos": [
+              "G S"
+            ],
+            "windows": [
+              "G S"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyS"
+                ]
+              ],
+              "display": "G → S"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyS"
+                ]
+              ],
+              "display": "G → S"
+            }
+          }
+        },
+        {
+          "id": "edit-file",
+          "action": "Open file in the editor",
+          "context": "File view",
+          "category": "Source code editing",
+          "sourceAction": "Open file in the editor",
+          "sourceBindings": {
+            "macos": [
+              "E"
+            ],
+            "windows": [
+              "E"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyE"
+                ]
+              ],
+              "display": "E"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyE"
+                ]
+              ],
+              "display": "E"
+            }
+          }
+        },
+        {
+          "id": "file-finder",
+          "action": "Activate the file finder",
+          "context": "Repository code",
+          "category": "Source code browsing",
+          "sourceAction": "Activate the file finder",
+          "sourceBindings": {
+            "macos": [
+              "t"
+            ],
+            "windows": [
+              "t"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "T"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyT"
+                ]
+              ],
+              "display": "T"
+            }
+          }
+        },
+        {
+          "id": "jump-to-line",
+          "action": "Jump to a line",
+          "context": "File view",
+          "category": "Source code browsing",
+          "sourceAction": "Jump to a line",
+          "sourceBindings": {
+            "macos": [
+              "l"
+            ],
+            "windows": [
+              "l"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "L"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "L"
+            }
+          }
+        },
+        {
+          "id": "switch-branch",
+          "action": "Switch branch or tag",
+          "context": "Repository code",
+          "category": "Source code browsing",
+          "sourceAction": "Switch branch or tag",
+          "sourceBindings": {
+            "macos": [
+              "w"
+            ],
+            "windows": [
+              "w"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyW"
+                ]
+              ],
+              "display": "W"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyW"
+                ]
+              ],
+              "display": "W"
+            }
+          }
+        },
+        {
+          "id": "permalink",
+          "action": "Expand URL to its permanent form",
+          "context": "File view",
+          "category": "Source code browsing",
+          "sourceAction": "Expand URL to its permanent form",
+          "sourceBindings": {
+            "macos": [
+              "y"
+            ],
+            "windows": [
+              "y"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyY"
+                ]
+              ],
+              "display": "Y"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyY"
+                ]
+              ],
+              "display": "Y"
+            }
+          }
+        },
+        {
+          "id": "toggle-diff-comments",
+          "action": "Show or hide diff comments",
+          "context": "Pull request diff",
+          "category": "Source code browsing",
+          "sourceAction": "Show or hide diff comments",
+          "sourceBindings": {
+            "macos": [
+              "i"
+            ],
+            "windows": [
+              "i"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "I"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyI"
+                ]
+              ],
+              "display": "I"
+            }
+          }
+        },
+        {
+          "id": "blame-view",
+          "action": "Open blame view",
+          "context": "File view",
+          "category": "Source code browsing",
+          "sourceAction": "Open blame view",
+          "sourceBindings": {
+            "macos": [
+              "b"
+            ],
+            "windows": [
+              "b"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyB"
+                ]
+              ],
+              "display": "B"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyB"
+                ]
+              ],
+              "display": "B"
+            }
+          }
+        },
+        {
+          "id": "highlight-line",
+          "action": "Highlight the selected line",
+          "context": "File view",
+          "category": "Navigating within code files",
+          "sourceAction": "Highlight the selected line",
+          "sourceBindings": {
+            "macos": [
+              "Shift+J"
+            ],
+            "windows": [
+              "Shift+J"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyJ"
+                ]
+              ],
+              "display": "⇧ J"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyJ"
+                ]
+              ],
+              "display": "⇧ J"
+            }
+          }
+        },
+        {
+          "id": "quote-reply",
+          "action": "Quote selected text in reply",
+          "context": "Comment thread",
+          "category": "Comments",
+          "sourceAction": "Quote selected text in reply",
+          "sourceBindings": {
+            "macos": [
+              "R"
+            ],
+            "windows": [
+              "R"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyR"
+                ]
+              ],
+              "display": "R"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyR"
+                ]
+              ],
+              "display": "R"
+            }
+          }
+        },
+        {
+          "id": "create-issue",
+          "action": "Create an issue",
+          "context": "Issue list",
+          "category": "Issue and pull request lists",
+          "sourceAction": "Create an issue",
+          "sourceBindings": {
+            "macos": [
+              "C"
+            ],
+            "windows": [
+              "C"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "C"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyC"
+                ]
+              ],
+              "display": "C"
+            }
+          }
+        },
+        {
+          "id": "filter-author",
+          "action": "Filter by author",
+          "context": "Issue list",
+          "category": "Issue and pull request lists",
+          "sourceAction": "Filter by author",
+          "sourceBindings": {
+            "macos": [
+              "U"
+            ],
+            "windows": [
+              "U"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyU"
+                ]
+              ],
+              "display": "U"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyU"
+                ]
+              ],
+              "display": "U"
+            }
+          }
+        },
+        {
+          "id": "open-issue",
+          "action": "Open issue",
+          "context": "Issue list",
+          "category": "Issue and pull request lists",
+          "sourceAction": "Open issue",
+          "sourceBindings": {
+            "macos": [
+              "O",
+              "Enter"
+            ],
+            "windows": [
+              "O",
+              "Enter"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyO"
+                ]
+              ],
+              "display": "O"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyO"
+                ]
+              ],
+              "display": "O"
+            }
+          }
+        },
+        {
+          "id": "request-reviewer",
+          "action": "Request a reviewer",
+          "context": "Pull request",
+          "category": "Issues and pull requests",
+          "sourceAction": "Request a reviewer",
+          "sourceBindings": {
+            "macos": [
+              "Q"
+            ],
+            "windows": [
+              "Q"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyQ"
+                ]
+              ],
+              "display": "Q"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyQ"
+                ]
+              ],
+              "display": "Q"
+            }
+          }
+        },
+        {
+          "id": "set-milestone",
+          "action": "Set a milestone",
+          "context": "Issue or pull request",
+          "category": "Issues and pull requests",
+          "sourceAction": "Set a milestone",
+          "sourceBindings": {
+            "macos": [
+              "M"
+            ],
+            "windows": [
+              "M"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyM"
+                ]
+              ],
+              "display": "M"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyM"
+                ]
+              ],
+              "display": "M"
+            }
+          }
+        },
+        {
+          "id": "apply-label",
+          "action": "Apply a label",
+          "context": "Issue or pull request",
+          "category": "Issues and pull requests",
+          "sourceAction": "Apply a label",
+          "sourceBindings": {
+            "macos": [
+              "L"
+            ],
+            "windows": [
+              "L"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "L"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyL"
+                ]
+              ],
+              "display": "L"
+            }
+          }
+        },
+        {
+          "id": "set-assignee",
+          "action": "Set an assignee",
+          "context": "Issue or pull request",
+          "category": "Issues and pull requests",
+          "sourceAction": "Set an assignee",
+          "sourceBindings": {
+            "macos": [
+              "A"
+            ],
+            "windows": [
+              "A"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "A"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyA"
+                ]
+              ],
+              "display": "A"
+            }
+          }
+        },
+        {
+          "id": "link-issue",
+          "action": "Link an issue or pull request",
+          "context": "Issue or pull request",
+          "category": "Issues and pull requests",
+          "sourceAction": "Link an issue or pull request",
+          "sourceBindings": {
+            "macos": [
+              "X"
+            ],
+            "windows": [
+              "X"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "X"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyX"
+                ]
+              ],
+              "display": "X"
+            }
+          }
+        },
+        {
+          "id": "go-workflow-file",
+          "action": "Go to the workflow file",
+          "context": "Workflow run",
+          "category": "GitHub Actions",
+          "sourceAction": "Go to the workflow file",
+          "sourceBindings": {
+            "macos": [
+              "G F"
+            ],
+            "windows": [
+              "G F"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyF"
+                ]
+              ],
+              "display": "G → F"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyG"
+                ],
+                [
+                  "KeyF"
+                ]
+              ],
+              "display": "G → F"
+            }
+          }
+        },
+        {
+          "id": "toggle-timestamps",
+          "action": "Toggle timestamps in logs",
+          "context": "Workflow logs",
+          "category": "GitHub Actions",
+          "sourceAction": "Toggle timestamps in logs",
+          "sourceBindings": {
+            "macos": [
+              "Shift+T",
+              "T"
+            ],
+            "windows": [
+              "Shift+T",
+              "T"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyT"
+                ]
+              ],
+              "display": "⇧ T"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyT"
+                ]
+              ],
+              "display": "⇧ T"
+            }
+          }
+        },
+        {
+          "id": "toggle-fullscreen-logs",
+          "action": "Toggle full-screen logs",
+          "context": "Workflow logs",
+          "category": "GitHub Actions",
+          "sourceAction": "Toggle full-screen logs",
+          "sourceBindings": {
+            "macos": [
+              "Shift+F",
+              "F"
+            ],
+            "windows": [
+              "Shift+F",
+              "F"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyF"
+                ]
+              ],
+              "display": "⇧ F"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyF"
+                ]
+              ],
+              "display": "⇧ F"
+            }
+          }
+        },
+        {
+          "id": "mark-done",
+          "action": "Mark as done",
+          "context": "Notifications inbox",
+          "category": "Notifications",
+          "sourceAction": "Mark as done",
+          "sourceBindings": {
+            "macos": [
+              "E"
+            ],
+            "windows": [
+              "E"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "KeyE"
+                ]
+              ],
+              "display": "E"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "KeyE"
+                ]
+              ],
+              "display": "E"
+            }
+          }
+        },
+        {
+          "id": "mark-unread",
+          "action": "Mark as unread",
+          "context": "Notifications inbox",
+          "category": "Notifications",
+          "sourceAction": "Mark as unread",
+          "sourceBindings": {
+            "macos": [
+              "Shift+U"
+            ],
+            "windows": [
+              "Shift+U"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyU"
+                ]
+              ],
+              "display": "⇧ U"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyU"
+                ]
+              ],
+              "display": "⇧ U"
+            }
+          }
+        },
+        {
+          "id": "mark-read",
+          "action": "Mark as read",
+          "context": "Notifications inbox",
+          "category": "Notifications",
+          "sourceAction": "Mark as read",
+          "sourceBindings": {
+            "macos": [
+              "Shift+I"
+            ],
+            "windows": [
+              "Shift+I"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyI"
+                ]
+              ],
+              "display": "⇧ I"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyI"
+                ]
+              ],
+              "display": "⇧ I"
+            }
+          }
+        },
+        {
+          "id": "unsubscribe",
+          "action": "Unsubscribe",
+          "context": "Notifications inbox",
+          "category": "Notifications",
+          "sourceAction": "Unsubscribe",
+          "sourceBindings": {
+            "macos": [
+              "Shift+M"
+            ],
+            "windows": [
+              "Shift+M"
+            ]
+          },
+          "source": {
+            "url": "https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts",
+            "checkedAt": "2026-09-10",
+            "verification": "current"
+          },
+          "bindings": {
+            "macos": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyM"
+                ]
+              ],
+              "display": "⇧ M"
+            },
+            "windows": {
+              "steps": [
+                [
+                  "Shift",
+                  "KeyM"
+                ]
+              ],
+              "display": "⇧ M"
             }
           }
         }

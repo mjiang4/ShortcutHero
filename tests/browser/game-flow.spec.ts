@@ -5,11 +5,12 @@ import { FAST_TEST_RUN, openAsReturningPlayer } from "./helpers";
 for (const [tool, action, key] of [
   ["slack", "Edit your message", "e"],
   ["notion", "Insert text block", "Enter"],
+  ["github", "Focus the search bar", "s"],
   ["jira", "New issue", "c"],
   ["superhuman", "New issue", "c"],
   ["excel", "New issue", "c"],
 ]) {
-  const supported = tool === "slack" || tool === "notion";
+  const supported = tool === "slack" || tool === "notion" || tool === "github";
   test(`${tool} ${supported ? "launches its own shortcuts" : "legacy link falls back to Linear"} and accepts the displayed key`, async ({ page }) => {
     await openAsReturningPlayer(page, FAST_TEST_RUN.replace("tool=linear", `tool=${tool}`));
     const game = page.locator("main.shortcut-hero");
@@ -242,6 +243,8 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   expect(progress.shortcuts["assign-user"].needsReview).toBe(true);
 
   await expect(page.locator(".results-player")).toContainText("Playing as Guest");
+  await expect(page.locator(".results-leaderboard")).toContainText("Add your name to post this score publicly.");
+  await expect(page.getByRole("button", { name: "Post to public board" })).toBeDisabled();
   await page.getByRole("button", { name: "Add your name", exact: true }).click();
   const nameInput = page.getByRole("textbox", { name: "Your name", exact: true });
   await expect(nameInput).toBeFocused();
@@ -251,6 +254,10 @@ test("a reduced-motion round supports pause, results, and retry", async ({
   await nameInput.press("Enter");
   await expect(page.getByRole("heading", { name: "Run complete" })).toBeVisible();
   await expect(page.locator(".results-player")).toContainText("Playing as Ada Swift");
+  // Names only leave the device on this explicit action; the test server has no board database.
+  await expect(page.locator(".results-leaderboard")).toContainText("as Ada Swift?");
+  await page.getByRole("button", { name: "Post to public board" }).click();
+  await expect(page.locator(".results-leaderboard")).toContainText("The public board is unavailable right now.");
   const savedScores = await page.evaluate(() => Object.keys(window.localStorage)
     .filter((key) => key.startsWith("shortcut-hero:high-score:"))
     .map((key) => JSON.parse(window.localStorage.getItem(key)!)));
@@ -269,6 +276,7 @@ test("a reduced-motion round supports pause, results, and retry", async ({
 
   await page.goto("/");
   await page.getByRole("button", { name: "high scores", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("The public board is unavailable right now.");
   await expect(page.locator(".score-list__name")).toHaveText("Ada Swift");
   expect(await page.evaluate(() => JSON.parse(window.localStorage.getItem("shortcut-hero:onboarding") ?? "null")))
     .toEqual({ name: "Ada Swift", complete: true });
